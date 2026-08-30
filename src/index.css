@@ -1,0 +1,250 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ------------------------------------------------------------------
+   Nusantara Freight — design tokens
+   A maritime navy system. Light = "harbour paper", Dark = "night deck".
+   ------------------------------------------------------------------ */
+:root {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* surfaces */
+  --bg: 210 44% 97%;
+  --bg-muted: 213 38% 94%;
+  --surface: 0 0% 100%;
+  --surface-raised: 0 0% 100%;
+  --surface-sunken: 213 40% 96%;
+  --overlay: 214 60% 8%;
+
+  /* ink */
+  --fg: 215 52% 12%;
+  --fg-muted: 215 18% 42%;
+  --fg-subtle: 214 15% 56%;
+  --fg-inverse: 210 40% 98%;
+
+  /* lines */
+  --border: 214 32% 88%;
+  --border-strong: 214 28% 78%;
+  --ring: 216 88% 52%;
+
+  /* brand — harbour blue */
+  --primary: 217 89% 46%;
+  --primary-hover: 217 89% 40%;
+  --primary-fg: 0 0% 100%;
+  --primary-soft: 217 92% 95%;
+  --primary-soft-fg: 217 76% 34%;
+
+  /* accent — container teal */
+  --accent: 184 78% 36%;
+  --accent-soft: 183 70% 94%;
+  --accent-soft-fg: 185 82% 24%;
+
+  /* status */
+  --success: 152 62% 34%;
+  --success-soft: 150 62% 94%;
+  --success-soft-fg: 154 70% 22%;
+  --warning: 33 92% 46%;
+  --warning-soft: 40 96% 92%;
+  --warning-soft-fg: 26 84% 30%;
+  --danger: 356 72% 48%;
+  --danger-soft: 355 92% 96%;
+  --danger-soft-fg: 356 72% 36%;
+  --info: 221 83% 53%;
+  --info-soft: 214 95% 95%;
+  --info-soft-fg: 224 76% 38%;
+  --neutral-soft: 214 30% 94%;
+  --neutral-soft-fg: 215 22% 34%;
+  --purple: 264 62% 52%;
+  --purple-soft: 268 84% 96%;
+  --purple-soft-fg: 265 60% 40%;
+
+  --shadow-color: 215 45% 22%;
+  --radius: 0.625rem;
+}
+
+.dark {
+  --bg: 216 52% 7%;
+  --bg-muted: 216 46% 10%;
+  --surface: 215 44% 11%;
+  --surface-raised: 214 40% 14%;
+  --surface-sunken: 216 50% 9%;
+  --overlay: 216 60% 3%;
+
+  --fg: 210 40% 96%;
+  --fg-muted: 213 20% 68%;
+  --fg-subtle: 214 16% 54%;
+  --fg-inverse: 215 52% 10%;
+
+  --border: 214 33% 20%;
+  --border-strong: 214 30% 28%;
+  --ring: 210 100% 62%;
+
+  --primary: 213 94% 60%;
+  --primary-hover: 213 94% 68%;
+  --primary-fg: 216 60% 8%;
+  --primary-soft: 214 60% 18%;
+  --primary-soft-fg: 211 96% 78%;
+
+  --accent: 183 72% 48%;
+  --accent-soft: 187 60% 15%;
+  --accent-soft-fg: 184 78% 66%;
+
+  --success: 151 62% 46%;
+  --success-soft: 155 50% 14%;
+  --success-soft-fg: 150 68% 66%;
+  --warning: 38 94% 56%;
+  --warning-soft: 33 60% 15%;
+  --warning-soft-fg: 40 94% 66%;
+  --danger: 356 84% 62%;
+  --danger-soft: 356 52% 17%;
+  --danger-soft-fg: 356 92% 78%;
+  --info: 214 94% 64%;
+  --info-soft: 216 60% 18%;
+  --info-soft-fg: 213 94% 78%;
+  --neutral-soft: 215 32% 18%;
+  --neutral-soft-fg: 213 22% 72%;
+  --purple: 264 82% 68%;
+  --purple-soft: 265 44% 20%;
+  --purple-soft-fg: 267 88% 80%;
+
+  --shadow-color: 216 80% 2%;
+}
+
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --color-bg: hsl(var(--bg));
+  --color-bg-muted: hsl(var(--bg-muted));
+  --color-surface: hsl(var(--surface));
+  --color-surface-raised: hsl(var(--surface-raised));
+  --color-surface-sunken: hsl(var(--surface-sunken));
+  --color-overlay: hsl(var(--overlay));
+
+  --color-fg: hsl(var(--fg));
+  --color-fg-muted: hsl(var(--fg-muted));
+  --color-fg-subtle: hsl(var(--fg-subtle));
+  --color-fg-inverse: hsl(var(--fg-inverse));
+
+  --color-border: hsl(var(--border));
+  --color-border-strong: hsl(var(--border-strong));
+  --color-ring: hsl(var(--ring));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-hover: hsl(var(--primary-hover));
+  --color-primary-fg: hsl(var(--primary-fg));
+  --color-primary-soft: hsl(var(--primary-soft));
+  --color-primary-soft-fg: hsl(var(--primary-soft-fg));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-soft: hsl(var(--accent-soft));
+  --color-accent-soft-fg: hsl(var(--accent-soft-fg));
+
+  --color-success: hsl(var(--success));
+  --color-success-soft: hsl(var(--success-soft));
+  --color-success-soft-fg: hsl(var(--success-soft-fg));
+  --color-warning: hsl(var(--warning));
+  --color-warning-soft: hsl(var(--warning-soft));
+  --color-warning-soft-fg: hsl(var(--warning-soft-fg));
+  --color-danger: hsl(var(--danger));
+  --color-danger-soft: hsl(var(--danger-soft));
+  --color-danger-soft-fg: hsl(var(--danger-soft-fg));
+  --color-info: hsl(var(--info));
+  --color-info-soft: hsl(var(--info-soft));
+  --color-info-soft-fg: hsl(var(--info-soft-fg));
+  --color-neutral-soft: hsl(var(--neutral-soft));
+  --color-neutral-soft-fg: hsl(var(--neutral-soft-fg));
+  --color-purple: hsl(var(--purple));
+  --color-purple-soft: hsl(var(--purple-soft));
+  --color-purple-soft-fg: hsl(var(--purple-soft-fg));
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 10px);
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background-color: hsl(var(--bg));
+    color: hsl(var(--fg));
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background-color: hsl(var(--primary) / 0.24);
+  }
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+  /* numerals align in tables */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border-strong)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border-strong));
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .surface-grid {
+    background-image:
+      linear-gradient(hsl(var(--border) / 0.5) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.5) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .shadow-card {
+    box-shadow:
+      0 1px 2px hsl(var(--shadow-color) / 0.06),
+      0 1px 3px hsl(var(--shadow-color) / 0.05);
+  }
+  .shadow-pop {
+    box-shadow:
+      0 0 0 1px hsl(var(--border)),
+      0 8px 24px -6px hsl(var(--shadow-color) / 0.18),
+      0 18px 48px -12px hsl(var(--shadow-color) / 0.16);
+  }
+  .shadow-sticky-l {
+    box-shadow: -14px 0 18px -10px hsl(var(--shadow-color) / 0.6);
+  }
+  .shadow-sticky-r {
+    box-shadow: 12px 0 16px -12px hsl(var(--shadow-color) / 0.45);
+  }
+}
+
+@keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+@keyframes pop-in { from { opacity: 0; transform: translateY(-4px) scale(.98) } to { opacity: 1; transform: none } }
+@keyframes slide-up { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
+@keyframes shimmer { 100% { transform: translateX(100%) } }
+.animate-fade-in { animation: fade-in .16s ease-out }
+.animate-pop-in { animation: pop-in .14s cubic-bezier(.16,1,.3,1) }
+.animate-slide-up { animation: slide-up .22s cubic-bezier(.16,1,.3,1) }
