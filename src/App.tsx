@@ -16,6 +16,13 @@ import { AccountsPage } from '@/pages/finance/AccountsPage'
 import { InvoicesPage } from '@/pages/finance/InvoicesPage'
 import { ReportsPage } from '@/pages/finance/ReportsPage'
 import { ProfitabilityPage } from '@/pages/finance/ProfitabilityPage'
+import { QuotationsPage } from '@/pages/quotations/QuotationsPage'
+import { PartnersPage } from '@/pages/partners/PartnersPage'
+import { TrackingPage } from '@/pages/tracking/TrackingPage'
+import { WarehousePage } from '@/pages/warehouse/WarehousePage'
+import { CustomsPage } from '@/pages/customs/CustomsPage'
+import { AnalyticsPage } from '@/pages/analytics/AnalyticsPage'
+import { SettingsPage } from '@/pages/settings/SettingsPage'
 
 export default function App() {
   return (
@@ -31,6 +38,13 @@ export default function App() {
                 <Route path="/containers" element={<ContainersPage />} />
                 <Route path="/documents" element={<DocumentsPage />} />
                 <Route path="/charges" element={<ChargesPage />} />
+                <Route path="/quotations" element={<QuotationsPage />} />
+                <Route path="/partners" element={<PartnersPage />} />
+                <Route path="/tracking" element={<TrackingPage />} />
+                <Route path="/warehouse" element={<WarehousePage />} />
+                <Route path="/customs" element={<CustomsPage />} />
+                <Route path="/analytics" element={<AnalyticsPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/customers" element={<CustomersPage />} />
                 <Route path="/customers/:id" element={<CustomerDetailPage />} />
                 <Route path="/offices" element={<OfficesPage />} />

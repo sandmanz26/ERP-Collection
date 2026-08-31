@@ -206,3 +206,119 @@ export const ACCOUNT_TYPE_META: Record<AccountType, { label: string; group: 'BAL
 export const FX_RATES: Record<string, number> = { IDR: 1, USD: 16250, EUR: 17600, SGD: 12050, JPY: 108, CNY: 2240, AUD: 10650, KRW: 11.7 }
 
 export const TEAM = ['Rina Wulandari', 'Ahmad Fauzi', 'Dewi Kartika', 'Bagus Prasetyo', 'Siti Nurhaliza', 'Yoga Pratama']
+
+/* ==================================================================
+   PHASE 2 reference data
+   ================================================================== */
+import type { LossReason, MilestoneCode, PartnerType, QuoteStatus } from './types'
+
+export const QUOTE_STATUS_FLOW: { status: QuoteStatus; label: string; open: boolean }[] = [
+  { status: 'DRAFT', label: 'Draft', open: true },
+  { status: 'SENT', label: 'Sent to client', open: true },
+  { status: 'UNDER_NEGOTIATION', label: 'Under negotiation', open: true },
+  { status: 'ACCEPTED', label: 'Accepted', open: false },
+  { status: 'REJECTED', label: 'Lost', open: false },
+  { status: 'EXPIRED', label: 'Expired', open: false },
+  { status: 'WITHDRAWN', label: 'Withdrawn', open: false },
+]
+
+export const LOSS_REASONS: { value: LossReason; label: string; hint: string }[] = [
+  { value: 'PRICE', label: 'Price', hint: 'Beaten on the all-in rate.' },
+  { value: 'TRANSIT_TIME', label: 'Transit time', hint: 'A faster routing won it.' },
+  { value: 'SPACE_UNAVAILABLE', label: 'Space unavailable', hint: 'No allocation on the sailing the client needed.' },
+  { value: 'SERVICE_SCOPE', label: 'Service scope', hint: 'Client wanted a leg we did not quote.' },
+  { value: 'CREDIT_TERMS', label: 'Credit terms', hint: 'Client wanted longer terms than we grant.' },
+  { value: 'INCUMBENT_RETAINED', label: 'Incumbent retained', hint: 'Client stayed with their existing forwarder.' },
+  { value: 'NO_DECISION', label: 'No decision', hint: 'Enquiry went quiet — cargo may not have moved.' },
+  { value: 'CARGO_CANCELLED', label: 'Cargo cancelled', hint: 'The underlying sale fell through.' },
+  { value: 'OTHER', label: 'Other', hint: '' },
+]
+
+export const PARTNER_TYPES: { value: PartnerType; label: string; hint: string }[] = [
+  { value: 'CARRIER', label: 'Ocean / air carrier', hint: 'Owns the vessel or aircraft space.' },
+  { value: 'OVERSEAS_AGENT', label: 'Overseas agent', hint: 'Handles the destination leg on our behalf.' },
+  { value: 'TRUCKING', label: 'Trucking / haulage', hint: 'Inland move between factory, depot and port.' },
+  { value: 'DEPOT', label: 'Container depot', hint: 'Empty release, stuffing yard, repairs.' },
+  { value: 'CUSTOMS_BROKER', label: 'Customs broker (PPJK)', hint: 'Files PEB and PIB on our behalf.' },
+  { value: 'WAREHOUSE', label: 'Warehouse / CFS', hint: 'Consolidation and storage.' },
+  { value: 'SURVEYOR', label: 'Surveyor', hint: 'Draft survey, lashing, damage inspection.' },
+  { value: 'INSURANCE', label: 'Marine insurance', hint: 'Cargo cover and claims.' },
+  { value: 'FUMIGATION', label: 'Fumigation / treatment', hint: 'ISPM-15 and quarantine treatment.' },
+  { value: 'TERMINAL', label: 'Port terminal', hint: 'THC, lift on/off, gate operations.' },
+]
+
+/** Journey milestones, modelled on the UN/EDIFACT IFTSTA status set. */
+export const MILESTONES: { code: MilestoneCode; label: string; leg: 'ORIGIN' | 'MAIN' | 'DESTINATION'; hint: string; offsetFromEtd: number }[] = [
+  { code: 'BOOKING_CONFIRMED', label: 'Booking confirmed', leg: 'ORIGIN', hint: 'Carrier accepted the booking and released the reference.', offsetFromEtd: -18 },
+  { code: 'EMPTY_RELEASED', label: 'Empty container released', leg: 'ORIGIN', hint: 'Equipment picked up from the depot.', offsetFromEtd: -10 },
+  { code: 'CARGO_RECEIVED', label: 'Cargo received', leg: 'ORIGIN', hint: 'Cargo in our custody at the factory or CFS.', offsetFromEtd: -8 },
+  { code: 'STUFFED', label: 'Stuffed and sealed', leg: 'ORIGIN', hint: 'Loading into the unit complete.', offsetFromEtd: -6 },
+  { code: 'VGM_SUBMITTED', label: 'VGM submitted', leg: 'ORIGIN', hint: 'SOLAS verified gross mass filed with the carrier.', offsetFromEtd: -5 },
+  { code: 'CUSTOMS_CLEARED_ORIGIN', label: 'Export customs cleared', leg: 'ORIGIN', hint: 'NPE issued against the PEB.', offsetFromEtd: -4 },
+  { code: 'GATE_IN', label: 'Gated in at terminal', leg: 'ORIGIN', hint: 'Unit accepted at the container yard.', offsetFromEtd: -3 },
+  { code: 'LOADED_ON_VESSEL', label: 'Loaded on board', leg: 'MAIN', hint: 'Confirmed on the loading list.', offsetFromEtd: -1 },
+  { code: 'VESSEL_DEPARTED', label: 'Vessel departed', leg: 'MAIN', hint: 'Actual time of departure from the POL.', offsetFromEtd: 0 },
+  { code: 'TRANSHIPMENT_DISCHARGED', label: 'Discharged at transhipment', leg: 'MAIN', hint: 'Only where the routing transships.', offsetFromEtd: 8 },
+  { code: 'TRANSHIPMENT_LOADED', label: 'Loaded on connecting vessel', leg: 'MAIN', hint: 'Connection made at the hub.', offsetFromEtd: 10 },
+  { code: 'VESSEL_ARRIVED', label: 'Vessel arrived', leg: 'DESTINATION', hint: 'Actual time of arrival at the POD.', offsetFromEtd: 30 },
+  { code: 'DISCHARGED', label: 'Discharged', leg: 'DESTINATION', hint: 'Unit off the vessel.', offsetFromEtd: 31 },
+  { code: 'CUSTOMS_RELEASED_DEST', label: 'Import customs released', leg: 'DESTINATION', hint: 'Destination authority released the cargo.', offsetFromEtd: 33 },
+  { code: 'GATE_OUT', label: 'Gated out', leg: 'DESTINATION', hint: 'Unit left the terminal for delivery.', offsetFromEtd: 34 },
+  { code: 'DELIVERED', label: 'Delivered', leg: 'DESTINATION', hint: 'Proof of delivery obtained.', offsetFromEtd: 36 },
+  { code: 'EMPTY_RETURNED', label: 'Empty returned', leg: 'DESTINATION', hint: 'Equipment back at the depot — detention stops here.', offsetFromEtd: 40 },
+]
+
+export const milestoneMeta = (code: MilestoneCode) => MILESTONES.find((m) => m.code === code)
+export const milestoneIndex = (code: MilestoneCode) => MILESTONES.findIndex((m) => m.code === code)
+
+export const MILESTONE_SOURCES: { value: string; label: string; hint: string }[] = [
+  { value: 'CARRIER_EDI', label: 'Carrier EDI', hint: 'IFTSTA status message from the carrier.' },
+  { value: 'PORTAL', label: 'Carrier portal', hint: 'Read from the line’s tracking page.' },
+  { value: 'AGENT', label: 'Overseas agent', hint: 'Reported by the destination agent.' },
+  { value: 'MANUAL', label: 'Keyed manually', hint: 'Typed by an operator — weakest evidence.' },
+]
+
+export const WAREHOUSES = [
+  { code: 'CFS-TPP', name: 'CFS Tanjung Priok', city: 'Jakarta' },
+  { code: 'CFS-SUB', name: 'CFS Tanjung Perak', city: 'Surabaya' },
+  { code: 'WH-SRG', name: 'Semarang Consolidation Hub', city: 'Semarang' },
+  { code: 'WH-DPS', name: 'Denpasar Buying Warehouse', city: 'Denpasar' },
+  { code: 'CS-MAK', name: 'Makassar Cold Store', city: 'Makassar' },
+]
+
+export const CUSTOMS_OFFICES = [
+  { code: '040300', name: 'KPU Bea Cukai Tanjung Priok' },
+  { code: '050100', name: 'KPPBC Tanjung Perak' },
+  { code: '070100', name: 'KPPBC Belawan' },
+  { code: '060200', name: 'KPPBC Tanjung Emas' },
+  { code: '080100', name: 'KPPBC Makassar' },
+]
+
+export const CUSTOMS_CHANNELS: { value: string; label: string; tone: string; hint: string }[] = [
+  { value: 'PENDING', label: 'Awaiting response', tone: 'neutral', hint: 'Filed, no channel assigned yet.' },
+  { value: 'HIJAU', label: 'Jalur Hijau', tone: 'success', hint: 'Green lane — released without inspection.' },
+  { value: 'KUNING', label: 'Jalur Kuning', tone: 'warning', hint: 'Yellow lane — document check, expect 1–2 days.' },
+  { value: 'MERAH', label: 'Jalur Merah', tone: 'danger', hint: 'Red lane — physical inspection, expect 3–5 days and demurrage risk.' },
+]
+
+/** Supporting documents CEISA 4.0 requires to be uploaded with a PEB (KEP-163/BC/2026). */
+export const PEB_SUPPORTING_DOCS: { type: DocType; label: string; mandatory: boolean }[] = [
+  { type: 'COMMERCIAL_INVOICE', label: 'Commercial Invoice', mandatory: true },
+  { type: 'PACKING_LIST', label: 'Packing List', mandatory: true },
+  { type: 'DRAFT_BL', label: 'Bill of Lading / AWB', mandatory: true },
+  { type: 'EXPORT_PERMIT', label: 'Export Permit (LARTAS commodities)', mandatory: false },
+  { type: 'CERTIFICATE_OF_ORIGIN', label: 'Certificate of Origin / SKA', mandatory: false },
+  { type: 'PHYTOSANITARY', label: 'Quarantine / Phytosanitary Certificate', mandatory: false },
+]
+
+/** HS prefixes under Indonesian export restriction (LARTAS) — illustrative subset. */
+export const RESTRICTED_HS_PREFIXES = ['4407', '4403', '2601', '2603', '7204', '1511', '0306', '4001']
+
+export const KPI_TARGETS_DEFAULT = {
+  onTimePct: 92,
+  winRatePct: 35,
+  grossMarginPct: 20,
+  dsoDays: 45,
+  utilisationPct: 80,
+  docAccuracyPct: 97,
+}

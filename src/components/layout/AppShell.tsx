@@ -16,6 +16,7 @@ import { Segmented } from '@/components/ui/checkbox'
 import { useTheme } from '@/hooks/useTheme'
 import { useErp } from '@/store/useErp'
 import { buildExceptions } from '@/lib/analytics'
+import { buildPhase2Exceptions, filingReadiness, isQuoteOpen } from '@/lib/analytics2'
 import { fmtDateTime } from '@/lib/format'
 import { useToast } from '@/components/ui/toast'
 
@@ -46,20 +47,30 @@ export function AppShell() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const exceptions = React.useMemo(
-    () =>
-      buildExceptions({
-        projects: store.projects, containers: store.containers, documents: store.documents,
-        charges: store.charges, customers: store.customers, invoices: store.invoices,
-      }),
-    [store.projects, store.containers, store.documents, store.charges, store.customers, store.invoices],
-  )
+  const exceptions = React.useMemo(() => {
+    const core = buildExceptions({
+      projects: store.projects, containers: store.containers, documents: store.documents,
+      charges: store.charges, customers: store.customers, invoices: store.invoices,
+    })
+    const extra = buildPhase2Exceptions({
+      quotations: store.quotations, partners: store.partners, milestones: store.milestones,
+      receipts: store.receipts, filings: store.filings, projects: store.projects, settings: store.settings,
+    })
+    const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2 } as const
+    return [...core, ...extra].sort((a, b) => order[a.severity] - order[b.severity])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    store.projects, store.containers, store.documents, store.charges, store.customers, store.invoices,
+    store.quotations, store.partners, store.milestones, store.receipts, store.filings, store.settings,
+  ])
   const critical = exceptions.filter((e) => e.severity === 'CRITICAL').length
 
   const badges: Record<string, number> = {
     projects: store.projects.filter((p) => p.status === 'ACTIVE').length,
     overdue: store.invoices.filter((i) => i.status === 'OVERDUE').length,
     exceptions: critical,
+    quotes: store.quotations.filter(isQuoteOpen).length,
+    customs: store.filings.filter((f) => f.status === 'DRAFT' && !filingReadiness(f).canSubmit).length,
   }
 
   return (
@@ -119,7 +130,7 @@ export function AppShell() {
                             <span
                               className={cn(
                                 'tnum rounded px-1.5 py-0.5 text-[10.5px] font-semibold',
-                                item.badgeKey === 'overdue'
+                                item.badgeKey === 'overdue' || item.badgeKey === 'customs'
                                   ? 'bg-danger-soft text-danger-soft-fg'
                                   : 'bg-neutral-soft text-neutral-soft-fg',
                               )}

@@ -59,6 +59,7 @@ export function evaluateStageGate(
   containers: Container[],
   documents: ShipmentDocument[],
   customer?: Customer,
+  extra?: { filings?: { type: string; status: string; channel: string; supportingDocs: { mandatory: boolean; uploaded: boolean; label: string }[] }[] },
 ): GateResult {
   const stage = project.stages.find((s) => s.key === project.stage)
   const blockers: string[] = []
@@ -97,6 +98,21 @@ export function evaluateStageGate(
   if (project.stage === 'DOCUMENTATION' || stageIndex(project.stage) > 3) {
     const missing = documents.filter((d) => d.mandatory && ['REQUIRED', 'REJECTED'].includes(d.status))
     missing.forEach((d) => blockers.push(`${d.title} is ${d.status === 'REJECTED' ? 'rejected' : 'still outstanding'}`))
+  }
+
+  if (project.stage === 'DOCUMENTATION') {
+    const peb = extra?.filings?.find((f) => f.type === 'PEB')
+    if (peb) {
+      const missing = peb.supportingDocs.filter((d) => d.mandatory && !d.uploaded)
+      if (peb.status === 'DRAFT' && missing.length)
+        blockers.push(`PEB cannot be submitted — CEISA 4.0 is missing ${missing.map((d) => d.label).join(', ')}`)
+      if (peb.channel === 'MERAH' && peb.status !== 'APPROVED')
+        blockers.push('PEB drew Jalur Merah — the physical inspection must clear before the cargo can gate in')
+      if (peb.channel === 'KUNING' && peb.status === 'UNDER_REVIEW')
+        warnings.push('PEB is in Jalur Kuning — answer the document query before the cut-off')
+    } else {
+      warnings.push('No PEB filing recorded for this job')
+    }
   }
 
   if (project.stage === 'STUFFING') {

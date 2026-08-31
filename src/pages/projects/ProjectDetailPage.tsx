@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   AlertTriangle, ArrowLeft, ArrowRight, Building2, CalendarClock, CheckCircle2, Container as ContainerIcon,
-  FileStack, Info, Pencil, Receipt, Repeat, Ship, ShieldCheck, Anchor,
+  FileSignature, FileStack, Info, Pencil, Radio, Receipt, Repeat, Ship, ShieldCheck, Stamp, Anchor,
 } from 'lucide-react'
 import { useErp } from '@/store/useErp'
 import { STAGES, countryFlag, stageIndex } from '@/data/reference'
@@ -20,13 +20,16 @@ import { ProjectForm } from './ProjectForm'
 import { ContainersTable } from './tabs/ContainersTable'
 import { DocumentsTable } from './tabs/DocumentsTable'
 import { ChargesTable } from './tabs/ChargesTable'
+import { MilestonesTable } from '@/pages/tracking/MilestonesTable'
+import { CustomsTable } from '@/pages/customs/CustomsTable'
+import { filingReadiness, milestoneHealth, quoteTotals } from '@/lib/analytics2'
 import { documentCompliance, evaluateStageGate, jobFinancials } from '@/lib/analytics'
 import { fmtCurrency, fmtDate, fmtDateTime, fmtNumber, fmtPercent, pluralDays, relativeDays, titleCase } from '@/lib/format'
 import { itemCbm, itemGrossKg } from '@/lib/shipping'
 import { useToast } from '@/components/ui/toast'
 import type { StageKey } from '@/data/types'
 
-type TabKey = 'overview' | 'containers' | 'documents' | 'charges' | 'timeline'
+type TabKey = 'overview' | 'containers' | 'documents' | 'charges' | 'tracking' | 'customs' | 'timeline'
 
 export function ProjectDetailPage() {
   const { id } = useParams()
@@ -65,8 +68,14 @@ export function ProjectDetailPage() {
   const shipperOffice = shipper?.offices.find((o) => o.id === project.shipperOfficeId)
   const consigneeOffice = consignee?.offices.find((o) => o.id === project.consigneeOfficeId)
   const pkg = store.packages.find((p) => p.id === project.packageId)
+  const milestones = store.milestones.filter((m) => m.projectId === project.id)
+  const filings = store.filings.filter((f) => f.projectId === project.id)
+  const sourceQuote = store.quotations.find((q) => q.convertedProjectId === project.id)
+  const tracking = milestoneHealth(milestones)
+  const peb = filings.find((f) => f.type === 'PEB')
+  const pebReadiness = peb ? filingReadiness(peb) : null
 
-  const gate = evaluateStageGate(project, containers, documents, client)
+  const gate = evaluateStageGate(project, containers, documents, client, { filings })
   const fin = jobFinancials(charges)
   const compliance = documentCompliance(project, documents)
   const currentIdx = stageIndex(project.stage)
@@ -147,7 +156,7 @@ export function ProjectDetailPage() {
 
       <Stepper project={project} selected={selectedStage} onSelect={setSelectedStage} className="mb-4" />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <MiniStat label="Containers" value={`${containers.length}`} sub={`${fmtNumber(totalCbm, 1)} m³ · ${fmtNumber(totalKg / 1000, 1)} t`} icon={<ContainerIcon />} />
         <MiniStat label="Documents" value={`${compliance.satisfiedCount}/${compliance.requiredCount}`} sub={`${compliance.pct.toFixed(0)}% complete`} icon={<FileStack />} tone={compliance.pct === 100 ? 'success' : 'warning'} />
         <MiniStat label="Revenue" value={fmtCurrency(fin.revenue, 'IDR', { compact: true })} sub={`${charges.length} charge lines`} icon={<Receipt />} />
@@ -157,6 +166,13 @@ export function ProjectDetailPage() {
           sub={fmtPercent(fin.marginPct)}
           icon={<Receipt />}
           tone={fin.marginPct >= 20 ? 'success' : fin.marginPct >= 8 ? 'warning' : 'danger'}
+        />
+        <MiniStat
+          label="On-time"
+          value={fmtPercent(tracking.onTimePct, 0)}
+          sub={`${tracking.recorded}/${tracking.total} events recorded`}
+          icon={<Radio />}
+          tone={tracking.onTimePct >= 90 ? 'success' : tracking.onTimePct >= 75 ? 'warning' : 'danger'}
         />
         <MiniStat
           label="Open blockers"
@@ -182,6 +198,8 @@ export function ProjectDetailPage() {
           { value: 'containers', label: 'Containers', icon: <ContainerIcon />, count: containers.length },
           { value: 'documents', label: 'Documents', icon: <FileStack />, count: documents.length },
           { value: 'charges', label: 'Charges', icon: <Receipt />, count: charges.length },
+          { value: 'tracking', label: 'Tracking', icon: <Radio />, count: milestones.length },
+          { value: 'customs', label: 'Customs', icon: <Stamp />, count: filings.length },
           { value: 'timeline', label: 'Timeline', icon: <CalendarClock />, count: project.timeline.length },
         ]}
       />
@@ -419,6 +437,65 @@ export function ProjectDetailPage() {
               </CardBody>
             </Card>
 
+            {peb && (
+              <Card className={peb.channel === 'MERAH' ? 'border-danger/30' : peb.channel === 'KUNING' ? 'border-warning/30' : undefined}>
+                <CardHeader icon={<Stamp />} title="Customs" description="CEISA 4.0 filing and its response lane." />
+                <CardBody className="space-y-3">
+                  <div className="divide-y divide-border">
+                    <MetaRow label="PEB">
+                      <span className="font-mono text-[12px]">{peb.regNumber ?? 'not registered'}</span>
+                    </MetaRow>
+                    <MetaRow label="Response lane">
+                      <Badge
+                        tone={peb.channel === 'HIJAU' ? 'success' : peb.channel === 'KUNING' ? 'warning' : peb.channel === 'MERAH' ? 'danger' : 'neutral'}
+                        size="sm"
+                        dot
+                      >
+                        {peb.channel === 'PENDING' ? 'Awaiting response' : `Jalur ${titleCase(peb.channel)}`}
+                      </Badge>
+                    </MetaRow>
+                    <MetaRow label="Filed by">{peb.filedByName}</MetaRow>
+                  </div>
+                  {pebReadiness && pebReadiness.mandatoryCount > 0 && (
+                    <div>
+                      <div className="mb-1.5 flex items-baseline justify-between">
+                        <span className="text-[12px] text-fg-muted">Supporting uploads</span>
+                        <span className="tnum text-[12px] font-semibold text-fg">
+                          {pebReadiness.uploadedCount}/{pebReadiness.mandatoryCount}
+                        </span>
+                      </div>
+                      <Progress value={pebReadiness.pct} tone={pebReadiness.canSubmit ? 'success' : 'warning'} />
+                      {!pebReadiness.canSubmit && (
+                        <p className="mt-1.5 text-[11.5px] text-warning">Missing: {pebReadiness.missing.join(', ')}</p>
+                      )}
+                    </div>
+                  )}
+                </CardBody>
+              </Card>
+            )}
+
+            {sourceQuote && (
+              <Card>
+                <CardHeader icon={<FileSignature />} title="Won from" description="The quotation this job was converted from." />
+                <CardBody className="divide-y divide-border">
+                  <MetaRow label="Quotation">
+                    <Link to="/quotations" className="font-mono text-[12px] text-primary hover:underline">
+                      {sourceQuote.number} v{sourceQuote.version}
+                    </Link>
+                  </MetaRow>
+                  <MetaRow label="Quoted value">
+                    {sourceQuote.currency} {fmtNumber(quoteTotals(sourceQuote).revenue, 2)}
+                  </MetaRow>
+                  <MetaRow label="Quoted margin">{fmtPercent(quoteTotals(sourceQuote).marginPct)}</MetaRow>
+                  <MetaRow label="Actual margin">
+                    <span className={fin.marginPct < quoteTotals(sourceQuote).marginPct - 3 ? 'text-danger' : 'text-success'}>
+                      {fmtPercent(fin.marginPct)}
+                    </span>
+                  </MetaRow>
+                </CardBody>
+              </Card>
+            )}
+
             {project.tags.length > 0 && (
               <Card>
                 <CardHeader title="Tags" />
@@ -436,6 +513,8 @@ export function ProjectDetailPage() {
       {tab === 'containers' && <ContainersTable project={project} scoped />}
       {tab === 'documents' && <DocumentsTable project={project} scoped />}
       {tab === 'charges' && <ChargesTable project={project} scoped />}
+      {tab === 'tracking' && <MilestonesTable project={project} scoped />}
+      {tab === 'customs' && <CustomsTable project={project} scoped />}
 
       {tab === 'timeline' && (
         <Card>

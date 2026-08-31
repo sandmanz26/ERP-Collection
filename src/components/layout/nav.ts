@@ -1,6 +1,6 @@
 import {
-  Banknote, BookOpen, Boxes, Building2, Container, FileStack, Gauge, Globe2, LineChart,
-  Receipt, Ship, Tags, Wallet,
+  Banknote, BarChart3, BookOpen, Boxes, Building2, Container, FileSignature, FileStack, Gauge,
+  Globe2, Handshake, LineChart, Radio, Receipt, Settings, Ship, Stamp, Tags, Wallet, Warehouse,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -8,7 +8,7 @@ export interface NavItem {
   to: string
   label: string
   icon: LucideIcon
-  badgeKey?: 'exceptions' | 'projects' | 'overdue'
+  badgeKey?: 'exceptions' | 'projects' | 'overdue' | 'quotes' | 'customs'
   description?: string
 }
 
@@ -23,20 +23,25 @@ export const NAV: NavGroup[] = [
     items: [{ to: '/', label: 'Control Tower', icon: Gauge, description: 'Exceptions, cut-offs and pipeline health' }],
   },
   {
-    label: 'Operations',
-    items: [
-      { to: '/projects', label: 'Projects', icon: Ship, badgeKey: 'projects', description: 'Export jobs from inquiry to settlement' },
-      { to: '/containers', label: 'Containers', icon: Container, description: 'Every unit across all jobs' },
-      { to: '/documents', label: 'Documents', icon: FileStack, description: 'Document register and compliance' },
-      { to: '/charges', label: 'Charges', icon: Receipt, description: 'Buy and sell lines across all jobs' },
-    ],
-  },
-  {
     label: 'Commercial',
     items: [
+      { to: '/quotations', label: 'Quotations', icon: FileSignature, badgeKey: 'quotes', description: 'Pipeline, revisions, win and loss' },
       { to: '/customers', label: 'Customers', icon: Building2, description: 'Clients, shippers and consignees' },
       { to: '/offices', label: 'Country Offices', icon: Globe2, description: 'Every customer office worldwide' },
       { to: '/packages', label: 'Service Packages', icon: Tags, description: 'Rate cards and tariffs' },
+      { to: '/partners', label: 'Partners & Vendors', icon: Handshake, description: 'Carriers, agents, truckers, brokers' },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { to: '/projects', label: 'Projects', icon: Ship, badgeKey: 'projects', description: 'Export jobs from inquiry to settlement' },
+      { to: '/tracking', label: 'Tracking', icon: Radio, description: 'Milestones, punctuality, event log' },
+      { to: '/containers', label: 'Containers', icon: Container, description: 'Every unit across all jobs' },
+      { to: '/documents', label: 'Documents', icon: FileStack, description: 'Document register and compliance' },
+      { to: '/customs', label: 'Customs', icon: Stamp, badgeKey: 'customs', description: 'PEB filings, CEISA 4.0, LARTAS' },
+      { to: '/warehouse', label: 'Warehouse & CFS', icon: Warehouse, description: 'Receipts, dwell and storage' },
+      { to: '/charges', label: 'Charges', icon: Receipt, description: 'Buy and sell lines across all jobs' },
     ],
   },
   {
@@ -47,6 +52,13 @@ export const NAV: NavGroup[] = [
       { to: '/finance/invoices', label: 'Invoices & Bills', icon: Wallet, badgeKey: 'overdue', description: 'AR and AP' },
       { to: '/finance/reports', label: 'Financial Reports', icon: LineChart, description: 'P&L, balance sheet, trial balance' },
       { to: '/finance/profitability', label: 'Job Profitability', icon: Banknote, description: 'Margin per project' },
+    ],
+  },
+  {
+    label: 'Insight',
+    items: [
+      { to: '/analytics', label: 'Operations Analytics', icon: BarChart3, description: 'On-time, win rate, DSO, utilisation' },
+      { to: '/settings', label: 'Settings & Audit', icon: Settings, description: 'Rates, tax, numbering, audit trail' },
     ],
   },
 ]

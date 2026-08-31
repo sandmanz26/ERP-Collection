@@ -1,8 +1,8 @@
 import * as React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  AlertTriangle, ArrowRight, Banknote, CalendarClock, Container as ContainerIcon, Gauge, Ship,
-  TrendingUp, Wallet, Anchor, FileStack, ShieldAlert, Repeat,
+  AlertTriangle, ArrowRight, Banknote, CalendarClock, Container as ContainerIcon, FileSignature, Gauge,
+  Radio, Ship, TrendingUp, Trophy, Wallet, Warehouse, Anchor, FileStack, ShieldAlert, Repeat,
 } from 'lucide-react'
 import { useErp } from '@/store/useErp'
 import { countryFlag } from '@/data/reference'
@@ -14,6 +14,7 @@ import { Tabs } from '@/components/ui/tabs'
 import { EmptyState, Progress } from '@/components/ui/misc'
 import { StageChip } from '@/components/shared/StageChip'
 import { buildExceptions, jobFinancials, pipelineByStage, trialBalance, incomeStatement, arAging, type Exception } from '@/lib/analytics'
+import { buildPhase2Exceptions, milestoneHealth, pipelineSummary, warehouseSummary } from '@/lib/analytics2'
 import { itemCbm, itemGrossKg, utilisation } from '@/lib/shipping'
 import { fmtCurrency, fmtDate, fmtNumber, fmtPercent, pluralDays, relativeDays } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -22,12 +23,19 @@ export function DashboardPage() {
   const nav = useNavigate()
   const store = useErp()
   const { projects, containers, documents, charges, customers, invoices, accounts, journal } = store
+  const { quotations, partners, milestones, receipts, filings, settings } = store
   const [sev, setSev] = React.useState<'ALL' | 'CRITICAL' | 'HIGH' | 'MEDIUM'>('ALL')
 
-  const exceptions = React.useMemo(
-    () => buildExceptions({ projects, containers, documents, charges, customers, invoices }),
-    [projects, containers, documents, charges, customers, invoices],
-  )
+  const exceptions = React.useMemo(() => {
+    const core = buildExceptions({ projects, containers, documents, charges, customers, invoices })
+    const extra = buildPhase2Exceptions({ quotations, partners, milestones, receipts, filings, projects, settings })
+    const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2 } as const
+    return [...core, ...extra].sort((a, b) => order[a.severity] - order[b.severity])
+  }, [projects, containers, documents, charges, customers, invoices, quotations, partners, milestones, receipts, filings, settings])
+
+  const quotePipeline = pipelineSummary(quotations)
+  const tracking = milestoneHealth(milestones)
+  const warehouse = warehouseSummary(receipts)
   const filteredExceptions = sev === 'ALL' ? exceptions : exceptions.filter((e) => e.severity === sev)
 
   const activeJobs = projects.filter((p) => p.status === 'ACTIVE')
@@ -126,6 +134,41 @@ export function DashboardPage() {
           accent={overdueAr > 0 ? 'danger' : 'success'}
           sub={`${invoices.filter((i) => i.status === 'OVERDUE').length} invoices past due`}
           onClick={() => nav('/finance/invoices')}
+        />
+      </div>
+
+      <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard
+          label="Open quotations"
+          value={fmtCurrency(quotePipeline.openValue, 'IDR', { compact: true })}
+          icon={<FileSignature />}
+          accent="accent"
+          sub={`${quotePipeline.openCount} live · ${fmtCurrency(quotePipeline.weightedValue, 'IDR', { compact: true })} weighted`}
+          onClick={() => nav('/quotations')}
+        />
+        <KpiCard
+          label="Win rate"
+          value={fmtPercent(quotePipeline.winRatePct, 0)}
+          icon={<Trophy />}
+          accent={quotePipeline.winRatePct >= 35 ? 'success' : 'warning'}
+          sub={`${quotePipeline.won.length} won of ${quotePipeline.decided.length} decided`}
+          onClick={() => nav('/quotations')}
+        />
+        <KpiCard
+          label="Milestone punctuality"
+          value={fmtPercent(tracking.onTimePct, 0)}
+          icon={<Radio />}
+          accent={tracking.onTimePct >= 90 ? 'success' : tracking.onTimePct >= 75 ? 'warning' : 'danger'}
+          sub={`${tracking.recorded} events recorded · avg slip ${tracking.avgSlipDays.toFixed(1)} d`}
+          onClick={() => nav('/tracking')}
+        />
+        <KpiCard
+          label="Cargo in store"
+          value={`${fmtNumber(warehouse.cbmOnHand, 1)} m³`}
+          icon={<Warehouse />}
+          accent={warehouse.aged ? 'warning' : 'primary'}
+          sub={`${warehouse.openCount} receipts · ${fmtCurrency(warehouse.storageAccrued, 'IDR', { compact: true })} storage accrued`}
+          onClick={() => nav('/warehouse')}
         />
       </div>
 

@@ -356,6 +356,8 @@ export interface ProjectCharge {
   vatApplicable: boolean
   whtApplicable: boolean
   vendor?: string
+  /** set once the vendor is a managed partner rather than free text */
+  partnerId?: ID
   freightTerm: FreightTerm
   billable: boolean
   status: ChargeStatus
@@ -430,4 +432,263 @@ export interface Invoice {
   paid: number
   status: InvoiceStatus
   terms: PaymentTerm
+}
+
+/* ==================================================================
+   PHASE 2 — commercial front end, partner network, tracking,
+   warehouse, customs and platform settings
+   ================================================================== */
+
+/* ---------- quotations & sales pipeline ---------- */
+export type QuoteStatus = 'DRAFT' | 'SENT' | 'UNDER_NEGOTIATION' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'WITHDRAWN'
+export type QuoteSource = 'INBOUND_RFQ' | 'OUTBOUND' | 'TENDER' | 'RENEWAL' | 'AGENT_NOMINATION'
+export type LossReason = 'PRICE' | 'TRANSIT_TIME' | 'SPACE_UNAVAILABLE' | 'SERVICE_SCOPE' | 'CREDIT_TERMS' | 'INCUMBENT_RETAINED' | 'NO_DECISION' | 'CARGO_CANCELLED' | 'OTHER'
+
+export interface QuoteLine {
+  id: ID
+  chargeCode: string
+  description: string
+  basis: RateBasis
+  quantity: number
+  buyRate: number
+  sellRate: number
+  currency: Currency
+  vatApplicable: boolean
+  optional: boolean
+}
+
+export interface QuoteEvent {
+  id: ID
+  at: ISODate
+  type: 'CREATED' | 'SENT' | 'REVISED' | 'NEGOTIATION' | 'DECIDED' | 'NOTE' | 'CONVERTED'
+  note: string
+  actor: string
+}
+
+export interface Quotation {
+  id: ID
+  number: string
+  version: number
+  revisionOfId?: ID
+  supersededById?: ID
+
+  customerId: ID
+  customerOfficeId: ID
+  contactName?: string
+  source: QuoteSource
+  status: QuoteStatus
+
+  mode: TransportMode
+  scope: ServiceScope
+  incoterm: Incoterm
+  paymentTerm: PaymentTerm
+  polCode: string
+  polName: string
+  podCode: string
+  podName: string
+  destCountry: string
+
+  commodity: string
+  hsCodes: string[]
+  equipment: { type: ContainerType; quantity: number }[]
+  cargoCbm?: number
+  cargoWeightKg?: number
+  cargoValue?: number
+
+  packageId?: ID
+  currency: Currency
+  fxRate: number
+  transitDays: number
+  freeTimeDays: number
+  validFrom: ISODate
+  validTo: ISODate
+
+  lines: QuoteLine[]
+  terms?: string
+  remarks?: string
+
+  probability: number
+  expectedCloseAt?: ISODate
+  ownerName: string
+
+  sentAt?: ISODate
+  decidedAt?: ISODate
+  lossReason?: LossReason
+  competitorName?: string
+  lostToAmount?: number
+
+  convertedProjectId?: ID
+  createdAt: ISODate
+  updatedAt: ISODate
+  events: QuoteEvent[]
+}
+
+/* ---------- partners & vendors ---------- */
+export type PartnerType =
+  | 'CARRIER' | 'OVERSEAS_AGENT' | 'TRUCKING' | 'DEPOT' | 'CUSTOMS_BROKER'
+  | 'WAREHOUSE' | 'SURVEYOR' | 'INSURANCE' | 'FUMIGATION' | 'TERMINAL'
+export type PartnerStatus = 'ACTIVE' | 'PROSPECT' | 'SUSPENDED'
+
+export interface PartnerScore {
+  /** share of milestones this partner was responsible for that landed on time */
+  onTimePct: number
+  /** share of documents this partner issued that were accepted first time */
+  docAccuracyPct: number
+  /** average hours to first response on an operational request */
+  responseHours: number
+  openDisputes: number
+  jobsHandled: number
+}
+
+export interface Partner {
+  id: ID
+  code: string
+  name: string
+  types: PartnerType[]
+  status: PartnerStatus
+  countryCode: string
+  country: string
+  city: string
+  addressLine?: string
+  scac?: string
+  taxId?: string
+  currency: Currency
+  paymentTermDays: number
+  contractNo?: string
+  contractValidTo?: ISODate
+  insuranceValidTo?: ISODate
+  services: string[]
+  lanes: string[]
+  contacts: Contact[]
+  score: PartnerScore
+  apOutstanding: number
+  notes?: string
+  onboardedAt: ISODate
+}
+
+/* ---------- milestones (UN/EDIFACT IFTSTA shaped) ---------- */
+export type MilestoneCode =
+  | 'BOOKING_CONFIRMED' | 'EMPTY_RELEASED' | 'CARGO_RECEIVED' | 'STUFFED' | 'VGM_SUBMITTED'
+  | 'CUSTOMS_CLEARED_ORIGIN' | 'GATE_IN' | 'LOADED_ON_VESSEL' | 'VESSEL_DEPARTED'
+  | 'TRANSHIPMENT_DISCHARGED' | 'TRANSHIPMENT_LOADED' | 'VESSEL_ARRIVED' | 'DISCHARGED'
+  | 'CUSTOMS_RELEASED_DEST' | 'GATE_OUT' | 'DELIVERED' | 'EMPTY_RETURNED'
+
+export type MilestoneSource = 'MANUAL' | 'CARRIER_EDI' | 'PORTAL' | 'AGENT'
+
+export interface Milestone {
+  id: ID
+  projectId: ID
+  containerId?: ID
+  code: MilestoneCode
+  plannedAt?: ISODate
+  actualAt?: ISODate
+  locationCode?: string
+  locationName?: string
+  source: MilestoneSource
+  vessel?: string
+  voyage?: string
+  partnerId?: ID
+  remarks?: string
+  recordedBy: string
+  recordedAt: ISODate
+}
+
+/* ---------- warehouse & CFS ---------- */
+export type ReceiptStatus = 'IN_STOCK' | 'PARTIALLY_RELEASED' | 'RELEASED' | 'ON_HOLD'
+
+export interface WarehouseReceipt {
+  id: ID
+  number: string
+  warehouseCode: string
+  warehouseName: string
+  customerId: ID
+  projectId?: ID
+  status: ReceiptStatus
+  receivedAt: ISODate
+  releasedAt?: ISODate
+  location: string
+  description: string
+  hsCode?: string
+  marks?: string
+  poNumber?: string
+  packages: number
+  packagesReleased: number
+  cbm: number
+  weightKg: number
+  freeDays: number
+  storageRatePerCbmDay: number
+  currency: Currency
+  handlingIn: number
+  handlingOut: number
+  remarks?: string
+  receivedBy: string
+}
+
+/* ---------- customs filings ---------- */
+export type FilingType = 'PEB' | 'NPE' | 'COO' | 'PIB' | 'PPFTZ'
+export type FilingStatus = 'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'AMENDED'
+/** Bea Cukai response lane */
+export type CustomsChannel = 'PENDING' | 'HIJAU' | 'KUNING' | 'MERAH'
+
+export interface FilingDocument {
+  type: DocType
+  label: string
+  mandatory: boolean
+  uploaded: boolean
+}
+
+export interface CustomsFiling {
+  id: ID
+  projectId: ID
+  type: FilingType
+  regNumber?: string
+  regDate?: ISODate
+  ceisaRef?: string
+  status: FilingStatus
+  channel: CustomsChannel
+  submittedAt?: ISODate
+  respondedAt?: ISODate
+  /** in-house PPJK or an appointed broker partner */
+  filedByPartnerId?: ID
+  filedByName: string
+  exporterOfRecord: string
+  declaredValue: number
+  declaredCurrency: Currency
+  officeCode: string
+  remarks?: string
+  supportingDocs: FilingDocument[]
+}
+
+/* ---------- platform settings & audit ---------- */
+export interface NumberingSeries {
+  key: string
+  label: string
+  prefix: string
+  includeYear: boolean
+  padding: number
+  nextNumber: number
+}
+
+export interface KpiTargets {
+  onTimePct: number
+  winRatePct: number
+  grossMarginPct: number
+  dsoDays: number
+  utilisationPct: number
+  docAccuracyPct: number
+}
+
+export interface AppSettings {
+  companyName: string
+  companyTaxId: string
+  baseCurrency: Currency
+  fxRates: Record<string, number>
+  vatRate: number
+  whtRate: number
+  chargeApprovalThreshold: number
+  billApprovalThreshold: number
+  numbering: NumberingSeries[]
+  kpiTargets: KpiTargets
+  /** HS prefixes that require an export permit (LARTAS) */
+  restrictedHsPrefixes: string[]
 }

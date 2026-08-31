@@ -1,13 +1,19 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type {
-  Account, Container, Customer, Invoice, JournalEntry, Project, ProjectCharge,
-  ServicePackage, ShipmentDocument, StageKey,
+  Account, AppSettings, Container, Customer, CustomsFiling, Invoice, JournalEntry, Milestone, Partner,
+  Project, ProjectCharge, Quotation, ServicePackage, ShipmentDocument, StageKey, WarehouseReceipt,
 } from '@/data/types'
 import { accounts as seedAccounts, charges as seedCharges, containers as seedContainers, customers as seedCustomers, documents as seedDocuments, invoices as seedInvoices, journal as seedJournal, packages as seedPackages, projects as seedProjects } from '@/data/seed'
+import {
+  customsFilings as seedFilings, defaultSettings, milestones as seedMilestones, partners as seedPartners,
+  quotations as seedQuotations, warehouseReceipts as seedReceipts,
+} from '@/data/seed2'
 import { uid } from '@/lib/utils'
 
-export type EntityKey = 'customers' | 'packages' | 'projects' | 'containers' | 'documents' | 'charges' | 'accounts' | 'journal' | 'invoices'
+export type EntityKey =
+  | 'customers' | 'packages' | 'projects' | 'containers' | 'documents' | 'charges' | 'accounts'
+  | 'journal' | 'invoices' | 'quotations' | 'partners' | 'milestones' | 'receipts' | 'filings'
 
 export interface ActivityLog {
   id: string
@@ -28,6 +34,12 @@ interface ErpState {
   accounts: Account[]
   journal: JournalEntry[]
   invoices: Invoice[]
+  quotations: Quotation[]
+  partners: Partner[]
+  milestones: Milestone[]
+  receipts: WarehouseReceipt[]
+  filings: CustomsFiling[]
+  settings: AppSettings
   activity: ActivityLog[]
 
   log: (action: string, entity: string, detail: string) => void
@@ -69,6 +81,33 @@ interface ErpState {
   upsertInvoice: (i: Invoice) => void
   removeInvoices: (ids: string[]) => void
 
+  upsertQuotation: (q: Quotation) => void
+  removeQuotations: (ids: string[]) => void
+  importQuotations: (rows: Quotation[]) => void
+  reviseQuotation: (id: string) => Quotation | undefined
+  decideQuotation: (id: string, outcome: 'ACCEPTED' | 'REJECTED', payload?: { lossReason?: Quotation['lossReason']; competitorName?: string; note?: string }) => void
+  convertQuotation: (id: string, project: Project, charges: ProjectCharge[]) => void
+
+  upsertPartner: (p: Partner) => void
+  removePartners: (ids: string[]) => void
+  importPartners: (rows: Partner[]) => void
+
+  upsertMilestone: (m: Milestone) => void
+  removeMilestones: (ids: string[]) => void
+  importMilestones: (rows: Milestone[]) => void
+  syncPlannedMilestones: (projectId: string, planned: { code: Milestone['code']; plannedAt: string }[]) => void
+
+  upsertReceipt: (r: WarehouseReceipt) => void
+  removeReceipts: (ids: string[]) => void
+  importReceipts: (rows: WarehouseReceipt[]) => void
+
+  upsertFiling: (f: CustomsFiling) => void
+  removeFilings: (ids: string[]) => void
+  importFilings: (rows: CustomsFiling[]) => void
+
+  updateSettings: (patch: Partial<AppSettings>) => void
+  clearActivity: () => void
+
   resetDemoData: () => void
 }
 
@@ -82,6 +121,12 @@ const seedState = () => ({
   accounts: seedAccounts,
   journal: seedJournal,
   invoices: seedInvoices,
+  quotations: seedQuotations,
+  partners: seedPartners,
+  milestones: seedMilestones,
+  receipts: seedReceipts,
+  filings: seedFilings,
+  settings: structuredClone(defaultSettings),
   activity: [] as ActivityLog[],
 })
 
@@ -151,8 +196,10 @@ export const useErp = create<ErpState>()(
           containers: s.containers.filter((c) => !ids.includes(c.projectId)),
           documents: s.documents.filter((d) => !ids.includes(d.projectId)),
           charges: s.charges.filter((c) => !ids.includes(c.projectId)),
+          milestones: s.milestones.filter((m) => !ids.includes(m.projectId)),
+          filings: s.filings.filter((f) => !ids.includes(f.projectId)),
         }))
-        get().log('delete', 'Project', `${ids.length} jobs and their containers, documents and charges`)
+        get().log('delete', 'Project', `${ids.length} jobs with their containers, documents, charges, milestones and customs filings`)
       },
       importProjects: (rows) => {
         set((s) => {
@@ -296,10 +343,201 @@ export const useErp = create<ErpState>()(
         get().log('delete', 'Invoice', `${ids.length} invoices`)
       },
 
+      upsertQuotation: (q) => {
+        set((s) => ({ quotations: upsert(s.quotations, { ...q, updatedAt: new Date().toISOString() }) }))
+        get().log('save', 'Quotation', `${q.number} v${q.version}`)
+      },
+      removeQuotations: (ids) => {
+        set((s) => ({ quotations: s.quotations.filter((q) => !ids.includes(q.id)) }))
+        get().log('delete', 'Quotation', `${ids.length} quotations`)
+      },
+      importQuotations: (rows) => {
+        set((s) => {
+          let list = s.quotations
+          rows.forEach((r) => (list = upsert(list, r)))
+          return { quotations: list }
+        })
+        get().log('import', 'Quotation', `${rows.length} records`)
+      },
+      reviseQuotation: (id) => {
+        const source = get().quotations.find((q) => q.id === id)
+        if (!source) return undefined
+        const now = new Date().toISOString()
+        const revision: Quotation = {
+          ...structuredClone(source),
+          id: uid('qt'),
+          version: source.version + 1,
+          revisionOfId: source.id,
+          supersededById: undefined,
+          status: 'DRAFT',
+          sentAt: undefined,
+          decidedAt: undefined,
+          lossReason: undefined,
+          createdAt: now,
+          updatedAt: now,
+          events: [
+            { id: uid('qe'), at: now, type: 'REVISED', note: `Revision ${source.version + 1} opened from ${source.number} v${source.version}.`, actor: 'Rina Wulandari' },
+            ...source.events,
+          ],
+        }
+        set((s) => ({
+          quotations: [revision, ...s.quotations.map((q) => (q.id === id ? { ...q, supersededById: revision.id, status: 'WITHDRAWN' as const } : q))],
+        }))
+        get().log('revise', 'Quotation', `${source.number} → v${revision.version}`)
+        return revision
+      },
+      decideQuotation: (id, outcome, payload) => {
+        const now = new Date().toISOString()
+        set((s) => ({
+          quotations: s.quotations.map((q) =>
+            q.id !== id
+              ? q
+              : {
+                  ...q,
+                  status: outcome,
+                  decidedAt: now,
+                  probability: outcome === 'ACCEPTED' ? 100 : 0,
+                  lossReason: outcome === 'REJECTED' ? payload?.lossReason : undefined,
+                  competitorName: outcome === 'REJECTED' ? payload?.competitorName : undefined,
+                  updatedAt: now,
+                  events: [
+                    {
+                      id: uid('qe'), at: now, type: 'DECIDED' as const,
+                      note: payload?.note ?? (outcome === 'ACCEPTED' ? 'Accepted by the client.' : 'Lost.'),
+                      actor: 'Rina Wulandari',
+                    },
+                    ...q.events,
+                  ],
+                },
+          ),
+        }))
+        get().log('decide', 'Quotation', `${outcome.toLowerCase()}`)
+      },
+      convertQuotation: (id, project, charges) => {
+        const now = new Date().toISOString()
+        set((s) => ({
+          projects: [project, ...s.projects],
+          charges: [...charges, ...s.charges],
+          quotations: s.quotations.map((q) =>
+            q.id !== id
+              ? q
+              : {
+                  ...q,
+                  status: 'ACCEPTED' as const,
+                  decidedAt: q.decidedAt ?? now,
+                  probability: 100,
+                  convertedProjectId: project.id,
+                  updatedAt: now,
+                  events: [
+                    { id: uid('qe'), at: now, type: 'CONVERTED' as const, note: `Converted to job ${project.code} with ${charges.length} charge lines.`, actor: 'Rina Wulandari' },
+                    ...q.events,
+                  ],
+                },
+          ),
+        }))
+        get().log('convert', 'Quotation', `→ ${project.code}`)
+      },
+
+      upsertPartner: (p) => {
+        set((s) => ({ partners: upsert(s.partners, p) }))
+        get().log('save', 'Partner', `${p.code} — ${p.name}`)
+      },
+      removePartners: (ids) => {
+        set((s) => ({ partners: s.partners.filter((p) => !ids.includes(p.id)) }))
+        get().log('delete', 'Partner', `${ids.length} partners`)
+      },
+      importPartners: (rows) => {
+        set((s) => {
+          let list = s.partners
+          rows.forEach((r) => (list = upsert(list, r)))
+          return { partners: list }
+        })
+        get().log('import', 'Partner', `${rows.length} records`)
+      },
+
+      upsertMilestone: (m) => {
+        set((s) => ({ milestones: upsert(s.milestones, m) }))
+        get().log('save', 'Milestone', m.code)
+      },
+      removeMilestones: (ids) => {
+        set((s) => ({ milestones: s.milestones.filter((m) => !ids.includes(m.id)) }))
+        get().log('delete', 'Milestone', `${ids.length} events`)
+      },
+      importMilestones: (rows) => {
+        set((s) => {
+          let list = s.milestones
+          rows.forEach((r) => (list = upsert(list, r)))
+          return { milestones: list }
+        })
+        get().log('import', 'Milestone', `${rows.length} records`)
+      },
+      syncPlannedMilestones: (projectId, planned) => {
+        set((s) => {
+          const existing = s.milestones.filter((m) => m.projectId === projectId)
+          const kept = existing.filter((m) => m.actualAt)
+          const now = new Date().toISOString()
+          const rebuilt = planned.map((p) => {
+            const prior = existing.find((m) => m.code === p.code)
+            if (prior?.actualAt) return { ...prior, plannedAt: p.plannedAt }
+            return (
+              prior
+                ? { ...prior, plannedAt: p.plannedAt }
+                : {
+                    id: uid('ms'), projectId, code: p.code, plannedAt: p.plannedAt,
+                    source: 'MANUAL' as const, recordedBy: 'Rina Wulandari', recordedAt: now,
+                  }
+            )
+          })
+          void kept
+          return { milestones: [...s.milestones.filter((m) => m.projectId !== projectId), ...rebuilt] }
+        })
+        get().log('sync', 'Milestone', 'planned dates regenerated from the job schedule')
+      },
+
+      upsertReceipt: (r) => {
+        set((s) => ({ receipts: upsert(s.receipts, r) }))
+        get().log('save', 'Warehouse receipt', r.number)
+      },
+      removeReceipts: (ids) => {
+        set((s) => ({ receipts: s.receipts.filter((r) => !ids.includes(r.id)) }))
+        get().log('delete', 'Warehouse receipt', `${ids.length} receipts`)
+      },
+      importReceipts: (rows) => {
+        set((s) => {
+          let list = s.receipts
+          rows.forEach((r) => (list = upsert(list, r)))
+          return { receipts: list }
+        })
+        get().log('import', 'Warehouse receipt', `${rows.length} records`)
+      },
+
+      upsertFiling: (f) => {
+        set((s) => ({ filings: upsert(s.filings, f) }))
+        get().log('save', 'Customs filing', `${f.type} ${f.regNumber ?? ''}`)
+      },
+      removeFilings: (ids) => {
+        set((s) => ({ filings: s.filings.filter((f) => !ids.includes(f.id)) }))
+        get().log('delete', 'Customs filing', `${ids.length} filings`)
+      },
+      importFilings: (rows) => {
+        set((s) => {
+          let list = s.filings
+          rows.forEach((r) => (list = upsert(list, r)))
+          return { filings: list }
+        })
+        get().log('import', 'Customs filing', `${rows.length} records`)
+      },
+
+      updateSettings: (patch) => {
+        set((s) => ({ settings: { ...s.settings, ...patch } }))
+        get().log('save', 'Settings', Object.keys(patch).join(', '))
+      },
+      clearActivity: () => set({ activity: [] }),
+
       resetDemoData: () => {
         set({ ...seedState() })
       },
     }),
-    { name: 'nusantara-freight-erp', version: 3 },
+    { name: 'nusantara-freight-erp', version: 4 },
   ),
 )

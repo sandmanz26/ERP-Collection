@@ -398,7 +398,7 @@ function ChargeForm({
   project: Project
   initial?: ProjectCharge | null
 }) {
-  const { upsertCharge, containers } = useErp()
+  const { upsertCharge, containers, partners } = useErp()
   const toast = useToast()
   const [draft, setDraft] = React.useState<ProjectCharge>(() => blank(project))
 
@@ -507,8 +507,26 @@ function ChargeForm({
         <Field label="FX rate to IDR">
           <Input type="number" value={draft.fxRate} onChange={(e) => set('fxRate', Number(e.target.value))} className="tnum" />
         </Field>
-        <Field label="Vendor">
-          <Input value={draft.vendor ?? ''} onChange={(e) => set('vendor', e.target.value)} />
+        <Field label="Vendor" help="Nominating a managed partner links the cost to their scorecard and AP position.">
+          <Select
+            clearable
+            searchable
+            value={draft.partnerId ?? null}
+            onClear={() => setDraft((d) => ({ ...d, partnerId: undefined, vendor: undefined }))}
+            onChange={(v) => {
+              const p = partners.find((x) => x.id === v)
+              setDraft((d) => ({ ...d, partnerId: v, vendor: p?.name }))
+            }}
+            options={partners
+              .filter((p) => p.status !== 'SUSPENDED')
+              .map((p) => ({
+                value: p.id,
+                label: p.name,
+                description: `${p.code} · ${p.types.map((t) => titleCase(t)).join(', ')}`,
+              }))}
+            placeholder={draft.vendor ?? 'Select a partner'}
+            emptyLabel="No partner matches"
+          />
         </Field>
         <Field label="Status">
           <Select
