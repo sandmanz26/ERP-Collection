@@ -230,7 +230,7 @@ export function CustomersPage() {
         importSample={{
           code: 'CUS-0009', legalName: 'PT Contoh Ekspor Indonesia', tradeName: 'Contoh Ekspor', taxId: '01.111.222.3-014.000',
           industry: 'Furniture & Wood Products', status: 'ACTIVE', riskRating: 'LOW', creditLimit: '1000000000',
-          creditTermDays: '30', defaultIncoterm: 'FOB', salesOwner: 'Rina Wulandari', officeCountry: 'ID', officeCity: 'Semarang',
+          creditTermDays: '30', defaultIncoterm: 'FOB', salesOwner: 'Elena Marchetti', officeCountry: 'ID', officeCity: 'Semarang',
         }}
         toImportRow={(r) => ({
           code: r.code, legalName: r.legalName, tradeName: r.tradeName ?? '', taxId: r.taxId ?? '',
@@ -260,7 +260,7 @@ export function CustomersPage() {
               outstandingAr: existing?.outstandingAr ?? 0,
               defaultIncoterm: (r.defaultIncoterm || 'FOB') as Customer['defaultIncoterm'],
               defaultPaymentTerm: existing?.defaultPaymentTerm ?? 'NET_30',
-              salesOwner: r.salesOwner || 'Rina Wulandari',
+              salesOwner: r.salesOwner || 'Elena Marchetti',
               onboardedAt: existing?.onboardedAt ?? new Date().toISOString().slice(0, 10),
               offices:
                 existing?.offices ??

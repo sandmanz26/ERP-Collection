@@ -1,6 +1,7 @@
 import {
   Banknote, BarChart3, BookOpen, Boxes, Building2, Container, FileSignature, FileStack, Gauge,
-  Globe2, Handshake, LineChart, Radio, Receipt, Settings, Ship, Stamp, Tags, Wallet, Warehouse,
+  Globe2, Handshake, LineChart, Radio, Receipt, Settings, Ship, ShieldAlert, SprayCan, Stamp, Tags,
+  Wallet, Warehouse,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -8,7 +9,7 @@ export interface NavItem {
   to: string
   label: string
   icon: LucideIcon
-  badgeKey?: 'exceptions' | 'projects' | 'overdue' | 'quotes' | 'customs'
+  badgeKey?: 'exceptions' | 'projects' | 'overdue' | 'quotes' | 'customs' | 'incidents'
   description?: string
 }
 
@@ -41,6 +42,8 @@ export const NAV: NavGroup[] = [
       { to: '/documents', label: 'Documents', icon: FileStack, description: 'Document register and compliance' },
       { to: '/customs', label: 'Customs', icon: Stamp, badgeKey: 'customs', description: 'PEB filings, CEISA 4.0, LARTAS' },
       { to: '/warehouse', label: 'Warehouse & CFS', icon: Warehouse, description: 'Receipts, dwell and storage' },
+      { to: '/services', label: 'Additional Services', icon: SprayCan, description: 'Fumigation, crating, survey, insurance' },
+      { to: '/incidents', label: 'Incidents & Claims', icon: ShieldAlert, badgeKey: 'incidents', description: 'Rollovers, holds, damage, demurrage' },
       { to: '/charges', label: 'Charges', icon: Receipt, description: 'Buy and sell lines across all jobs' },
     ],
   },

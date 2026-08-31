@@ -42,11 +42,15 @@ export interface ButtonProps
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, loading, children, disabled, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, loading, children, disabled, type, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button'
     return (
       <Comp
         ref={ref}
+        /* A bare <button> inside a <form> submits it. Default to "button" so an
+           action button placed in a form never fires the form by accident —
+           submit buttons say so explicitly. */
+        {...(asChild ? {} : { type: type ?? 'button' })}
         className={cn(buttonVariants({ variant, size }), className)}
         disabled={disabled || loading}
         {...props}

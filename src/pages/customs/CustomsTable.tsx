@@ -226,7 +226,7 @@ export function CustomsTable({ project, scoped }: { project?: Project; scoped?: 
         importSample={{
           projectCode: project?.code ?? 'PRJ-2026-0041', type: 'PEB', regNumber: '000600-2026-TPP',
           regDate: '2026-09-02', ceisaRef: 'CEISA/2026/TPP/0006001', status: 'SUBMITTED', channel: 'PENDING',
-          filedByName: 'In-house PPJK — Nusantara Freight', exporterOfRecord: 'PT Jati Makmur Furniture',
+          filedByName: 'In-house customs desk — Meridian Freight', exporterOfRecord: 'PT Jati Makmur Furniture',
           declaredValue: '284500', declaredCurrency: 'USD', officeCode: '040300', remarks: '',
         }}
         toImportRow={(r) => ({
@@ -251,7 +251,7 @@ export function CustomsTable({ project, scoped }: { project?: Project; scoped?: 
                 ceisaRef: r.ceisaRef || undefined,
                 status: (['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'AMENDED'].includes(r.status) ? r.status : 'DRAFT') as CustomsFiling['status'],
                 channel: (['PENDING', 'HIJAU', 'KUNING', 'MERAH'].includes(r.channel) ? r.channel : 'PENDING') as CustomsFiling['channel'],
-                filedByName: r.filedByName || 'In-house PPJK — Nusantara Freight',
+                filedByName: r.filedByName || 'In-house customs desk — Meridian Freight',
                 exporterOfRecord: r.exporterOfRecord,
                 declaredValue: Number(r.declaredValue) || 0,
                 declaredCurrency: (r.declaredCurrency || 'USD') as CustomsFiling['declaredCurrency'],
@@ -463,7 +463,7 @@ function FilingForm({
           <Select
             clearable
             value={draft.filedByPartnerId ?? null}
-            onClear={() => setDraft((d) => ({ ...d, filedByPartnerId: undefined, filedByName: 'In-house PPJK — Nusantara Freight' }))}
+            onClear={() => setDraft((d) => ({ ...d, filedByPartnerId: undefined, filedByName: 'In-house customs desk — Meridian Freight' }))}
             onChange={(v) => {
               const b = brokers.find((x) => x.id === v)
               setDraft((d) => ({ ...d, filedByPartnerId: v, filedByName: b?.name ?? d.filedByName }))
@@ -544,7 +544,7 @@ function blank(project: Project, customers: { id: string; legalName: string }[])
   const exporter = customers.find((c) => c.id === project.shipperId)?.legalName ?? ''
   return {
     id: uid('cf'), projectId: project.id, type: 'PEB', status: 'DRAFT', channel: 'PENDING',
-    filedByName: 'In-house PPJK — Nusantara Freight', exporterOfRecord: exporter,
+    filedByName: 'In-house customs desk — Meridian Freight', exporterOfRecord: exporter,
     declaredValue: project.cargoValue, declaredCurrency: project.cargoCurrency,
     officeCode: CUSTOMS_OFFICES[0].code,
     supportingDocs: PEB_SUPPORTING_DOCS.map((d) => ({ ...d, uploaded: false })),

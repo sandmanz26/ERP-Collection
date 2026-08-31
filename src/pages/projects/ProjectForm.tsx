@@ -696,9 +696,9 @@ function blank(existing: Project[]): Project {
     commodity: '', hsCodes: [], cargoValue: 0, cargoCurrency: 'USD', insured: false, dangerousGoods: false,
     polCode: 'IDTPP', polName: 'Tanjung Priok', podCode: 'SGSIN', podName: 'Singapore', destCountry: 'SG',
     blType: 'ORIGINAL_3_3', blStatus: 'NOT_ISSUED',
-    currency: 'USD', fxRate: 16250, quotedRevenue: 0, ownerName: 'Rina Wulandari',
+    currency: 'USD', fxRate: 16250, quotedRevenue: 0, ownerName: 'Elena Marchetti',
     createdAt: now, updatedAt: now, tags: [], timeline: [
-      { id: uid('tl'), at: now, type: 'STATUS', title: 'Job created', actor: 'Rina Wulandari' },
+      { id: uid('tl'), at: now, type: 'STATUS', title: 'Job created', actor: 'Elena Marchetti' },
     ],
   }
 }

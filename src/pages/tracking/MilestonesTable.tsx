@@ -255,7 +255,7 @@ export function MilestonesTable({ project, scoped }: { project?: Project; scoped
             size="sm"
             onClick={() => {
               const now = new Date().toISOString()
-              rows.filter((r) => !r.actualAt).forEach((r) => upsertMilestone({ ...r, actualAt: now, source: 'MANUAL', recordedAt: now, recordedBy: 'Rina Wulandari' }))
+              rows.filter((r) => !r.actualAt).forEach((r) => upsertMilestone({ ...r, actualAt: now, source: 'MANUAL', recordedAt: now, recordedBy: 'Elena Marchetti' }))
               toast.push({ tone: 'success', title: `${rows.filter((r) => !r.actualAt).length} events marked as happened today`, description: 'Recorded as manual — weaker evidence than a carrier feed.' })
               clear()
             }}
@@ -504,7 +504,7 @@ function blank(project: Project): Milestone {
   return {
     id: uid('ms'), projectId: project.id, code: 'BOOKING_CONFIRMED', source: 'MANUAL',
     locationCode: project.polCode, locationName: project.polName,
-    recordedBy: 'Rina Wulandari', recordedAt: new Date().toISOString(),
+    recordedBy: 'Elena Marchetti', recordedAt: new Date().toISOString(),
   }
 }
 

@@ -27,7 +27,7 @@ export const customers: Customer[] = [
     id: 'cus_1', code: 'CUS-0001', legalName: 'PT Jati Makmur Furniture', tradeName: 'Jati Makmur',
     taxId: '01.234.567.8-013.000', industry: 'Furniture & Wood Products', roles: ['CLIENT', 'SHIPPER'],
     status: 'ACTIVE', riskRating: 'LOW', creditLimit: 3_500_000_000, creditCurrency: 'IDR', creditTermDays: 30,
-    outstandingAr: 842_300_000, defaultIncoterm: 'FOB', defaultPaymentTerm: 'NET_30', salesOwner: 'Rina Wulandari',
+    outstandingAr: 842_300_000, defaultIncoterm: 'FOB', defaultPaymentTerm: 'NET_30', salesOwner: 'Elena Marchetti',
     onboardedAt: '2021-03-14', website: 'jatimakmur.co.id',
     notes: 'Largest export account. Weekly sailings to Europe and the US. Always requires ISPM-15 fumigation.',
     offices: [
@@ -37,14 +37,14 @@ export const customers: Customer[] = [
     ],
   },
   {
-    id: 'cus_2', code: 'CUS-0002', legalName: 'PT Nusantara Rubber Industries', tradeName: 'Nusantara Rubber',
+    id: 'cus_2', code: 'CUS-0002', legalName: 'PT Anugerah Rubber Industries', tradeName: 'Anugerah Rubber',
     taxId: '02.345.678.9-021.000', industry: 'Rubber & Commodities', roles: ['CLIENT', 'SHIPPER'],
     status: 'ACTIVE', riskRating: 'LOW', creditLimit: 5_000_000_000, creditCurrency: 'IDR', creditTermDays: 45,
-    outstandingAr: 1_920_400_000, defaultIncoterm: 'CIF', defaultPaymentTerm: 'LC_AT_SIGHT', salesOwner: 'Ahmad Fauzi',
-    onboardedAt: '2019-08-02', website: 'nusantararubber.com',
+    outstandingAr: 1_920_400_000, defaultIncoterm: 'CIF', defaultPaymentTerm: 'LC_AT_SIGHT', salesOwner: 'Marcus Bell',
+    onboardedAt: '2019-08-02', website: 'anugerahrubber.com',
     notes: 'Ships TSNR 20 to tyre plants in Japan and Korea. All shipments under L/C at sight — document accuracy is critical.',
     offices: [
-      { id: 'off_4', customerId: 'cus_2', name: 'Medan Head Office', countryCode: 'ID', country: 'Indonesia', city: 'Medan', portCode: 'IDBLW', portName: 'Belawan', addressLine: 'Jl. Putri Hijau No. 10, Medan 20111', timezone: 'Asia/Jakarta', customsId: 'NIB 8120009988776', roles: ['SHIPPER'], isHeadquarter: true, isBillingOffice: true, active: true, contacts: [{ id: 'c4', name: 'Hendra Wijaya', title: 'Director of Exports', email: 'hendra@nusantararubber.com', phone: '+62 61 4567 890', isPrimary: true }] },
+      { id: 'off_4', customerId: 'cus_2', name: 'Medan Head Office', countryCode: 'ID', country: 'Indonesia', city: 'Medan', portCode: 'IDBLW', portName: 'Belawan', addressLine: 'Jl. Putri Hijau No. 10, Medan 20111', timezone: 'Asia/Jakarta', customsId: 'NIB 8120009988776', roles: ['SHIPPER'], isHeadquarter: true, isBillingOffice: true, active: true, contacts: [{ id: 'c4', name: 'Hendra Wijaya', title: 'Director of Exports', email: 'hendra@anugerahrubber.com', phone: '+62 61 4567 890', isPrimary: true }] },
       { id: 'off_5', customerId: 'cus_2', name: 'Yokohama Liaison', countryCode: 'JP', country: 'Japan', city: 'Yokohama', portCode: 'JPYOK', portName: 'Yokohama', addressLine: '2-3-1 Minatomirai, Nishi-ku, Yokohama 220-0012', timezone: 'Asia/Tokyo', customsId: 'JP-CUS-778812', roles: ['CONSIGNEE'], isHeadquarter: false, isBillingOffice: false, active: true, contacts: [{ id: 'c5', name: 'Kenji Tanaka', title: 'Procurement', email: 'k.tanaka@nusantara.jp', phone: '+81 45 222 8811', isPrimary: true }] },
       { id: 'off_6', customerId: 'cus_2', name: 'Busan Office', countryCode: 'KR', country: 'South Korea', city: 'Busan', portCode: 'KRPUS', portName: 'Busan', addressLine: '55 Jungang-daero, Jung-gu, Busan 48939', timezone: 'Asia/Seoul', customsId: 'KR-1208812345', roles: ['CONSIGNEE'], isHeadquarter: false, isBillingOffice: false, active: true, contacts: [{ id: 'c6', name: 'Ji-woo Park', title: 'Supply Chain', email: 'jw.park@nusantara.kr', phone: '+82 51 441 2200', isPrimary: true }] },
     ],
@@ -53,7 +53,7 @@ export const customers: Customer[] = [
     id: 'cus_3', code: 'CUS-0003', legalName: 'Bali Craft Collective Pte Ltd', tradeName: 'Bali Craft',
     industry: 'Handicraft & Home Decor', roles: ['CLIENT', 'CONSIGNEE'], status: 'ACTIVE', riskRating: 'MEDIUM',
     creditLimit: 900_000_000, creditCurrency: 'IDR', creditTermDays: 14, outstandingAr: 312_000_000,
-    defaultIncoterm: 'EXW', defaultPaymentTerm: 'CONSIGNMENT_SETTLEMENT', salesOwner: 'Dewi Kartika',
+    defaultIncoterm: 'EXW', defaultPaymentTerm: 'CONSIGNMENT_SETTLEMENT', salesOwner: 'Sofia Reyes',
     onboardedAt: '2023-01-20', website: 'balicraft.sg',
     notes: 'Consignment model — goods remain the shipper\'s property until sold in the destination showroom. Settlement every 30 days.',
     offices: [
@@ -63,10 +63,10 @@ export const customers: Customer[] = [
     ],
   },
   {
-    id: 'cus_4', code: 'CUS-0004', legalName: 'PT Sinar Kopi Nusantara', tradeName: 'Sinar Kopi',
+    id: 'cus_4', code: 'CUS-0004', legalName: 'PT Sinar Kopi Sejahtera', tradeName: 'Sinar Kopi',
     taxId: '03.456.789.0-055.000', industry: 'Agriculture & F&B', roles: ['CLIENT', 'SHIPPER'], status: 'ACTIVE',
     riskRating: 'LOW', creditLimit: 1_800_000_000, creditCurrency: 'IDR', creditTermDays: 30, outstandingAr: 465_800_000,
-    defaultIncoterm: 'FOB', defaultPaymentTerm: 'NET_30', salesOwner: 'Siti Nurhaliza', onboardedAt: '2022-06-11',
+    defaultIncoterm: 'FOB', defaultPaymentTerm: 'NET_30', salesOwner: 'Priya Nair', onboardedAt: '2022-06-11',
     notes: 'Specialty green coffee. Every shipment needs a phytosanitary certificate and ICO marks on the packing list.',
     offices: [
       { id: 'off_10', customerId: 'cus_4', name: 'Surabaya Processing Plant', countryCode: 'ID', country: 'Indonesia', city: 'Surabaya', portCode: 'IDSUB', portName: 'Tanjung Perak', addressLine: 'Kawasan Industri SIER Blok J-12, Surabaya', timezone: 'Asia/Jakarta', customsId: 'NIB 8120001122334', roles: ['SHIPPER'], isHeadquarter: true, isBillingOffice: true, active: true, contacts: [{ id: 'c10', name: 'Ratna Sari', title: 'Export Admin', email: 'ratna@sinarkopi.co.id', phone: '+62 31 8412 900', isPrimary: true }] },
@@ -77,7 +77,7 @@ export const customers: Customer[] = [
     id: 'cus_5', code: 'CUS-0005', legalName: 'Pacific Textile Trading LLC', tradeName: 'Pacific Textile',
     industry: 'Apparel & Textile', roles: ['CLIENT', 'CONSIGNEE'], status: 'ON_HOLD', riskRating: 'HIGH',
     creditLimit: 600_000_000, creditCurrency: 'IDR', creditTermDays: 30, outstandingAr: 718_500_000,
-    defaultIncoterm: 'FOB', defaultPaymentTerm: 'NET_30', salesOwner: 'Bagus Prasetyo', onboardedAt: '2024-02-05',
+    defaultIncoterm: 'FOB', defaultPaymentTerm: 'NET_30', salesOwner: 'David Chen', onboardedAt: '2024-02-05',
     notes: 'CREDIT HOLD — AR exceeds the approved limit by IDR 118.5 M. New bookings need a director release.',
     offices: [
       { id: 'off_12', customerId: 'cus_5', name: 'Los Angeles Office', countryCode: 'US', country: 'United States', city: 'Los Angeles', portCode: 'USLAX', portName: 'Los Angeles', addressLine: '888 S Figueroa St Suite 1200, Los Angeles, CA 90017', timezone: 'America/Los_Angeles', customsId: 'EIN 95-7654321', roles: ['CLIENT', 'CONSIGNEE'], isHeadquarter: true, isBillingOffice: true, active: true, contacts: [{ id: 'c12', name: 'Angela Reyes', title: 'Import Manager', email: 'angela@pactextile.com', phone: '+1 213 555 0180', isPrimary: true }] },
@@ -88,7 +88,7 @@ export const customers: Customer[] = [
     id: 'cus_6', code: 'CUS-0006', legalName: 'PT Cakra Elektronik Komponen', tradeName: 'Cakra Elektronik',
     taxId: '04.567.890.1-072.000', industry: 'Electronics Manufacturing', roles: ['CLIENT', 'SHIPPER'], status: 'ACTIVE',
     riskRating: 'MEDIUM', creditLimit: 2_200_000_000, creditCurrency: 'IDR', creditTermDays: 30, outstandingAr: 288_100_000,
-    defaultIncoterm: 'FCA', defaultPaymentTerm: 'NET_14', salesOwner: 'Yoga Pratama', onboardedAt: '2023-09-18',
+    defaultIncoterm: 'FCA', defaultPaymentTerm: 'NET_14', salesOwner: 'Tomas Weber', onboardedAt: '2023-09-18',
     notes: 'High-value wire harnesses. Mixed air and sea; air is used when the plant in Shanghai runs short.',
     offices: [
       { id: 'off_14', customerId: 'cus_6', name: 'Batam Plant', countryCode: 'ID', country: 'Indonesia', city: 'Batam', portCode: 'IDTPP', portName: 'Tanjung Priok', addressLine: 'Kawasan Industri Batamindo Blok 7, Batam 29433', timezone: 'Asia/Jakarta', customsId: 'NIB 8120005566778', roles: ['SHIPPER'], isHeadquarter: true, isBillingOffice: true, active: true, contacts: [{ id: 'c14', name: 'Rizky Hidayat', title: 'Logistics Supervisor', email: 'rizky@cakraelektronik.co.id', phone: '+62 778 611 2200', isPrimary: true }] },
@@ -100,7 +100,7 @@ export const customers: Customer[] = [
     id: 'cus_7', code: 'CUS-0007', legalName: 'Emirates Stone & Marble FZE', tradeName: 'Emirates Stone',
     industry: 'Construction Materials', roles: ['CLIENT', 'CONSIGNEE'], status: 'PROSPECT', riskRating: 'MEDIUM',
     creditLimit: 0, creditCurrency: 'USD', creditTermDays: 0, outstandingAr: 0, defaultIncoterm: 'CFR',
-    defaultPaymentTerm: 'TT_ADVANCE', salesOwner: 'Ahmad Fauzi', onboardedAt: '2026-07-02',
+    defaultPaymentTerm: 'TT_ADVANCE', salesOwner: 'Marcus Bell', onboardedAt: '2026-07-02',
     notes: 'Prospect from the Dubai trade mission. First trial shipment of marble slabs quoted, awaiting acceptance.',
     offices: [
       { id: 'off_17', customerId: 'cus_7', name: 'Jebel Ali Free Zone', countryCode: 'AE', country: 'United Arab Emirates', city: 'Dubai', portCode: 'AEJEA', portName: 'Jebel Ali', addressLine: 'JAFZA South, Warehouse ZC-14, Dubai', timezone: 'Asia/Dubai', customsId: 'AE-JAFZA-99120', roles: ['CLIENT', 'CONSIGNEE'], isHeadquarter: true, isBillingOffice: true, active: true, contacts: [{ id: 'c17', name: 'Omar Al Falasi', title: 'Procurement Head', email: 'omar@emiratesstone.ae', phone: '+971 4 881 2200', isPrimary: true }] },
@@ -110,7 +110,7 @@ export const customers: Customer[] = [
     id: 'cus_8', code: 'CUS-0008', legalName: 'PT Samudra Beku Seafood', tradeName: 'Samudra Beku',
     taxId: '05.678.901.2-088.000', industry: 'Frozen Seafood', roles: ['CLIENT', 'SHIPPER'], status: 'ACTIVE',
     riskRating: 'MEDIUM', creditLimit: 1_200_000_000, creditCurrency: 'IDR', creditTermDays: 21, outstandingAr: 397_600_000,
-    defaultIncoterm: 'CIF', defaultPaymentTerm: 'NET_21' as never, salesOwner: 'Dewi Kartika', onboardedAt: '2022-11-30',
+    defaultIncoterm: 'CIF', defaultPaymentTerm: 'NET_21' as never, salesOwner: 'Sofia Reyes', onboardedAt: '2022-11-30',
     notes: 'Reefer cargo at -18 °C. Temperature deviation on any leg voids the buyer\'s acceptance — monitor pre-trip inspection.',
     offices: [
       { id: 'off_18', customerId: 'cus_8', name: 'Makassar Cold Storage', countryCode: 'ID', country: 'Indonesia', city: 'Makassar', portCode: 'IDMAK', portName: 'Makassar', addressLine: 'Jl. Nusantara No. 15, Makassar 90173', timezone: 'Asia/Makassar', customsId: 'NIB 8120007788990', roles: ['SHIPPER'], isHeadquarter: true, isBillingOffice: true, active: true, contacts: [{ id: 'c18', name: 'Andi Pratama', title: 'Export Manager', email: 'andi@samudrabeku.co.id', phone: '+62 411 322 4400', isPrimary: true }] },
@@ -387,14 +387,14 @@ const projSpecs: ProjSpec[] = [
     paymentTerm: 'NET_30', packageId: 'pkg_1', commodity: 'Teak dining sets, knock-down', hsCodes: ['9403.60'], cargoValue: 284_500,
     cargoCurrency: 'USD', insured: true, insuranceValue: 312_950, dangerousGoods: false, polCode: 'IDSRG', polName: 'Tanjung Emas',
     podCode: 'NLRTM', podName: 'Rotterdam', destCountry: 'NL', carrier: 'Maersk Line', vessel: 'Maersk Semarang', voyage: '634W',
-    bookingNo: 'MAEU-BK-8827194', masterBlNo: 'MAEU221847390', houseBlNo: 'NFI/RTM/26/0841', blType: 'ORIGINAL_3_3', blStatus: 'ISSUED',
+    bookingNo: 'MAEU-BK-8827194', masterBlNo: 'MAEU221847390', houseBlNo: 'MFI/RTM/26/0841', blType: 'ORIGINAL_3_3', blStatus: 'ISSUED',
     siCutoff: day(-9), vgmCutoff: day(-8), gateInCutoff: day(-7), etd: day(-5), atd: day(-5), eta: day(27),
     pebNumber: '000412-2026-SRG', pebDate: day(-10), npeDate: day(-8), cooForm: 'EUR.1 / Form A', cooNumber: 'SKA/26/117844',
-    currency: 'USD', fxRate: 16250, quotedRevenue: 9_640, ownerName: 'Rina Wulandari', tags: ['europe', 'furniture', 'fumigation'],
+    currency: 'USD', fxRate: 16250, quotedRevenue: 9_640, ownerName: 'Elena Marchetti', tags: ['europe', 'furniture', 'fumigation'],
     remarks: 'Three units of 40HC. Fumigation certificate issued for the wooden crating.',
   },
   {
-    id: 'prj_2', code: 'PRJ-2026-0042', jobNo: 'MES/EXP/26/0233', name: 'Nusantara Rubber — Yokohama TSNR20 Aug', type: 'FULL_EXPORT',
+    id: 'prj_2', code: 'PRJ-2026-0042', jobNo: 'MES/EXP/26/0233', name: 'Anugerah Rubber — Yokohama TSNR20 Aug', type: 'FULL_EXPORT',
     stage: 'STUFFING', status: 'ACTIVE', priority: 'CRITICAL', clientId: 'cus_2', clientOfficeId: 'off_4', shipperId: 'cus_2', shipperOfficeId: 'off_4',
     consigneeId: 'cus_2', consigneeOfficeId: 'off_5', mode: 'FCL', scope: 'PORT_TO_PORT', incoterm: 'CIF', freightTerm: 'PREPAID',
     paymentTerm: 'LC_AT_SIGHT', packageId: 'pkg_2', commodity: 'TSNR 20 natural rubber bales', hsCodes: ['4001.22'], cargoValue: 412_000,
@@ -402,7 +402,7 @@ const projSpecs: ProjSpec[] = [
     podCode: 'JPYOK', podName: 'Yokohama', destCountry: 'JP', carrier: 'Ocean Network Express', vessel: 'ONE Competence', voyage: '112N',
     bookingNo: 'ONEY-BK-5518822', blType: 'ORIGINAL_3_3', blStatus: 'DRAFT', siCutoff: day(1), vgmCutoff: day(2), gateInCutoff: day(2),
     etd: day(4), eta: day(20), pebNumber: '000297-2026-BLW', pebDate: day(0), cooForm: 'Form JIEPA',
-    currency: 'USD', fxRate: 16250, quotedRevenue: 12_180, ownerName: 'Ahmad Fauzi', tags: ['japan', 'lc', 'rubber'],
+    currency: 'USD', fxRate: 16250, quotedRevenue: 12_180, ownerName: 'Marcus Bell', tags: ['japan', 'lc', 'rubber'],
     remarks: 'L/C at sight — every document must match the credit exactly, no discrepancies allowed. COO must be dated before ETD.',
   },
   {
@@ -412,10 +412,10 @@ const projSpecs: ProjSpec[] = [
     paymentTerm: 'CONSIGNMENT_SETTLEMENT', packageId: 'pkg_3', commodity: 'Rattan homeware, carved teak decor', hsCodes: ['9403.60', '4407.29'],
     cargoValue: 96_400, cargoCurrency: 'AUD', insured: true, insuranceValue: 106_040, dangerousGoods: false, polCode: 'IDSUB', polName: 'Tanjung Perak',
     podCode: 'AUSYD', podName: 'Sydney', destCountry: 'AU', carrier: 'CMA CGM', vessel: 'CMA CGM Coral', voyage: '0AB2W',
-    bookingNo: 'CMDU-BK-3391027', houseBlNo: 'NFI/SYD/26/0072', blType: 'SEAWAY', blStatus: 'RELEASED',
+    bookingNo: 'CMDU-BK-3391027', houseBlNo: 'MFI/SYD/26/0072', blType: 'SEAWAY', blStatus: 'RELEASED',
     siCutoff: day(-26), vgmCutoff: day(-25), gateInCutoff: day(-24), etd: day(-22), atd: day(-22), eta: day(-1), ata: day(-1),
     pebNumber: '000188-2026-SUB', pebDate: day(-27), cooForm: 'Form AANZFTA',
-    currency: 'AUD', fxRate: 10650, quotedRevenue: 14_820, ownerName: 'Dewi Kartika', tags: ['consignment', 'australia', 'aqis'],
+    currency: 'AUD', fxRate: 10650, quotedRevenue: 14_820, ownerName: 'Sofia Reyes', tags: ['consignment', 'australia', 'aqis'],
     remarks: 'Consignment cycle 7. Title stays with the shipper until the showroom sells. AQIS inspection passed on arrival.',
     consignment: {
       agreementNo: 'CNS-BALI-2026-07', titleRetained: true, settlementCycleDays: 30, commissionPct: 22,
@@ -432,7 +432,7 @@ const projSpecs: ProjSpec[] = [
     destCountry: 'DE', carrier: 'Hapag-Lloyd', vessel: 'Hamburg Bay', voyage: '228W', bookingNo: 'HLCU-BK-7712430',
     blType: 'TELEX_RELEASE', blStatus: 'NOT_ISSUED', siCutoff: day(2), vgmCutoff: day(3), gateInCutoff: day(4), etd: day(6), eta: day(38),
     pebNumber: '000501-2026-SUB', pebDate: day(1), cooForm: 'Form A',
-    currency: 'USD', fxRate: 16250, quotedRevenue: 6_290, ownerName: 'Siti Nurhaliza', tags: ['coffee', 'europe', 'phyto'],
+    currency: 'USD', fxRate: 16250, quotedRevenue: 6_290, ownerName: 'Priya Nair', tags: ['coffee', 'europe', 'phyto'],
     remarks: 'Phytosanitary certificate is still with Karantina — it must be in hand before the SI cut-off in two days.',
   },
   {
@@ -442,7 +442,7 @@ const projSpecs: ProjSpec[] = [
     paymentTerm: 'NET_14', packageId: 'pkg_5', commodity: 'Automotive wire harness assemblies', hsCodes: ['8544.42'], cargoValue: 88_600,
     cargoCurrency: 'USD', insured: true, insuranceValue: 97_460, dangerousGoods: false, polCode: 'IDTPP', polName: 'Soekarno-Hatta (CGK)',
     podCode: 'CNSHA', podName: 'Pudong (PVG)', destCountry: 'CN', carrier: 'China Eastern', blType: 'EXPRESS', blStatus: 'NOT_ISSUED',
-    siCutoff: day(1), etd: day(2), eta: day(4), currency: 'USD', fxRate: 16250, quotedRevenue: 4_760, ownerName: 'Yoga Pratama',
+    siCutoff: day(1), etd: day(2), eta: day(4), currency: 'USD', fxRate: 16250, quotedRevenue: 4_760, ownerName: 'Tomas Weber',
     tags: ['air', 'urgent', 'china'],
     remarks: 'Line-stop risk at the Shanghai plant. Chargeable weight is volumetric — confirm the final carton dimensions today.',
   },
@@ -455,7 +455,7 @@ const projSpecs: ProjSpec[] = [
     polName: 'Makassar', podCode: 'KRPUS', podName: 'Busan', destCountry: 'KR', carrier: 'Evergreen Line', vessel: 'Ever Lambent',
     voyage: '0918E', bookingNo: 'EGLV-BK-2274118', blType: 'ORIGINAL_3_3', blStatus: 'NOT_ISSUED',
     siCutoff: day(8), vgmCutoff: day(9), gateInCutoff: day(9), etd: day(12), eta: day(30),
-    currency: 'USD', fxRate: 16250, quotedRevenue: 7_420, ownerName: 'Dewi Kartika', tags: ['reefer', 'korea', 'seafood'],
+    currency: 'USD', fxRate: 16250, quotedRevenue: 7_420, ownerName: 'Sofia Reyes', tags: ['reefer', 'korea', 'seafood'],
     remarks: 'Reefer plug at the depot confirmed for the 9th. Pre-trip inspection report must be attached before stuffing.',
   },
   {
@@ -465,7 +465,7 @@ const projSpecs: ProjSpec[] = [
     paymentTerm: 'TT_ADVANCE', packageId: 'pkg_7', commodity: 'Marble slabs on A-frame cradles', hsCodes: ['2515.11'], cargoValue: 142_000,
     cargoCurrency: 'USD', insured: false, dangerousGoods: false, polCode: 'IDSUB', polName: 'Tanjung Perak', podCode: 'AEJEA',
     podName: 'Jebel Ali', destCountry: 'AE', blType: 'ORIGINAL_3_3', blStatus: 'NOT_ISSUED', currency: 'USD', fxRate: 16250,
-    quotedRevenue: 5_180, ownerName: 'Ahmad Fauzi', tags: ['prospect', 'breakbulk', 'middle-east'],
+    quotedRevenue: 5_180, ownerName: 'Marcus Bell', tags: ['prospect', 'breakbulk', 'middle-east'],
     remarks: 'Prospect trial. Quote is valid for 14 days; TT advance in full is required before booking because there is no credit line.',
   },
   {
@@ -475,22 +475,22 @@ const projSpecs: ProjSpec[] = [
     paymentTerm: 'NET_30', packageId: 'pkg_4', commodity: 'Teak outdoor furniture', hsCodes: ['9403.60'], cargoValue: 246_800,
     cargoCurrency: 'USD', insured: true, insuranceValue: 271_480, dangerousGoods: false, polCode: 'IDTPP', polName: 'Tanjung Priok',
     podCode: 'USSAV', podName: 'Savannah', destCountry: 'US', carrier: 'Hapag-Lloyd', vessel: 'Chicago Express', voyage: '412W',
-    bookingNo: 'HLCU-BK-7698210', masterBlNo: 'HLCUJK2026114', houseBlNo: 'NFI/SAV/26/0798', blType: 'TELEX_RELEASE', blStatus: 'SURRENDERED',
+    bookingNo: 'HLCU-BK-7698210', masterBlNo: 'HLCUJK2026114', houseBlNo: 'MFI/SAV/26/0798', blType: 'TELEX_RELEASE', blStatus: 'SURRENDERED',
     siCutoff: day(-58), vgmCutoff: day(-57), gateInCutoff: day(-56), etd: day(-53), atd: day(-53), eta: day(-15), ata: day(-13),
     pebNumber: '000355-2026-TPP', pebDate: day(-59), npeDate: day(-57), cooForm: 'Form A', cooNumber: 'SKA/26/109221',
-    currency: 'USD', fxRate: 16100, quotedRevenue: 11_320, ownerName: 'Rina Wulandari', tags: ['usa', 'furniture'],
+    currency: 'USD', fxRate: 16100, quotedRevenue: 11_320, ownerName: 'Elena Marchetti', tags: ['usa', 'furniture'],
     remarks: 'Delivered. Two days of demurrage at Savannah are in dispute with the client — evidence pack sent.',
   },
   {
-    id: 'prj_9', code: 'PRJ-2026-0039', jobNo: 'MES/EXP/26/0228', name: 'Nusantara Rubber — Busan TSNR20 Jul', type: 'FULL_EXPORT',
+    id: 'prj_9', code: 'PRJ-2026-0039', jobNo: 'MES/EXP/26/0228', name: 'Anugerah Rubber — Busan TSNR20 Jul', type: 'FULL_EXPORT',
     stage: 'SETTLEMENT', status: 'COMPLETED', priority: 'STANDARD', clientId: 'cus_2', clientOfficeId: 'off_4', shipperId: 'cus_2', shipperOfficeId: 'off_4',
     consigneeId: 'cus_2', consigneeOfficeId: 'off_6', mode: 'FCL', scope: 'PORT_TO_PORT', incoterm: 'CIF', freightTerm: 'PREPAID',
     paymentTerm: 'LC_AT_SIGHT', packageId: 'pkg_2', commodity: 'TSNR 20 natural rubber bales', hsCodes: ['4001.22'], cargoValue: 388_000,
     cargoCurrency: 'USD', insured: true, insuranceValue: 426_800, dangerousGoods: false, polCode: 'IDBLW', polName: 'Belawan',
     podCode: 'KRPUS', podName: 'Busan', destCountry: 'KR', carrier: 'Ocean Network Express', vessel: 'ONE Cygnus', voyage: '108N',
-    bookingNo: 'ONEY-BK-5498103', masterBlNo: 'ONEYBLWA1188', houseBlNo: 'NFI/PUS/26/0228', blType: 'ORIGINAL_3_3', blStatus: 'SURRENDERED',
+    bookingNo: 'ONEY-BK-5498103', masterBlNo: 'ONEYBLWA1188', houseBlNo: 'MFI/PUS/26/0228', blType: 'ORIGINAL_3_3', blStatus: 'SURRENDERED',
     etd: day(-72), atd: day(-72), eta: day(-54), ata: day(-53), pebNumber: '000241-2026-BLW', pebDate: day(-75), cooForm: 'Form AK',
-    cooNumber: 'SKA/26/104417', currency: 'USD', fxRate: 16050, quotedRevenue: 10_940, ownerName: 'Ahmad Fauzi', tags: ['korea', 'rubber', 'closed'],
+    cooNumber: 'SKA/26/104417', currency: 'USD', fxRate: 16050, quotedRevenue: 10_940, ownerName: 'Marcus Bell', tags: ['korea', 'rubber', 'closed'],
     remarks: 'Closed and fully settled. L/C proceeds received without discrepancy.',
   },
   {
@@ -500,7 +500,7 @@ const projSpecs: ProjSpec[] = [
     paymentTerm: 'NET_30', packageId: 'pkg_4', commodity: 'Knitted cotton T-shirts, cartons', hsCodes: ['6109.10'], cargoValue: 164_200,
     cargoCurrency: 'USD', insured: false, dangerousGoods: false, polCode: 'IDTPP', polName: 'Tanjung Priok', podCode: 'USLAX',
     podName: 'Los Angeles', destCountry: 'US', blType: 'ORIGINAL_3_3', blStatus: 'NOT_ISSUED', currency: 'USD', fxRate: 16250,
-    quotedRevenue: 8_450, ownerName: 'Bagus Prasetyo', tags: ['credit-hold', 'usa', 'apparel'],
+    quotedRevenue: 8_450, ownerName: 'David Chen', tags: ['credit-hold', 'usa', 'apparel'],
     remarks: 'ON HOLD — client is over their credit limit by IDR 118.5 M. Booking is blocked until the overdue invoice is settled or a director releases it.',
   },
   {
@@ -511,7 +511,7 @@ const projSpecs: ProjSpec[] = [
     cargoValue: 74_800, cargoCurrency: 'AUD', insured: true, insuranceValue: 82_280, dangerousGoods: false, polCode: 'IDSUB',
     polName: 'Tanjung Perak', podCode: 'AUSYD', podName: 'Sydney', destCountry: 'AU', carrier: 'CMA CGM', blType: 'SEAWAY',
     blStatus: 'NOT_ISSUED', siCutoff: day(6), vgmCutoff: day(7), gateInCutoff: day(7), etd: day(10), eta: day(31),
-    currency: 'AUD', fxRate: 10650, quotedRevenue: 11_640, ownerName: 'Dewi Kartika', tags: ['consignment', 'australia'],
+    currency: 'AUD', fxRate: 10650, quotedRevenue: 11_640, ownerName: 'Sofia Reyes', tags: ['consignment', 'australia'],
     remarks: 'Cycle 8. Unsold stock from cycle 6 must be returned within 120 days — 41 units are at day 96.',
     consignment: {
       agreementNo: 'CNS-BALI-2026-08', titleRetained: true, settlementCycleDays: 30, commissionPct: 22,
@@ -526,7 +526,7 @@ const projSpecs: ProjSpec[] = [
     paymentTerm: 'NET_30', packageId: 'pkg_1', commodity: 'Robusta green coffee, 60 kg bags', hsCodes: ['0901.11'], cargoValue: 152_400,
     cargoCurrency: 'USD', insured: false, dangerousGoods: false, polCode: 'IDSUB', polName: 'Tanjung Perak', podCode: 'NLRTM',
     podName: 'Rotterdam', destCountry: 'NL', blType: 'TELEX_RELEASE', blStatus: 'NOT_ISSUED', etd: day(24), eta: day(56),
-    currency: 'USD', fxRate: 16250, quotedRevenue: 5_980, ownerName: 'Siti Nurhaliza', tags: ['coffee', 'europe'],
+    currency: 'USD', fxRate: 16250, quotedRevenue: 5_980, ownerName: 'Priya Nair', tags: ['coffee', 'europe'],
     remarks: 'Quote issued, awaiting the buyer contract. Booking window opens once the client confirms the sailing week.',
   },
   {
@@ -538,7 +538,7 @@ const projSpecs: ProjSpec[] = [
     podCode: 'VNSGN', podName: 'Cat Lai', destCountry: 'VN', carrier: 'SITC Line', vessel: 'SITC Hakata', voyage: '2612S',
     bookingNo: 'SAMU-BK-1129004', blType: 'SEAWAY', blStatus: 'DRAFT', siCutoff: day(3), vgmCutoff: day(4), gateInCutoff: day(4),
     etd: day(7), eta: day(13), pebNumber: '000517-2026-TPP', pebDate: day(2), cooForm: 'Form D',
-    currency: 'USD', fxRate: 16250, quotedRevenue: 3_940, ownerName: 'Yoga Pratama', tags: ['asean', 'electronics'],
+    currency: 'USD', fxRate: 16250, quotedRevenue: 3_940, ownerName: 'Tomas Weber', tags: ['asean', 'electronics'],
     remarks: 'Form D under ATIGA gives the consignee a 0% duty — the invoice value must match the COO exactly.',
   },
   {
@@ -550,7 +550,7 @@ const projSpecs: ProjSpec[] = [
     podCode: 'NLRTM', podName: 'Rotterdam', destCountry: 'NL', carrier: 'Maersk Line', vessel: 'Maersk Batam', voyage: '638W',
     bookingNo: 'MAEU-BK-8841266', blType: 'ORIGINAL_3_3', blStatus: 'NOT_ISSUED', siCutoff: day(11), vgmCutoff: day(12),
     gateInCutoff: day(12), etd: day(16), eta: day(48), currency: 'USD', fxRate: 16250, quotedRevenue: 7_240,
-    ownerName: 'Rina Wulandari', tags: ['europe', 'furniture'], remarks: 'Two units of 40HC booked. Fumigation slot to be reserved.',
+    ownerName: 'Elena Marchetti', tags: ['europe', 'furniture'], remarks: 'Two units of 40HC booked. Fumigation slot to be reserved.',
   },
 ]
 
@@ -654,7 +654,7 @@ for (const plan of containerPlan) {
       const qty = Math.max(1, Math.round((targetCbm / defs.length) / perCbm))
       return {
         id: `${id}_i${di}`, containerId: id, description: d.desc, hsCode: d.hs,
-        marksAndNumbers: `NFI/${plan.projectId.toUpperCase()}\nC/NO. 1-${qty}\nMADE IN INDONESIA`,
+        marksAndNumbers: `MFI/${plan.projectId.toUpperCase()}\nC/NO. 1-${qty}\nMADE IN INDONESIA`,
         packageUnit: d.unit, quantity: qty, lengthCm: d.l, widthCm: d.w, heightCm: d.h,
         grossWeightKg: d.kg, netWeightKg: +(d.kg * 0.92).toFixed(1), stackable: d.unit !== 'CRATE',
         unitValue: int(40, 400), poNumber: `PO-${int(10000, 99999)}`,
@@ -717,7 +717,7 @@ for (const p of projects) {
       id: `doc_${dIdx}`, projectId: p.id, type: d.type, title: d.label,
       docNo: issued ? `${d.type.slice(0, 3)}-${p.code.slice(-4)}-${String(dIdx).padStart(3, '0')}` : undefined,
       version: issued ? int(1, 3) : 1, status, mandatory: d.mandatoryDefault, stage: d.stage,
-      issuedBy: issued ? pick(['Nusantara Freight', 'Shipper', 'Bea Cukai', 'Kadin Indonesia', 'Karantina Pertanian', 'Carrier']) : undefined,
+      issuedBy: issued ? pick(['Meridian Freight', 'Shipper', 'Bea Cukai', 'Kadin Indonesia', 'Karantina Pertanian', 'Carrier']) : undefined,
       issuedAt: issued ? day(-int(1, 40)) : undefined,
       expiresAt: d.type === 'CERTIFICATE_OF_ORIGIN' ? day(int(30, 120)) : undefined,
       reviewedBy: status === 'APPROVED' || status === 'ISSUED' ? pick(TEAM) : undefined,
@@ -837,7 +837,7 @@ export const journal: JournalEntry[] = [
     ['3-3100', 0, 5_000_000_000, 'Share capital'],
     ['3-3200', 0, 4_306_700_000, 'Retained earnings'],
   ]),
-  je('JV-2026-0388', '2026-07-04', 'AR invoice INV/AR/26/1188 — Nusantara Rubber PRJ-2026-0039', 'AR_INVOICE', 'PRJ-2026-0039', [
+  je('JV-2026-0388', '2026-07-04', 'AR invoice INV/AR/26/1188 — Anugerah Rubber PRJ-2026-0039', 'AR_INVOICE', 'PRJ-2026-0039', [
     ['1-1300', 176_182_000, 0, 'Receivable incl. VAT'],
     ['4-4100', 0, 140_000_000, 'Ocean freight revenue'],
     ['4-4300', 0, 18_600_000, 'Origin handling revenue'],
@@ -850,7 +850,7 @@ export const journal: JournalEntry[] = [
     ['1-1600', 1_562_000, 0, 'VAT input'],
     ['2-2100', 0, 124_362_000, 'Payable to ONE'],
   ], 'POSTED', 'BILL/ONE/26/4471'),
-  je('JV-2026-0402', '2026-07-22', 'Receipt from Nusantara Rubber — L/C proceeds', 'RECEIPT', 'PRJ-2026-0039', [
+  je('JV-2026-0402', '2026-07-22', 'Receipt from Anugerah Rubber — L/C proceeds', 'RECEIPT', 'PRJ-2026-0039', [
     ['1-1210', 176_182_000, 0, 'USD account'],
     ['1-1300', 0, 176_182_000, 'Clear receivable'],
   ], 'POSTED', 'RCP/26/0771'),
@@ -917,13 +917,13 @@ export const journal: JournalEntry[] = [
 ]
 
 export const invoices: Invoice[] = [
-  { id: 'inv_1', number: 'INV/AR/26/1188', kind: 'AR', partyName: 'PT Nusantara Rubber Industries', projectCode: 'PRJ-2026-0039', issueDate: '2026-07-04', dueDate: '2026-08-18', currency: 'IDR', fxRate: 1, subtotal: 163_500_000, vat: 17_985_000, wht: 5_303_000, total: 176_182_000, paid: 176_182_000, status: 'PAID', terms: 'LC_AT_SIGHT' },
+  { id: 'inv_1', number: 'INV/AR/26/1188', kind: 'AR', partyName: 'PT Anugerah Rubber Industries', projectCode: 'PRJ-2026-0039', issueDate: '2026-07-04', dueDate: '2026-08-18', currency: 'IDR', fxRate: 1, subtotal: 163_500_000, vat: 17_985_000, wht: 5_303_000, total: 176_182_000, paid: 176_182_000, status: 'PAID', terms: 'LC_AT_SIGHT' },
   { id: 'inv_2', number: 'INV/AR/26/1204', kind: 'AR', partyName: 'PT Jati Makmur Furniture', projectCode: 'PRJ-2026-0038', issueDate: '2026-07-30', dueDate: '2026-08-29', currency: 'IDR', fxRate: 1, subtotal: 182_000_000, vat: 20_020_000, wht: 0, total: 202_020_000, paid: 100_000_000, status: 'PARTIALLY_PAID', terms: 'NET_30' },
   { id: 'inv_3', number: 'INV/AR/26/1231', kind: 'AR', partyName: 'Bali Craft Collective Pte Ltd', projectCode: 'PRJ-2026-0043', issueDate: '2026-08-20', dueDate: '2026-09-03', currency: 'IDR', fxRate: 1, subtotal: 157_850_000, vat: 17_363_800, wht: 0, total: 175_213_800, paid: 0, status: 'ISSUED', terms: 'NET_14' },
   { id: 'inv_4', number: 'INV/AR/26/1244', kind: 'AR', partyName: 'PT Jati Makmur Furniture', projectCode: 'PRJ-2026-0041', issueDate: '2026-08-28', dueDate: '2026-09-27', currency: 'IDR', fxRate: 1, subtotal: 156_500_000, vat: 17_338_600, wht: 0, total: 173_838_600, paid: 0, status: 'ISSUED', terms: 'NET_30' },
   { id: 'inv_5', number: 'INV/AR/26/1149', kind: 'AR', partyName: 'Pacific Textile Trading LLC', projectCode: 'PRJ-2026-0031', issueDate: '2026-06-18', dueDate: '2026-07-18', currency: 'IDR', fxRate: 1, subtotal: 148_600_000, vat: 16_346_000, wht: 0, total: 164_946_000, paid: 0, status: 'OVERDUE', terms: 'NET_30' },
   { id: 'inv_6', number: 'INV/AR/26/1162', kind: 'AR', partyName: 'Pacific Textile Trading LLC', projectCode: 'PRJ-2026-0034', issueDate: '2026-06-30', dueDate: '2026-07-30', currency: 'IDR', fxRate: 1, subtotal: 121_400_000, vat: 13_354_000, wht: 0, total: 134_754_000, paid: 0, status: 'OVERDUE', terms: 'NET_30' },
-  { id: 'inv_7', number: 'INV/AR/26/1210', kind: 'AR', partyName: 'PT Sinar Kopi Nusantara', projectCode: 'PRJ-2026-0040', issueDate: '2026-08-04', dueDate: '2026-09-03', currency: 'IDR', fxRate: 1, subtotal: 88_300_000, vat: 9_713_000, wht: 0, total: 98_013_000, paid: 0, status: 'ISSUED', terms: 'NET_30' },
+  { id: 'inv_7', number: 'INV/AR/26/1210', kind: 'AR', partyName: 'PT Sinar Kopi Sejahtera', projectCode: 'PRJ-2026-0040', issueDate: '2026-08-04', dueDate: '2026-09-03', currency: 'IDR', fxRate: 1, subtotal: 88_300_000, vat: 9_713_000, wht: 0, total: 98_013_000, paid: 0, status: 'ISSUED', terms: 'NET_30' },
   { id: 'inv_8', number: 'BILL/HLC/26/8812', kind: 'AP', partyName: 'Hapag-Lloyd Indonesia', projectCode: 'PRJ-2026-0038', issueDate: '2026-07-31', dueDate: '2026-08-30', currency: 'IDR', fxRate: 1, subtotal: 158_800_000, vat: 3_344_000, wht: 272_000, total: 162_144_000, paid: 162_144_000, status: 'PAID', terms: 'NET_30' },
   { id: 'inv_9', number: 'BILL/ONE/26/4471', kind: 'AP', partyName: 'Ocean Network Express', projectCode: 'PRJ-2026-0039', issueDate: '2026-07-05', dueDate: '2026-08-04', currency: 'IDR', fxRate: 1, subtotal: 122_800_000, vat: 1_562_000, wht: 0, total: 124_362_000, paid: 124_362_000, status: 'PAID', terms: 'NET_30' },
   { id: 'inv_10', number: 'BILL/MAE/26/9930', kind: 'AP', partyName: 'Maersk Line Indonesia', projectCode: 'PRJ-2026-0041', issueDate: '2026-08-29', dueDate: '2026-09-28', currency: 'IDR', fxRate: 1, subtotal: 123_000_000, vat: 2_002_000, wht: 0, total: 125_002_000, paid: 0, status: 'DRAFT', terms: 'NET_30' },

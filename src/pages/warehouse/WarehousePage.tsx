@@ -573,6 +573,6 @@ function blank(existing: WarehouseReceipt[]): WarehouseReceipt {
     customerId: '', status: 'IN_STOCK', receivedAt: new Date().toISOString(),
     location: '', description: '', packages: 0, packagesReleased: 0, cbm: 0, weightKg: 0,
     freeDays: 7, storageRatePerCbmDay: 8500, currency: 'IDR', handlingIn: 0, handlingOut: 0,
-    receivedBy: 'Rina Wulandari',
+    receivedBy: 'Elena Marchetti',
   }
 }

@@ -21,6 +21,7 @@ import { DatePicker } from '@/components/ui/date-picker'
 import { Switch } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/misc'
 import { documentCompliance } from '@/lib/analytics'
+import { documentStandard } from '@/lib/services'
 import { fmtDate, pluralDays, relativeDays, titleCase } from '@/lib/format'
 import { uid } from '@/lib/utils'
 import { useToast } from '@/components/ui/toast'
@@ -87,6 +88,47 @@ export function DocumentsTable({ project, scoped }: { project?: Project; scoped?
       key: 'status', header: 'Status', width: 'w-[150px]', sortable: true,
       sortValue: (r) => r.status, exportValue: (r) => r.status,
       cell: (r) => <StatusBadge value={r.status} size="sm" />,
+    },
+    {
+      key: 'standard', header: 'Standard', width: 'w-[164px]', sortable: true,
+      /* ascending puts the real risk first: an issued document short of its own
+         standard, then work in progress, then things not started or ungoverned */
+      sortValue: (r) => {
+        const c = documentStandard(r)
+        if (!c.governed || r.status === 'REQUIRED') return 300
+        const settled = ['APPROVED', 'ISSUED', 'SURRENDERED'].includes(r.status)
+        return (settled ? 0 : 100) + c.pct
+      },
+      exportValue: (r) => {
+        const c = documentStandard(r)
+        return c.governed ? `${c.filled}/${c.requiredTotal}` : ''
+      },
+      cell: (r) => {
+        const c = documentStandard(r)
+        if (!c.governed) return <span className="text-[12px] text-fg-subtle">no standard</span>
+        if (r.status === 'REQUIRED') return <span className="text-[12px] text-fg-subtle">not started</span>
+        const settled = ['APPROVED', 'ISSUED', 'SURRENDERED'].includes(r.status)
+        return (
+          <Tooltip
+            content={
+              c.missing.length
+                ? `Missing: ${c.missing.map((m) => m.label).join(', ')}`
+                : 'Every mandatory field on the standard is filled.'
+            }
+          >
+            <div className="flex items-center gap-2">
+              <Progress
+                value={c.pct}
+                tone={c.missing.length === 0 ? 'success' : settled ? 'danger' : 'warning'}
+                className="w-[58px]"
+              />
+              <span className={`tnum text-[12px] ${c.missing.length && settled ? 'text-danger' : 'text-fg-muted'}`}>
+                {c.filled}/{c.requiredTotal}
+              </span>
+            </div>
+          </Tooltip>
+        )
+      },
     },
     {
       key: 'version', header: 'Ver.', width: 'w-[74px]', align: 'right', sortable: true, defaultHidden: true,
@@ -215,7 +257,7 @@ export function DocumentsTable({ project, scoped }: { project?: Project; scoped?
             variant="secondary"
             size="sm"
             onClick={() => {
-              rows.forEach((r) => upsertDocument({ ...r, status: 'APPROVED', reviewedBy: 'Rina Wulandari' }))
+              rows.forEach((r) => upsertDocument({ ...r, status: 'APPROVED', reviewedBy: 'Elena Marchetti' }))
               toast.push({ tone: 'success', title: `${rows.length} documents approved` })
               clear()
             }}
@@ -357,11 +399,24 @@ function DocumentForm({
   const set = <K extends keyof ShipmentDocument>(k: K, v: ShipmentDocument[K]) => setDraft((d) => ({ ...d, [k]: v }))
   const meta = DOC_TYPES.find((d) => d.type === draft.type)
 
+  const check = documentStandard(draft)
+  const fieldValue = (key: string) => draft.fields?.find((f) => f.key === key)?.value ?? ''
+  const setFieldValue = (key: string, value: string) =>
+    setDraft((d) => {
+      const rest = (d.fields ?? []).filter((f) => f.key !== key)
+      return { ...d, fields: value ? [...rest, { key, value }] : rest }
+    })
+
+  /* A document that claims to be approved or issued has to satisfy its own
+     standard — that is exactly the list a bank or a customs office works from. */
+  const claimsSettled = ['APPROVED', 'ISSUED', 'SURRENDERED'].includes(draft.status)
+  const blockedByStandard = claimsSettled && check.governed && check.missing.length > 0
+
   return (
     <Sheet
       open={open}
       onOpenChange={onOpenChange}
-      width="max-w-xl"
+      width="max-w-3xl"
       eyebrow={<Badge tone="outline" size="sm">{project.code}</Badge>}
       title={initial ? draft.title : 'Add a document'}
       description={meta?.hint}
@@ -371,6 +426,7 @@ function DocumentForm({
           <Button
             variant="primary"
             size="sm"
+            disabled={blockedByStandard}
             onClick={() => {
               upsertDocument(draft)
               toast.push({ tone: 'success', title: initial ? 'Document updated' : 'Document added', description: draft.title })
@@ -453,6 +509,64 @@ function DocumentForm({
         <Field label="Remarks" className="sm:col-span-2">
           <Textarea value={draft.remarks ?? ''} onChange={(e) => set('remarks', e.target.value)} rows={3} />
         </Field>
+
+        {/* -------- the standard this document has to meet -------- */}
+        {check.governed && (
+          <div className="sm:col-span-2">
+            <div className="rounded-xl border border-border">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3.5 py-2.5">
+                <div>
+                  <p className="text-[12.5px] font-semibold text-fg">Document standard</p>
+                  <p className="text-[11.5px] text-fg-muted">
+                    What a bank, carrier or customs office checks on {docTypeLabel(draft.type).toLowerCase()}.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Progress
+                    value={check.pct}
+                    tone={check.missing.length === 0 ? 'success' : blockedByStandard ? 'danger' : 'warning'}
+                    className="w-[74px]"
+                  />
+                  <span className="tnum text-[12px] font-medium text-fg">
+                    {check.filled}/{check.requiredTotal}
+                  </span>
+                </div>
+              </div>
+
+              {blockedByStandard && (
+                <div className="border-b border-danger/25 bg-danger-soft px-3.5 py-2.5">
+                  <p className="text-[12px] font-semibold text-danger-soft-fg">
+                    Cannot be marked {titleCase(draft.status).toLowerCase()} while {check.missing.length} mandatory field
+                    {check.missing.length === 1 ? '' : 's'} {check.missing.length === 1 ? 'is' : 'are'} empty
+                  </p>
+                  <p className="mt-0.5 text-[11.5px] leading-relaxed text-danger-soft-fg/85">
+                    Missing {check.missing.map((m) => m.label).join(', ')}. A discrepancy found by the bank costs an
+                    amendment fee and a re-presentation; found by customs it costs the sailing.
+                  </p>
+                </div>
+              )}
+
+              <div className="grid gap-3 p-3.5 sm:grid-cols-2">
+                {check.specs.map((spec) => (
+                  <Field
+                    key={spec.key}
+                    label={spec.label}
+                    required={spec.required}
+                    help={spec.hint || undefined}
+                    className={spec.hint.length > 60 ? 'sm:col-span-2' : undefined}
+                  >
+                    <Input
+                      value={fieldValue(spec.key)}
+                      invalid={spec.required && claimsSettled && !fieldValue(spec.key)}
+                      onChange={(e) => setFieldValue(spec.key, e.target.value)}
+                      placeholder={spec.required ? 'Required' : 'Optional'}
+                    />
+                  </Field>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Sheet>
   )

@@ -10,7 +10,7 @@ const Ctx = React.createContext<{ mode: Mode; resolved: 'light' | 'dark'; setMod
 export const useTheme = () => React.useContext(Ctx)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setMode] = React.useState<Mode>(() => (localStorage.getItem('nf-theme') as Mode) ?? 'dark')
+  const [mode, setMode] = React.useState<Mode>(() => (localStorage.getItem('mf-theme') as Mode) ?? 'dark')
   const [systemDark, setSystemDark] = React.useState(
     () => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false,
   )
@@ -27,7 +27,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     document.documentElement.classList.toggle('dark', resolved === 'dark')
     document.documentElement.style.colorScheme = resolved
-    localStorage.setItem('nf-theme', mode)
+    localStorage.setItem('mf-theme', mode)
   }, [mode, resolved])
 
   return <Ctx.Provider value={{ mode, resolved, setMode }}>{children}</Ctx.Provider>

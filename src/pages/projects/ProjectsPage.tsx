@@ -376,7 +376,7 @@ export function ProjectsPage() {
               currency: (r.currency || 'USD') as Project['currency'],
               fxRate: existing?.fxRate ?? 16250,
               quotedRevenue: Number(r.quotedRevenue) || 0,
-              ownerName: existing?.ownerName ?? 'Rina Wulandari',
+              ownerName: existing?.ownerName ?? 'Elena Marchetti',
               createdAt: existing?.createdAt ?? new Date().toISOString(),
               updatedAt: new Date().toISOString(),
               tags: existing?.tags ?? [],

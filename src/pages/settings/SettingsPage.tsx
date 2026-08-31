@@ -1,6 +1,7 @@
 import * as React from 'react'
 import {
-  Banknote, Coins, Cog, Download, Hash, History, RotateCcw, ShieldCheck, Target, Trash2,
+  Banknote, Building2, Coins, Cog, Download, Hash, History, RotateCcw, ShieldCheck, Target, Trash2,
+  Users,
 } from 'lucide-react'
 import type { AppSettings, NumberingSeries } from '@/data/types'
 import { useErp } from '@/store/useErp'
@@ -18,11 +19,13 @@ import { exportCsv } from '@/lib/csv'
 import { fmtCurrency, fmtDateTime, titleCase } from '@/lib/format'
 import { useToast } from '@/components/ui/toast'
 import { defaultSettings } from '@/data/seed2'
+import { CompanyPanel } from './CompanyPanel'
+import { UsersPanel } from './UsersPanel'
 
 export function SettingsPage() {
   const toast = useToast()
   const { settings, activity, updateSettings, clearActivity, resetDemoData } = useErp()
-  const [tab, setTab] = React.useState<'company' | 'finance' | 'numbering' | 'targets' | 'audit'>('company')
+  const [tab, setTab] = React.useState<'organisation' | 'users' | 'company' | 'finance' | 'numbering' | 'targets' | 'audit'>('organisation')
   const [clearOpen, setClearOpen] = React.useState(false)
 
   const set = <K extends keyof AppSettings>(k: K, v: AppSettings[K]) => updateSettings({ [k]: v } as Partial<AppSettings>)
@@ -37,7 +40,7 @@ export function SettingsPage() {
     <>
       <PageHeader
         title="Settings & Audit"
-        description="The knobs the rest of the system reads: exchange rates used for ledger translation, tax rates, document numbering, approval thresholds and KPI targets — plus a record of every change made in this workspace."
+        description="Who we are on paper — licences, branches, bank accounts and the cover behind our liability — and the knobs the rest of the system reads: exchange rates, tax, document numbering, approval thresholds and KPI targets, with a record of every change made here."
         actions={
           <Button
             variant="secondary"
@@ -57,13 +60,19 @@ export function SettingsPage() {
         variant="pill"
         className="mb-4"
         items={[
-          { value: 'company', label: 'Company', icon: <Cog /> },
+          { value: 'organisation', label: 'Our company', icon: <Building2 /> },
+          { value: 'users', label: 'Users & access', icon: <Users /> },
+          { value: 'company', label: 'Workspace', icon: <Cog /> },
           { value: 'finance', label: 'Currency & tax', icon: <Coins /> },
           { value: 'numbering', label: 'Numbering', icon: <Hash />, count: settings.numbering.length },
           { value: 'targets', label: 'KPI targets', icon: <Target /> },
           { value: 'audit', label: 'Audit trail', icon: <History />, count: activity.length },
         ]}
       />
+
+      {tab === 'organisation' && <CompanyPanel />}
+
+      {tab === 'users' && <UsersPanel />}
 
       {tab === 'company' && (
         <div className="grid gap-4 lg:grid-cols-2">

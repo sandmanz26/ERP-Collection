@@ -59,7 +59,11 @@ export function evaluateStageGate(
   containers: Container[],
   documents: ShipmentDocument[],
   customer?: Customer,
-  extra?: { filings?: { type: string; status: string; channel: string; supportingDocs: { mandatory: boolean; uploaded: boolean; label: string }[] }[] },
+  extra?: {
+    filings?: { type: string; status: string; channel: string; supportingDocs: { mandatory: boolean; uploaded: boolean; label: string }[] }[]
+    /** mandatory additional services that are missing, refused or failed */
+    serviceBlockers?: string[]
+  },
 ): GateResult {
   const stage = project.stages.find((s) => s.key === project.stage)
   const blockers: string[] = []
@@ -67,6 +71,12 @@ export function evaluateStageGate(
   const tasks = stage?.tasks ?? []
   const openBlocking = tasks.filter((t) => t.blocking && !t.done)
   openBlocking.forEach((t) => blockers.push(t.label))
+
+  /* A treatment or inspection the destination requires is a hard stop from the
+     cargo plan onwards — the cargo is refused at the border, not at our desk. */
+  if (stageIndex(project.stage) >= stageIndex('CARGO_PLAN')) {
+    ;(extra?.serviceBlockers ?? []).forEach((b) => blockers.push(b))
+  }
 
   if (project.stage === 'INQUIRY' && customer) {
     if (customer.status === 'ON_HOLD' || customer.status === 'BLACKLISTED')

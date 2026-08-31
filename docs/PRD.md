@@ -1,5 +1,5 @@
 # Product Requirements Document
-## Nusantara Freight — Export Operations Suite
+## Meridian Freight — Export Operations Suite
 
 | | |
 | --- | --- |
@@ -258,6 +258,121 @@ is what renews a contract. The trade's standard KPI set is well established.
 
 ---
 
+## 6A. Phase 3 requirements
+
+Phase 2 made the commercial and compliance sides of a job visible. Phase 3 closes three gaps that
+a real desk hits every week: nobody can get into the system, nothing sells the work that sits
+*around* the freight, and there is no record of what happens when a shipment goes wrong.
+
+### 6A.1 Access & accounts `[P0]`
+
+The suite has no backend, so authentication here is an interface exercise: it exists to prove the
+screens and the states, not to protect data. Passwords in the seeded user list are clear text and
+labelled as such in the source; a real deployment authenticates server-side and never lets a
+credential reach the browser.
+
+**Requirements**
+
+- Sign in, register and a two-step password reset (request a link, then set a new password).
+- Every route behind the shell requires a session; the attempted path is remembered on redirect.
+- Registration is restricted to company domains. Everyone else joins by invitation.
+- Password policy enforced live as the user types: 10 characters, upper, lower, digit, symbol, and
+  not a common password.
+- Reset links are single-use and expire after 30 minutes.
+- The audit trail records the signed-in user, not a placeholder.
+
+**Negative cases the screens must handle, each with a remedy rather than a dead end**
+
+| Case | Behaviour |
+| --- | --- |
+| Unknown email | Refused, with a route to registration |
+| Wrong password | Refused, with the remaining attempts counted down |
+| Five failed attempts | Account locked for 15 minutes; an administrator can release it |
+| Lock aged out | Clears itself on the next sign-in attempt |
+| Unverified email | Refused, with a verification action offered |
+| Invitation not accepted | Refused, with the same route |
+| Suspended account | Refused; only an administrator can restore it |
+| Reset for an unknown address | The same answer as a known one — the form must not confirm who is registered |
+| Expired reset link | Refused, with a route to request a new one |
+| Reused reset link | Refused |
+| Duplicate registration | Refused, with a route to sign in |
+| Non-company domain | Refused, with the invitation route explained |
+| Weak password | Refused, naming exactly which rules are unmet |
+
+### 6A.2 Additional services `[P0]`
+
+Freight is the smallest line on a job that needs treating, crating, surveying or insuring. The
+catalogue exists so the desk sells the right scope without having to remember the regulation.
+
+**Requirements**
+
+- A catalogue entry carries what we do, what the customer gets, the buy and sell rate on a named
+  basis, the lead time, the charge code it lands on, and the certificate it produces.
+- Each entry declares the conditions that make it **mandatory** and the conditions that make it
+  worth **suggesting**. Conditions are read off the job — commodity, HS chapter, packaging unit,
+  container type, declared value and destination — never typed in by hand.
+- A job's Services tab shows the triggers that fired, the services already bought with their status,
+  and everything still outstanding, mandatory first.
+- A completed service can be pushed onto the charge sheet in one action, so nothing is done for free.
+- A **mandatory service that is missing, declined or failed blocks the stage gate** from the cargo
+  plan onwards and raises a critical exception. The refusal stays on the record — that is the
+  evidence when a container is turned back at the border.
+- Deleting a catalogue entry that is attached to a job is refused; retiring it is offered instead.
+
+**Worked example.** Teak furniture crated on timber for Rotterdam fires *wooden packaging*, which
+makes ISPM-15 methyl bromide fumigation mandatory and puts a fumigation certificate on the document
+register. The same cargo to Sydney additionally fires *to Australia*, which pulls in seasonal BMSB
+treatment. If the shipper declines the treatment, the job cannot advance and the exception queue
+says so by name.
+
+### 6A.3 Incidents & claims `[P0]`
+
+Shipments go wrong in a small number of predictable ways. Each one should produce a claim and a
+preventive action, not an email thread.
+
+**Requirements**
+
+- Sixteen incident types across four groups — carrier, customs, cargo and commercial — each with a
+  default severity, a default liable party and a playbook shown when the type is chosen.
+- An incident records what it cost, what we expect to recover, what has actually been recovered,
+  the liable party and the managed partner behind it, the claim reference, and a dated action log.
+- An incident cannot be closed without a root cause. Closing without one is refused at the form.
+- High and critical open incidents raise exceptions on the control tower.
+- Recovery rate, net loss and cost by liable party are reported so the pattern is visible, not just
+  the individual case.
+
+### 6A.4 Document standards `[P1]`
+
+A document is not "done" because a file exists. It is done when it carries what the party checking
+it will look for.
+
+**Requirements**
+
+- Each governed document type declares its field standard — what a bank, carrier or customs office
+  checks — with a hint explaining why each field matters.
+- The document register shows completeness per document and sorts by actual risk: an issued
+  document short of its own standard first, then work in progress, then unstarted.
+- A document **cannot be marked approved, issued or surrendered while a mandatory field is empty**.
+- Settled documents that are short raise exceptions naming the missing fields.
+
+### 6A.5 The forwarder's own record `[P1]`
+
+Everything else in the suite describes the customer. This describes us.
+
+**Requirements**
+
+- Legal entity, tax and business registration, registered address and contact.
+- Licences and accreditations with issuer, number, scope and expiry — freight forwarding, customs
+  broker, NVOCC, AEO, IATA, bonded warehouse, tax, and association memberships.
+- **A licence within 60 days of expiry raises an exception; a lapsed one raises a critical.**
+- Freight liability cover and its expiry, with the standard trading conditions that cap our
+  exposure. Expired cover is a critical exception — it means we are trading uninsured.
+- Branches with the ports each serves, and bank accounts per invoicing currency.
+- User accounts with their role, branch, status and last sign-in; administrators can release a lock
+  or verify an address.
+
+---
+
 ## 7. Data model additions
 
 ```
@@ -277,7 +392,36 @@ CustomsFiling ──── projectId, type, channel, supportingDocs[], filedBy, 
 
 AppSettings ────── fxRates, taxRates, numberingSeries, approvalThresholds, kpiTargets
 AuditEntry ─────── at, actor, action, entity, entityId, detail
+
+── phase 3 ───────────────────────────────────────────────────────────────────
+
+UserAccount ────── email, role, status, failedAttempts, lockedUntil, twoFactorEnabled
+PasswordResetToken ── token, email, issuedAt, expiresAt, used
+
+AdditionalService ─┬─ mandatoryWhen: ServiceTrigger[]
+                   ├─ suggestedWhen: ServiceTrigger[]
+                   └─ producesDocument? → DocType
+
+JobService ────────┬─ projectId, serviceId, status, mandatory, reason
+                   └─ chargeId? → ProjectCharge
+
+Incident ──────────┬─ projectId?, containerId?, type, severity, status
+                   ├─ liableParty, partnerId?, costImpact, recoveryExpected/Received
+                   └─ IncidentAction[]
+
+ShipmentDocument ── + fields: DocFieldValue[]   (checked against DOC_FIELD_SPECS[type])
+
+CompanyProfile ────┬─ CompanyLicence[]  (kind, number, issuer, expiresAt)
+                   ├─ CompanyBranch[]   (code, servesPorts[], manager)
+                   └─ BankAccount[]     (currency, swift, isPrimary)
 ```
+
+**Derived, never stored**
+
+- A job's service triggers are computed from its commodity, HS codes, packaging units, container
+  types, declared value and destination — so changing the cargo changes what the job must buy.
+- Document completeness is computed from the field standard for the type, not flagged by hand.
+- Licence and liability alerts are computed from expiry dates against a 60-day window.
 
 **Referential rules**
 
@@ -286,6 +430,11 @@ AuditEntry ─────── at, actor, action, entity, entityId, detail
   the cascade is stated in the confirmation.
 - Converting a Quotation is idempotent: a quotation already linked to a job cannot convert twice.
 - A Milestone's `plannedAt` is regenerated when the job's schedule changes, unless it has an actual.
+- Deleting an AdditionalService attached to any job is blocked; the UI offers to retire it instead,
+  so the jobs that bought it keep their record.
+- A JobService that has raised a charge keeps that charge when the service is removed from the job,
+  and the confirmation says so.
+- An Incident cannot move to a closed status without a root cause.
 
 ---
 
@@ -309,8 +458,9 @@ AuditEntry ─────── at, actor, action, entity, entityId, detail
 | --- | --- | --- |
 | **1.0** | Customers, offices, packages, projects + stepper, containers, documents, charges, finance, control tower | Shipped |
 | **2.0** | Quotations & pipeline, partners, milestone tracking, warehouse, customs filings, operations analytics, settings, audit trail | This document |
-| **2.1** | Printable quotation / invoice / draft B/L, SOP per customer, approval routing | Next |
-| **3.0** | Backend, auth and roles, carrier EDI ingestion, CEISA 4.0 and Coretax connectors, customer portal | Planned |
+| **3.0** | Sign-in, registration and password reset; additional-services catalogue with trigger rules; incidents and claims; per-document standards; the forwarder's own company record | This document |
+| **3.1** | Printable quotation / invoice / draft B/L, SOP per customer, approval routing | Next |
+| **4.0** | Backend, server-side auth and role enforcement, carrier EDI ingestion, CEISA 4.0 and Coretax connectors, customer portal | Planned |
 
 ---
 
@@ -325,3 +475,11 @@ AuditEntry ─────── at, actor, action, entity, entityId, detail
    one.
 4. **Milestone authority.** When a carrier EDI event contradicts a manually keyed actual, which
    wins? Proposed: EDI wins, the manual value is retained as a superseded record.
+5. **Refused mandatory services.** Today a declined mandatory treatment blocks the gate outright.
+   Should a named director be able to release it against a signed customer indemnity, and if so does
+   that release belong on the job or on the customer?
+6. **Service triggers vs. destination rules.** Trigger rules and the destination document rules
+   overlap (Australia demands both a treatment and its certificate). Should the certificate be
+   derived from the service rather than declared twice?
+7. **Incident cost attribution.** Incident cost sits on the incident. Whether it should also post to
+   the job's margin — and therefore to job profitability — is an accounting-policy decision.

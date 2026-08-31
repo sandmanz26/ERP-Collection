@@ -334,6 +334,8 @@ export interface ShipmentDocument {
   fileSizeKb?: number
   stage: StageKey
   remarks?: string
+  /** values captured against the document standard for this type */
+  fields?: DocFieldValue[]
   updatedAt: ISODate
 }
 
@@ -691,4 +693,225 @@ export interface AppSettings {
   kpiTargets: KpiTargets
   /** HS prefixes that require an export permit (LARTAS) */
   restrictedHsPrefixes: string[]
+}
+
+/* ==================================================================
+   PHASE 3 — auth, value-added services, incident handling,
+   document standards and the forwarder's own company record
+   ================================================================== */
+
+/* ---------- authentication ---------- */
+export type UserRole = 'ADMIN' | 'OPERATIONS' | 'SALES' | 'FINANCE' | 'WAREHOUSE' | 'VIEWER'
+export type AccountStatus = 'ACTIVE' | 'PENDING_VERIFICATION' | 'LOCKED' | 'SUSPENDED' | 'INVITED'
+
+export interface UserAccount {
+  id: ID
+  email: string
+  /** demo only — a real build never stores or compares a password client-side */
+  password: string
+  fullName: string
+  jobTitle: string
+  role: UserRole
+  status: AccountStatus
+  branchCode?: string
+  phone?: string
+  failedAttempts: number
+  lockedUntil?: ISODate
+  lastLoginAt?: ISODate
+  mustChangePassword: boolean
+  twoFactorEnabled: boolean
+  createdAt: ISODate
+}
+
+export interface PasswordResetToken {
+  token: string
+  email: string
+  issuedAt: ISODate
+  expiresAt: ISODate
+  used: boolean
+}
+
+/* ---------- value-added services ---------- */
+export type ServiceCategory =
+  | 'TREATMENT' | 'PACKING' | 'INSPECTION' | 'INSURANCE' | 'CUSTOMS'
+  | 'HANDLING' | 'TRANSPORT' | 'STORAGE' | 'DOCUMENTATION' | 'SPECIAL_CARGO'
+
+export type ServiceTrigger =
+  | 'WOODEN_PACKAGING' | 'PLANT_PRODUCT' | 'ANIMAL_PRODUCT' | 'FOOD_GRADE'
+  | 'DANGEROUS_GOODS' | 'REEFER' | 'HIGH_VALUE' | 'OUT_OF_GAUGE' | 'FRAGILE'
+  | 'DESTINATION_AU' | 'DESTINATION_US' | 'DESTINATION_EU' | 'LCL' | 'ALWAYS'
+
+export interface AdditionalService {
+  id: ID
+  code: string
+  name: string
+  category: ServiceCategory
+  description: string
+  /** what the customer actually gets, in their words */
+  deliverable: string
+  basis: RateBasis
+  buyRate: number
+  sellRate: number
+  currency: Currency
+  leadTimeDays: number
+  /** charge code used when this service is pushed onto a job's charge sheet */
+  chargeCode: string
+  /** document this service produces, if any */
+  producesDocument?: DocType
+  /** conditions that make this service mandatory rather than optional */
+  mandatoryWhen: ServiceTrigger[]
+  /** conditions that make it worth offering */
+  suggestedWhen: ServiceTrigger[]
+  providerPartnerId?: ID
+  active: boolean
+  notes?: string
+}
+
+export type JobServiceStatus = 'PROPOSED' | 'ACCEPTED' | 'DECLINED' | 'BOOKED' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED'
+
+export interface JobService {
+  id: ID
+  projectId: ID
+  serviceId: ID
+  code: string
+  name: string
+  status: JobServiceStatus
+  mandatory: boolean
+  /** why it is on this job — the rule that fired, or "added by hand" */
+  reason: string
+  quantity: number
+  buyRate: number
+  sellRate: number
+  currency: Currency
+  providerPartnerId?: ID
+  scheduledAt?: ISODate
+  completedAt?: ISODate
+  certificateNo?: string
+  chargeId?: ID
+  remarks?: string
+}
+
+/* ---------- incidents: the negative cases ---------- */
+export type IncidentType =
+  | 'ROLLOVER' | 'SHORT_SHIPPED' | 'BOOKING_CANCELLED' | 'GATE_REJECTED'
+  | 'CUSTOMS_HOLD' | 'DOCUMENT_DISCREPANCY' | 'CARGO_DAMAGE' | 'CARGO_SHORTAGE'
+  | 'TEMPERATURE_DEVIATION' | 'DEMURRAGE' | 'DETENTION' | 'VESSEL_OMISSION'
+  | 'CUSTOMER_CANCELLED' | 'PAYMENT_DEFAULT' | 'RETURN_TO_ORIGIN' | 'MISDECLARATION'
+
+export type IncidentSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+export type IncidentStatus = 'OPEN' | 'INVESTIGATING' | 'ACTION_TAKEN' | 'AWAITING_PARTY' | 'RESOLVED' | 'WRITTEN_OFF' | 'ESCALATED'
+export type LiableParty = 'CARRIER' | 'SHIPPER' | 'CONSIGNEE' | 'FORWARDER' | 'VENDOR' | 'CUSTOMS' | 'INSURER' | 'UNDETERMINED'
+
+export interface IncidentAction {
+  id: ID
+  at: ISODate
+  action: string
+  actor: string
+  outcome?: string
+}
+
+export interface Incident {
+  id: ID
+  reference: string
+  projectId?: ID
+  containerId?: ID
+  type: IncidentType
+  severity: IncidentSeverity
+  status: IncidentStatus
+  title: string
+  detail: string
+  detectedAt: ISODate
+  resolvedAt?: ISODate
+  liableParty: LiableParty
+  partnerId?: ID
+  /** what it costs us before recovery */
+  costImpact: number
+  /** what we expect to recover from the liable party or insurer */
+  recoveryExpected: number
+  recoveryReceived: number
+  currency: Currency
+  claimRef?: string
+  claimFiledAt?: ISODate
+  rootCause?: string
+  preventiveAction?: string
+  owner: string
+  actions: IncidentAction[]
+}
+
+/* ---------- document standards ---------- */
+export interface DocFieldSpec {
+  key: string
+  label: string
+  required: boolean
+  hint: string
+}
+
+export interface DocFieldValue {
+  key: string
+  value: string
+}
+
+/* ---------- the forwarder's own company record ---------- */
+export type LicenceKind =
+  | 'FREIGHT_FORWARDING' | 'CUSTOMS_BROKER' | 'NVOCC' | 'IATA_AGENT' | 'AEO'
+  | 'BONDED_WAREHOUSE' | 'BUSINESS_REGISTRATION' | 'TAX_REGISTRATION' | 'MEMBERSHIP'
+
+export interface CompanyLicence {
+  id: ID
+  kind: LicenceKind
+  name: string
+  number: string
+  issuer: string
+  issuedAt: ISODate
+  expiresAt?: ISODate
+  scope?: string
+  notes?: string
+}
+
+export interface CompanyBranch {
+  id: ID
+  code: string
+  name: string
+  city: string
+  countryCode: string
+  addressLine: string
+  phone?: string
+  email?: string
+  managerName: string
+  isHeadOffice: boolean
+  servesPorts: string[]
+  headcount: number
+}
+
+export interface BankAccount {
+  id: ID
+  label: string
+  bankName: string
+  accountName: string
+  accountNumber: string
+  swift?: string
+  currency: Currency
+  branchCode?: string
+  isPrimary: boolean
+}
+
+export interface CompanyProfile {
+  legalName: string
+  tradingName: string
+  taxId: string
+  registrationNo: string
+  foundedYear: number
+  addressLine: string
+  city: string
+  countryCode: string
+  phone: string
+  email: string
+  website: string
+  liabilityCoverage: number
+  liabilityCurrency: Currency
+  liabilityExpiresAt: ISODate
+  standardTradingConditions: string
+  licences: CompanyLicence[]
+  branches: CompanyBranch[]
+  bankAccounts: BankAccount[]
 }

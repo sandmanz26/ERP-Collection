@@ -123,7 +123,7 @@ export const partners: Partner[] = [
     notes: 'Licensed PPJK. Since 3 Aug 2026 they upload every PEB supporting document through CEISA 4.0 on our behalf.',
   },
   {
-    id: 'ptr_11', code: 'VND-0011', name: 'PT Fumigasi Nusantara', types: ['FUMIGATION'], status: 'ACTIVE',
+    id: 'ptr_11', code: 'VND-0011', name: 'PT Prima Fumigasi Indonesia', types: ['FUMIGATION'], status: 'ACTIVE',
     countryCode: 'ID', country: 'Indonesia', city: 'Semarang', currency: 'IDR', paymentTermDays: 14,
     insuranceValidTo: '2026-09-20',
     services: ['ISPM-15 heat treatment', 'Methyl bromide fumigation', 'Certificate issuance'],
@@ -205,13 +205,13 @@ export const quotations: Quotation[] = [
     ],
     terms: 'Rate valid for shipment on or before the validity end date. Subject to space and equipment availability. Excludes destination THC, duty and VAT.',
     remarks: 'Client pushed back on v1 by USD 60 per box. v2 shaves the ocean freight and moves PEB to optional. Decision expected this week.',
-    probability: 70, expectedCloseAt: iso(4), ownerName: 'Rina Wulandari',
+    probability: 70, expectedCloseAt: iso(4), ownerName: 'Elena Marchetti',
     sentAt: day(-2), createdAt: day(-6), updatedAt: day(-2),
     events: [
-      qevent('qe_1', -6, 'CREATED', 'RFQ received for four 40HC to Rotterdam, weekly through Q4.', 'Rina Wulandari'),
-      qevent('qe_2', -5, 'SENT', 'v1 sent at USD 1,480 per box all-in.', 'Rina Wulandari'),
-      qevent('qe_3', -3, 'NEGOTIATION', 'Budi: competitor quoted USD 1,420. Asked us to match or explain.', 'Rina Wulandari'),
-      qevent('qe_4', -2, 'REVISED', 'v2 issued at USD 1,420 with PEB made optional to hold the margin.', 'Rina Wulandari'),
+      qevent('qe_1', -6, 'CREATED', 'RFQ received for four 40HC to Rotterdam, weekly through Q4.', 'Elena Marchetti'),
+      qevent('qe_2', -5, 'SENT', 'v1 sent at USD 1,480 per box all-in.', 'Elena Marchetti'),
+      qevent('qe_3', -3, 'NEGOTIATION', 'Budi: competitor quoted USD 1,420. Asked us to match or explain.', 'Elena Marchetti'),
+      qevent('qe_4', -2, 'REVISED', 'v2 issued at USD 1,420 with PEB made optional to hold the margin.', 'Elena Marchetti'),
     ].reverse(),
   },
   {
@@ -232,11 +232,11 @@ export const quotations: Quotation[] = [
     ],
     terms: 'Full payment by telegraphic transfer before booking — no credit line is in place. Lashing survey at owner’s account.',
     remarks: 'First trial with a prospect met at the Dubai trade mission. Surveyor quote still outstanding, so the lashing line carries risk.',
-    probability: 40, expectedCloseAt: iso(8), ownerName: 'Ahmad Fauzi',
+    probability: 40, expectedCloseAt: iso(8), ownerName: 'Marcus Bell',
     sentAt: day(-3), createdAt: day(-4), updatedAt: day(-3),
     events: [
-      qevent('qe_5', -4, 'CREATED', 'Built from the draft breakbulk package after the Dubai mission.', 'Ahmad Fauzi'),
-      qevent('qe_6', -3, 'SENT', 'Quote sent with TT-advance terms because no credit line exists.', 'Ahmad Fauzi'),
+      qevent('qe_5', -4, 'CREATED', 'Built from the draft breakbulk package after the Dubai mission.', 'Marcus Bell'),
+      qevent('qe_6', -3, 'SENT', 'Quote sent with TT-advance terms because no credit line exists.', 'Marcus Bell'),
     ].reverse(),
   },
   {
@@ -258,14 +258,14 @@ export const quotations: Quotation[] = [
     ],
     terms: 'Renewal of the Q3 rate on the same terms. Phytosanitary certificate included.',
     remarks: 'Accepted without negotiation — the phytosanitary handling is what keeps this account.',
-    probability: 100, expectedCloseAt: iso(-10), ownerName: 'Siti Nurhaliza',
+    probability: 100, expectedCloseAt: iso(-10), ownerName: 'Priya Nair',
     sentAt: day(-13), decidedAt: day(-10), convertedProjectId: 'prj_12',
     createdAt: day(-14), updatedAt: day(-10),
     events: [
-      qevent('qe_7', -14, 'CREATED', 'Q4 renewal prepared from the Q3 rate card.', 'Siti Nurhaliza'),
-      qevent('qe_8', -13, 'SENT', 'Sent to Ratna with the same all-in rate as Q3.', 'Siti Nurhaliza'),
-      qevent('qe_9', -10, 'DECIDED', 'Accepted by email. Converted to PRJ-2026-0050.', 'Siti Nurhaliza'),
-      qevent('qe_10', -10, 'CONVERTED', 'Job opened with five charge lines copied from the quotation.', 'Siti Nurhaliza'),
+      qevent('qe_7', -14, 'CREATED', 'Q4 renewal prepared from the Q3 rate card.', 'Priya Nair'),
+      qevent('qe_8', -13, 'SENT', 'Sent to Ratna with the same all-in rate as Q3.', 'Priya Nair'),
+      qevent('qe_9', -10, 'DECIDED', 'Accepted by email. Converted to PRJ-2026-0050.', 'Priya Nair'),
+      qevent('qe_10', -10, 'CONVERTED', 'Job opened with five charge lines copied from the quotation.', 'Priya Nair'),
     ].reverse(),
   },
   {
@@ -286,15 +286,15 @@ export const quotations: Quotation[] = [
     ],
     terms: 'Net 45 requested by the client; approved only against a director release.',
     remarks: 'Lost on credit terms, not price. The client is already over their limit with us by IDR 118.5 M — finance would not extend to net 45.',
-    probability: 0, expectedCloseAt: iso(-12), ownerName: 'Bagus Prasetyo',
+    probability: 0, expectedCloseAt: iso(-12), ownerName: 'David Chen',
     sentAt: day(-26), decidedAt: day(-12), lossReason: 'CREDIT_TERMS', competitorName: 'Pacific Rim Logistics',
     createdAt: day(-30), updatedAt: day(-12),
     events: [
-      qevent('qe_11', -30, 'CREATED', 'RFQ for six 40HC monthly to Los Angeles.', 'Bagus Prasetyo'),
-      qevent('qe_12', -26, 'SENT', 'v1 at net 30.', 'Bagus Prasetyo'),
-      qevent('qe_13', -20, 'REVISED', 'v2 with a small rate reduction after pushback.', 'Bagus Prasetyo'),
-      qevent('qe_14', -16, 'REVISED', 'v3 — client asked for net 45; sent pending a director release.', 'Bagus Prasetyo'),
-      qevent('qe_15', -12, 'DECIDED', 'Lost. Finance declined net 45 while the account is over its limit.', 'Bagus Prasetyo'),
+      qevent('qe_11', -30, 'CREATED', 'RFQ for six 40HC monthly to Los Angeles.', 'David Chen'),
+      qevent('qe_12', -26, 'SENT', 'v1 at net 30.', 'David Chen'),
+      qevent('qe_13', -20, 'REVISED', 'v2 with a small rate reduction after pushback.', 'David Chen'),
+      qevent('qe_14', -16, 'REVISED', 'v3 — client asked for net 45; sent pending a director release.', 'David Chen'),
+      qevent('qe_15', -12, 'DECIDED', 'Lost. Finance declined net 45 while the account is over its limit.', 'David Chen'),
     ].reverse(),
   },
   {
@@ -315,11 +315,11 @@ export const quotations: Quotation[] = [
     ],
     terms: 'Chargeable weight on the IATA volumetric divisor of 6000; 1,067 kg chargeable against 780 kg actual.',
     remarks: 'Standing air rate for line-stop replenishment. Volumetric weight is the driver — confirm carton dimensions before booking.',
-    probability: 65, expectedCloseAt: iso(3), ownerName: 'Yoga Pratama',
+    probability: 65, expectedCloseAt: iso(3), ownerName: 'Tomas Weber',
     sentAt: day(-1), createdAt: day(-1), updatedAt: day(-1),
     events: [
-      qevent('qe_16', -1, 'CREATED', 'Rizky flagged a Shanghai line-stop risk; quoted same day.', 'Yoga Pratama'),
-      qevent('qe_17', -1, 'SENT', 'Sent with the volumetric calculation shown so the buyer can sanity-check it.', 'Yoga Pratama'),
+      qevent('qe_16', -1, 'CREATED', 'Rizky flagged a Shanghai line-stop risk; quoted same day.', 'Tomas Weber'),
+      qevent('qe_17', -1, 'SENT', 'Sent with the volumetric calculation shown so the buyer can sanity-check it.', 'Tomas Weber'),
     ].reverse(),
   },
   {
@@ -340,12 +340,12 @@ export const quotations: Quotation[] = [
     ],
     terms: 'Reefer set point -18 °C with pre-trip inspection. Plug-in at destination beyond 7 days at consignee’s account.',
     remarks: 'Expired without a decision — the Japanese buyer deferred the season. Worth re-quoting for the October window.',
-    probability: 0, ownerName: 'Dewi Kartika',
+    probability: 0, ownerName: 'Sofia Reyes',
     sentAt: day(-44), createdAt: day(-45), updatedAt: day(-15),
     events: [
-      qevent('qe_18', -45, 'CREATED', 'Proactive quote ahead of the tuna season.', 'Dewi Kartika'),
-      qevent('qe_19', -44, 'SENT', 'Sent to Andi with a 30-day validity.', 'Dewi Kartika'),
-      qevent('qe_20', -15, 'NOTE', 'Validity lapsed with no decision — buyer deferred the season.', 'Dewi Kartika'),
+      qevent('qe_18', -45, 'CREATED', 'Proactive quote ahead of the tuna season.', 'Sofia Reyes'),
+      qevent('qe_19', -44, 'SENT', 'Sent to Andi with a 30-day validity.', 'Sofia Reyes'),
+      qevent('qe_20', -15, 'NOTE', 'Validity lapsed with no decision — buyer deferred the season.', 'Sofia Reyes'),
     ].reverse(),
   },
   {
@@ -368,9 +368,9 @@ export const quotations: Quotation[] = [
     ],
     terms: 'Logistics package invoiced on shipment. Goods settle on the consignment cycle, 30 days, 22% commission.',
     remarks: 'Draft for cycle 9. Hold until cycle 8 sells through — 41 units from cycle 6 are still unsold at day 96 of 120.',
-    probability: 80, expectedCloseAt: iso(12), ownerName: 'Dewi Kartika',
+    probability: 80, expectedCloseAt: iso(12), ownerName: 'Sofia Reyes',
     createdAt: day(0), updatedAt: day(0),
-    events: [qevent('qe_21', 0, 'CREATED', 'Cycle 9 drafted from the standing consignment package.', 'Dewi Kartika')],
+    events: [qevent('qe_21', 0, 'CREATED', 'Cycle 9 drafted from the standing consignment package.', 'Sofia Reyes')],
   },
 ]
 
@@ -427,7 +427,7 @@ export const warehouseReceipts: WarehouseReceipt[] = [
     marks: 'BALI CRAFT / SYD / C-NO 1-180', poNumber: 'PO-88214',
     packages: 180, packagesReleased: 0, cbm: 46.2, weightKg: 4_320, freeDays: 7,
     storageRatePerCbmDay: 8500, currency: 'IDR', handlingIn: 1_850_000, handlingOut: 1_850_000,
-    receivedBy: 'Bagus Prasetyo', remarks: 'Awaiting CFS consolidation with the ceramics lot before gate-in.',
+    receivedBy: 'David Chen', remarks: 'Awaiting CFS consolidation with the ceramics lot before gate-in.',
   },
   {
     id: 'wr_2', number: 'WR-2026-0312', warehouseCode: 'CFS-SUB', warehouseName: 'CFS Tanjung Perak',
@@ -436,7 +436,7 @@ export const warehouseReceipts: WarehouseReceipt[] = [
     marks: 'BALI CRAFT / SYD / C-NO 181-300', poNumber: 'PO-88215',
     packages: 120, packagesReleased: 0, cbm: 18.9, weightKg: 2_640, freeDays: 7,
     storageRatePerCbmDay: 8500, currency: 'IDR', handlingIn: 980_000, handlingOut: 980_000,
-    receivedBy: 'Bagus Prasetyo',
+    receivedBy: 'David Chen',
   },
   {
     id: 'wr_3', number: 'WR-2026-0298', warehouseCode: 'WH-SRG', warehouseName: 'Semarang Consolidation Hub',
@@ -445,7 +445,7 @@ export const warehouseReceipts: WarehouseReceipt[] = [
     marks: 'JATI MAKMUR / RTM / C-NO 1-240', poNumber: 'PO-77120',
     packages: 240, packagesReleased: 160, cbm: 92.4, weightKg: 17_760, freeDays: 10,
     storageRatePerCbmDay: 7200, currency: 'IDR', handlingIn: 3_400_000, handlingOut: 2_260_000,
-    receivedBy: 'Rina Wulandari', remarks: '160 crates stuffed into the first 40HC. Balance waits for the second unit.',
+    receivedBy: 'Elena Marchetti', remarks: '160 crates stuffed into the first 40HC. Balance waits for the second unit.',
   },
   {
     id: 'wr_4', number: 'WR-2026-0264', warehouseCode: 'WH-DPS', warehouseName: 'Denpasar Buying Warehouse',
@@ -453,7 +453,7 @@ export const warehouseReceipts: WarehouseReceipt[] = [
     description: 'Carved teak wall panels — returned from Sydney showroom, cycle 6 unsold', hsCode: '4407.29',
     marks: 'BALI CRAFT / RETURN / C-NO 1-41', packages: 41, packagesReleased: 0, cbm: 11.2, weightKg: 902,
     freeDays: 14, storageRatePerCbmDay: 6800, currency: 'IDR', handlingIn: 620_000, handlingOut: 620_000,
-    receivedBy: 'Dewi Kartika',
+    receivedBy: 'Sofia Reyes',
     remarks: 'Cycle 6 unsold stock at day 96 of the 120-day return window. Decide: re-consign, discount or write down.',
   },
   {
@@ -463,7 +463,7 @@ export const warehouseReceipts: WarehouseReceipt[] = [
     marks: 'CAKRA / SGN / C-NO 1-96', poNumber: 'PO-45990',
     packages: 96, packagesReleased: 96, cbm: 5.8, weightKg: 1_536, freeDays: 5,
     storageRatePerCbmDay: 9200, currency: 'IDR', handlingIn: 1_120_000, handlingOut: 1_120_000,
-    receivedBy: 'Yoga Pratama',
+    receivedBy: 'Tomas Weber',
   },
   {
     id: 'wr_6', number: 'WR-2026-0288', warehouseCode: 'CS-MAK', warehouseName: 'Makassar Cold Store',
@@ -472,7 +472,7 @@ export const warehouseReceipts: WarehouseReceipt[] = [
     marks: 'SAMUDRA / PUS / MC 1-2400', poNumber: 'PO-31007',
     packages: 2400, packagesReleased: 0, cbm: 72.0, weightKg: 24_960, freeDays: 5,
     storageRatePerCbmDay: 21000, currency: 'IDR', handlingIn: 8_400_000, handlingOut: 8_400_000,
-    receivedBy: 'Dewi Kartika',
+    receivedBy: 'Sofia Reyes',
     remarks: 'ON HOLD pending the health certificate from the fisheries authority. Cold-store storage is the expensive kind.',
   },
   {
@@ -481,7 +481,7 @@ export const warehouseReceipts: WarehouseReceipt[] = [
     description: 'Teak occasional tables — buyer rejected finish, awaiting instruction', hsCode: '9403.60',
     marks: 'JATI MAKMUR / HOLD', packages: 64, packagesReleased: 0, cbm: 24.6, weightKg: 3_072,
     freeDays: 10, storageRatePerCbmDay: 7200, currency: 'IDR', handlingIn: 1_240_000, handlingOut: 1_240_000,
-    receivedBy: 'Rina Wulandari',
+    receivedBy: 'Elena Marchetti',
     remarks: 'Sitting 61 days. Storage now exceeds the freight it would have earned — escalate to the client.',
   },
 ]
@@ -504,8 +504,8 @@ export const customsFilings: CustomsFiling[] = [
   {
     id: 'cf_2', projectId: 'prj_2', type: 'PEB', regNumber: '000297-2026-BLW', regDate: iso(0),
     ceisaRef: 'CEISA/2026/BLW/0002971', status: 'UNDER_REVIEW', channel: 'KUNING',
-    submittedAt: day(0, 8), filedByName: 'In-house PPJK — Nusantara Freight',
-    exporterOfRecord: 'PT Nusantara Rubber Industries', declaredValue: 412_000, declaredCurrency: 'USD',
+    submittedAt: day(0, 8), filedByName: 'In-house customs desk — Meridian Freight',
+    exporterOfRecord: 'PT Anugerah Rubber Industries', declaredValue: 412_000, declaredCurrency: 'USD',
     officeCode: '070100',
     remarks: 'Yellow lane — Bea Cukai querying the weight declared against the packing list. Expect 1–2 days; VGM cut-off is in two.',
     supportingDocs: supportingDocs(['COMMERCIAL_INVOICE', 'PACKING_LIST', 'DRAFT_BL']),
@@ -513,7 +513,7 @@ export const customsFilings: CustomsFiling[] = [
   {
     id: 'cf_3', projectId: 'prj_4', type: 'PEB', regNumber: '000501-2026-SUB', regDate: iso(1),
     status: 'DRAFT', channel: 'PENDING', filedByPartnerId: 'ptr_10', filedByName: 'PT Sarana Bandar Nasional',
-    exporterOfRecord: 'PT Sinar Kopi Nusantara', declaredValue: 198_000, declaredCurrency: 'USD',
+    exporterOfRecord: 'PT Sinar Kopi Sejahtera', declaredValue: 198_000, declaredCurrency: 'USD',
     officeCode: '050100',
     remarks: 'Cannot submit: the phytosanitary certificate was rejected by Karantina and CEISA 4.0 requires it uploaded for coffee.',
     supportingDocs: supportingDocs(['COMMERCIAL_INVOICE', 'PACKING_LIST']),
@@ -530,7 +530,7 @@ export const customsFilings: CustomsFiling[] = [
   {
     id: 'cf_5', projectId: 'prj_13', type: 'PEB', regNumber: '000517-2026-TPP', regDate: iso(2),
     ceisaRef: 'CEISA/2026/TPP/0005170', status: 'SUBMITTED', channel: 'PENDING',
-    submittedAt: day(2), filedByName: 'In-house PPJK — Nusantara Freight',
+    submittedAt: day(2), filedByName: 'In-house customs desk — Meridian Freight',
     exporterOfRecord: 'PT Cakra Elektronik Komponen', declaredValue: 118_900, declaredCurrency: 'USD',
     officeCode: '040300', remarks: 'Form D claimed under ATIGA — invoice value must match the COO exactly.',
     supportingDocs: supportingDocs(['COMMERCIAL_INVOICE', 'PACKING_LIST', 'DRAFT_BL', 'CERTIFICATE_OF_ORIGIN']),
@@ -538,8 +538,8 @@ export const customsFilings: CustomsFiling[] = [
   {
     id: 'cf_6', projectId: 'prj_9', type: 'PEB', regNumber: '000241-2026-BLW', regDate: iso(-75),
     ceisaRef: 'CEISA/2026/BLW/0002410', status: 'APPROVED', channel: 'HIJAU',
-    submittedAt: day(-75), respondedAt: day(-75, 14), filedByName: 'In-house PPJK — Nusantara Freight',
-    exporterOfRecord: 'PT Nusantara Rubber Industries', declaredValue: 388_000, declaredCurrency: 'USD',
+    submittedAt: day(-75), respondedAt: day(-75, 14), filedByName: 'In-house customs desk — Meridian Freight',
+    exporterOfRecord: 'PT Anugerah Rubber Industries', declaredValue: 388_000, declaredCurrency: 'USD',
     officeCode: '070100', remarks: 'Clean filing. Form AK issued for the Korean buyer’s duty preference.',
     supportingDocs: supportingDocs(['COMMERCIAL_INVOICE', 'PACKING_LIST', 'DRAFT_BL', 'CERTIFICATE_OF_ORIGIN']),
   },
@@ -553,7 +553,7 @@ export const customsFilings: CustomsFiling[] = [
   },
   {
     id: 'cf_8', projectId: 'prj_6', type: 'PEB', status: 'DRAFT', channel: 'PENDING',
-    filedByName: 'In-house PPJK — Nusantara Freight', exporterOfRecord: 'PT Samudra Beku Seafood',
+    filedByName: 'In-house customs desk — Meridian Freight', exporterOfRecord: 'PT Samudra Beku Seafood',
     declaredValue: 356_000, declaredCurrency: 'USD', officeCode: '080100',
     remarks: 'Held: shrimp is a LARTAS commodity and the health certificate is still with the fisheries authority.',
     supportingDocs: supportingDocs(['COMMERCIAL_INVOICE', 'PACKING_LIST']),
@@ -564,7 +564,7 @@ export const customsFilings: CustomsFiling[] = [
    SETTINGS
    ================================================================ */
 export const defaultSettings: AppSettings = {
-  companyName: 'PT Nusantara Freight Internasional',
+  companyName: 'Meridian Freight International',
   companyTaxId: '01.234.567.8-051.000',
   baseCurrency: 'IDR',
   fxRates: { ...FX_RATES },

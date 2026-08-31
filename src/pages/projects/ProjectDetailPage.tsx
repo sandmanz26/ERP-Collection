@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   AlertTriangle, ArrowLeft, ArrowRight, Building2, CalendarClock, CheckCircle2, Container as ContainerIcon,
-  FileSignature, FileStack, Info, Pencil, Radio, Receipt, Repeat, Ship, ShieldCheck, Stamp, Anchor,
+  FileSignature, FileStack, Info, Pencil, Radio, Receipt, Repeat, Ship, ShieldCheck, Sparkles, Stamp, Anchor,
 } from 'lucide-react'
 import { useErp } from '@/store/useErp'
 import { STAGES, countryFlag, stageIndex } from '@/data/reference'
@@ -20,6 +20,8 @@ import { ProjectForm } from './ProjectForm'
 import { ContainersTable } from './tabs/ContainersTable'
 import { DocumentsTable } from './tabs/DocumentsTable'
 import { ChargesTable } from './tabs/ChargesTable'
+import { ServicesPanel } from './tabs/ServicesPanel'
+import { recommendServices, serviceBlockers } from '@/lib/services'
 import { MilestonesTable } from '@/pages/tracking/MilestonesTable'
 import { CustomsTable } from '@/pages/customs/CustomsTable'
 import { filingReadiness, milestoneHealth, quoteTotals } from '@/lib/analytics2'
@@ -29,7 +31,7 @@ import { itemCbm, itemGrossKg } from '@/lib/shipping'
 import { useToast } from '@/components/ui/toast'
 import type { StageKey } from '@/data/types'
 
-type TabKey = 'overview' | 'containers' | 'documents' | 'charges' | 'tracking' | 'customs' | 'timeline'
+type TabKey = 'overview' | 'containers' | 'documents' | 'charges' | 'services' | 'tracking' | 'customs' | 'timeline'
 
 export function ProjectDetailPage() {
   const { id } = useParams()
@@ -62,6 +64,7 @@ export function ProjectDetailPage() {
   const containers = store.containers.filter((c) => c.projectId === project.id)
   const documents = store.documents.filter((d) => d.projectId === project.id)
   const charges = store.charges.filter((c) => c.projectId === project.id)
+  const projectServices = store.jobServices.filter((j) => j.projectId === project.id)
   const client = store.customers.find((c) => c.id === project.clientId)
   const shipper = store.customers.find((c) => c.id === project.shipperId)
   const consignee = store.customers.find((c) => c.id === project.consigneeId)
@@ -75,7 +78,11 @@ export function ProjectDetailPage() {
   const peb = filings.find((f) => f.type === 'PEB')
   const pebReadiness = peb ? filingReadiness(peb) : null
 
-  const gate = evaluateStageGate(project, containers, documents, client, { filings })
+  const serviceGate = serviceBlockers(
+    recommendServices(project, store.containers, projectServices, store.services),
+    projectServices,
+  )
+  const gate = evaluateStageGate(project, containers, documents, client, { filings, serviceBlockers: serviceGate })
   const fin = jobFinancials(charges)
   const compliance = documentCompliance(project, documents)
   const currentIdx = stageIndex(project.stage)
@@ -198,6 +205,7 @@ export function ProjectDetailPage() {
           { value: 'containers', label: 'Containers', icon: <ContainerIcon />, count: containers.length },
           { value: 'documents', label: 'Documents', icon: <FileStack />, count: documents.length },
           { value: 'charges', label: 'Charges', icon: <Receipt />, count: charges.length },
+          { value: 'services', label: 'Services', icon: <Sparkles />, count: projectServices.length },
           { value: 'tracking', label: 'Tracking', icon: <Radio />, count: milestones.length },
           { value: 'customs', label: 'Customs', icon: <Stamp />, count: filings.length },
           { value: 'timeline', label: 'Timeline', icon: <CalendarClock />, count: project.timeline.length },
@@ -513,6 +521,7 @@ export function ProjectDetailPage() {
       {tab === 'containers' && <ContainersTable project={project} scoped />}
       {tab === 'documents' && <DocumentsTable project={project} scoped />}
       {tab === 'charges' && <ChargesTable project={project} scoped />}
+      {tab === 'services' && <ServicesPanel project={project} />}
       {tab === 'tracking' && <MilestonesTable project={project} scoped />}
       {tab === 'customs' && <CustomsTable project={project} scoped />}
 

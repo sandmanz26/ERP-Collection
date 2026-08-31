@@ -5,7 +5,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ------------------------------------------------------------------
-   Nusantara Freight — design tokens
+   Meridian Freight — design tokens
    A maritime navy system. Light = "harbour paper", Dark = "night deck".
    ------------------------------------------------------------------ */
 :root {
@@ -62,6 +62,10 @@
   --purple-soft: 268 84% 96%;
   --purple-soft-fg: 265 60% 40%;
 
+  /* the sign-in brand panel — deep enough to sit beside the form in both themes */
+  --auth-panel: 217 89% 46%;
+  --auth-panel-fg: 0 0% 100%;
+
   --shadow-color: 215 45% 22%;
   --radius: 0.625rem;
 }
@@ -88,6 +92,8 @@
   --primary-fg: 216 60% 8%;
   --primary-soft: 214 60% 18%;
   --primary-soft-fg: 211 96% 78%;
+  --auth-panel: 216 58% 12%;
+  --auth-panel-fg: 210 40% 96%;
 
   --accent: 183 72% 48%;
   --accent-soft: 187 60% 15%;
@@ -139,6 +145,8 @@
   --color-primary-fg: hsl(var(--primary-fg));
   --color-primary-soft: hsl(var(--primary-soft));
   --color-primary-soft-fg: hsl(var(--primary-soft-fg));
+  --color-auth-panel: hsl(var(--auth-panel));
+  --color-auth-panel-fg: hsl(var(--auth-panel-fg));
 
   --color-accent: hsl(var(--accent));
   --color-accent-soft: hsl(var(--accent-soft));

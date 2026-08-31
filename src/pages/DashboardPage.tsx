@@ -15,6 +15,7 @@ import { EmptyState, Progress } from '@/components/ui/misc'
 import { StageChip } from '@/components/shared/StageChip'
 import { buildExceptions, jobFinancials, pipelineByStage, trialBalance, incomeStatement, arAging, type Exception } from '@/lib/analytics'
 import { buildPhase2Exceptions, milestoneHealth, pipelineSummary, warehouseSummary } from '@/lib/analytics2'
+import { buildPhase3Exceptions, incidentExposure } from '@/lib/services'
 import { itemCbm, itemGrossKg, utilisation } from '@/lib/shipping'
 import { fmtCurrency, fmtDate, fmtNumber, fmtPercent, pluralDays, relativeDays } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -24,18 +25,21 @@ export function DashboardPage() {
   const store = useErp()
   const { projects, containers, documents, charges, customers, invoices, accounts, journal } = store
   const { quotations, partners, milestones, receipts, filings, settings } = store
+  const { jobServices, services, incidents, company } = store
   const [sev, setSev] = React.useState<'ALL' | 'CRITICAL' | 'HIGH' | 'MEDIUM'>('ALL')
 
   const exceptions = React.useMemo(() => {
     const core = buildExceptions({ projects, containers, documents, charges, customers, invoices })
     const extra = buildPhase2Exceptions({ quotations, partners, milestones, receipts, filings, projects, settings })
+    const phase3 = buildPhase3Exceptions({ projects, containers, documents, jobServices, services, incidents, company })
     const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2 } as const
-    return [...core, ...extra].sort((a, b) => order[a.severity] - order[b.severity])
-  }, [projects, containers, documents, charges, customers, invoices, quotations, partners, milestones, receipts, filings, settings])
+    return [...core, ...extra, ...phase3].sort((a, b) => order[a.severity] - order[b.severity])
+  }, [projects, containers, documents, charges, customers, invoices, quotations, partners, milestones, receipts, filings, settings, jobServices, services, incidents, company])
 
   const quotePipeline = pipelineSummary(quotations)
   const tracking = milestoneHealth(milestones)
   const warehouse = warehouseSummary(receipts)
+  const claims = incidentExposure(incidents)
   const filteredExceptions = sev === 'ALL' ? exceptions : exceptions.filter((e) => e.severity === sev)
 
   const activeJobs = projects.filter((p) => p.status === 'ACTIVE')
@@ -169,6 +173,14 @@ export function DashboardPage() {
           accent={warehouse.aged ? 'warning' : 'primary'}
           sub={`${warehouse.openCount} receipts · ${fmtCurrency(warehouse.storageAccrued, 'IDR', { compact: true })} storage accrued`}
           onClick={() => nav('/warehouse')}
+        />
+        <KpiCard
+          label="Open claims"
+          value={claims.open}
+          icon={<ShieldAlert />}
+          accent={claims.critical ? 'danger' : claims.open ? 'warning' : 'success'}
+          sub={`${fmtCurrency(claims.outstanding, 'IDR', { compact: true })} outstanding · ${claims.recoveryRatePct.toFixed(0)}% recovered to date`}
+          onClick={() => nav('/incidents')}
         />
       </div>
 

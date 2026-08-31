@@ -155,7 +155,7 @@ export function CustomerForm({
             <Select
               value={draft.salesOwner}
               onChange={(v) => set('salesOwner', v)}
-              options={['Rina Wulandari', 'Ahmad Fauzi', 'Dewi Kartika', 'Bagus Prasetyo', 'Siti Nurhaliza', 'Yoga Pratama'].map((t) => ({ value: t, label: t }))}
+              options={['Elena Marchetti', 'Marcus Bell', 'Sofia Reyes', 'David Chen', 'Priya Nair', 'Tomas Weber'].map((t) => ({ value: t, label: t }))}
             />
           </Field>
           <Field label="Trading roles" help="What this party can be on a job. A customer is often both the client who pays and the shipper." className="sm:col-span-2">
@@ -432,7 +432,7 @@ function blank(existing: Customer[]): Customer {
     code: nextCode('CUS', existing.map((c) => c.code)),
     legalName: '', tradeName: '', industry: 'Other', roles: ['CLIENT', 'SHIPPER'], status: 'PROSPECT',
     riskRating: 'MEDIUM', creditLimit: 0, creditCurrency: 'IDR', creditTermDays: 30, outstandingAr: 0,
-    defaultIncoterm: 'FOB', defaultPaymentTerm: 'NET_30', salesOwner: 'Rina Wulandari',
+    defaultIncoterm: 'FOB', defaultPaymentTerm: 'NET_30', salesOwner: 'Elena Marchetti',
     onboardedAt: new Date().toISOString().slice(0, 10), notes: '',
     offices: [{ ...emptyOffice(id), name: 'Head Office', isHeadquarter: true, isBillingOffice: true, roles: ['CLIENT', 'SHIPPER'] }],
   }

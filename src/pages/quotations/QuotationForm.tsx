@@ -538,9 +538,9 @@ function blank(existing: Quotation[], numbering: { key: string; prefix: string; 
     commodity: '', hsCodes: [], equipment: [{ type: '40HC', quantity: 1 }],
     currency: 'USD', fxRate: 16250, transitDays: 14, freeTimeDays: 7,
     validFrom: now.slice(0, 10), validTo: validTo.toISOString().slice(0, 10),
-    lines: [], probability: 50, ownerName: 'Rina Wulandari',
+    lines: [], probability: 50, ownerName: 'Elena Marchetti',
     createdAt: now, updatedAt: now,
-    events: [{ id: uid('qe'), at: now, type: 'CREATED', note: 'Quotation opened.', actor: 'Rina Wulandari' }],
+    events: [{ id: uid('qe'), at: now, type: 'CREATED', note: 'Quotation opened.', actor: 'Elena Marchetti' }],
   }
 }
 

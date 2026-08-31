@@ -1,12 +1,17 @@
-# Nusantara Freight — Export Operations Suite
+# Meridian Freight — Export Operations Suite
 
 A front-end for an Indonesian sea-freight forwarder: the kind of business that books space with a
 carrier, stuffs a factory's cargo into containers, clears it through Bea Cukai and gets it onto a
 vessel bound for Rotterdam, Yokohama or Savannah — and then has to prove it made money doing so.
 
 This is a **front-end only** build. All data lives in the browser (Zustand + `localStorage`), seeded
-with a realistic operating book of 14 jobs, 8 customers, 23 containers, 205 documents, a charge
-sheet and a posted general ledger. There is no backend and no API layer.
+with a realistic operating book of 14 jobs, 8 customers, 23 containers, 205 documents, 18 catalogue
+services, 16 logged incidents, a charge sheet and a posted general ledger. There is no backend and
+no API layer.
+
+Sign in with any of the seeded accounts — `elena.marchetti@meridianfreight.com` and the rest — using
+`Meridian#2026`. Three accounts deliberately fail (unverified, locked, suspended) so those paths can
+be walked without breaking anything.
 
 ```bash
 npm install
@@ -37,6 +42,10 @@ does not pretend to be authoritative. The parts of this job that actually cost m
 | A shipper asks for on-time evidence and there is only prose | IFTSTA-shaped milestones with planned vs. actual, variance and the source of each event |
 | An overseas agent underperforms and nobody notices until the claim | Partner scorecards derived from on-time, document accuracy, responsiveness and open disputes |
 | Cargo sits in the CFS and the storage is never billed | Dwell computed from receipt, chargeable days from free time, and a one-click push to the job's charge sheet |
+| Furniture on timber crates ships to Australia untreated and is turned back at the border | Service triggers read off the cargo — wooden packaging makes ISPM-15 fumigation mandatory, an Australian destination adds seasonal BMSB treatment, and a missing or refused one blocks the gate |
+| A rollover, a red-lane hold or a reefer deviation lives in an email thread and is never claimed | Incident register with liability, cost impact against recovery, claim reference, dated action log and a mandatory root cause before closing |
+| A B/L is marked issued while the description does not match the L/C | Per-document-type field standards, with approval and issuance blocked while a mandatory field is empty |
+| Our own PPJK licence lapses and every filing under it is challengeable | Company record with licence and liability-cover expiry raising exceptions 60 days out |
 
 Every number on the Control Tower is derived from the jobs, containers, documents and charges in
 the store — nothing is a hand-typed dashboard figure.
@@ -46,7 +55,7 @@ the store — nothing is a hand-typed dashboard figure.
 ## Modules
 
 **Commercial** — Quotations & pipeline · Customers · Country offices · Service packages · Partners & vendors
-**Operations** — Projects · Tracking · Containers · Documents · Customs · Warehouse & CFS · Charges
+**Operations** — Projects · Tracking · Containers · Documents · Customs · Warehouse & CFS · Additional services · Incidents & claims · Charges
 **Finance** — General ledger · Chart of accounts · Invoices & bills · Financial reports · Job profitability
 **Insight** — Operations analytics · Settings & audit
 
@@ -180,6 +189,64 @@ Exchange rates used for ledger translation, PPN and PPh 23 rates, per-document n
 a live preview, approval thresholds, KPI targets and the LARTAS prefix list — plus an audit trail of
 every create, update, delete, import and conversion, exportable as CSV.
 
+### Additional services
+The catalogue of work that sits around the freight: fumigation and heat treatment, phytosanitary
+handling, export crating, vacuum barrier bagging, lashing, loading supervision, pre-shipment
+inspection, marine insurance, DG declaration, reefer monitoring, COO legalisation, courier, buffer
+storage, escorted oversize moves, and the ISF, ENS and BMSB filings a destination demands.
+
+Each entry declares **the conditions that put it on a job** — and those conditions are read off the
+job itself: packaging unit, HS chapter, container type, declared value, DG flag and destination.
+Wooden crates make ISPM-15 fumigation *mandatory*; a US destination makes an ISF filing mandatory;
+high value makes loading supervision *suggested*. A job's Services tab shows the triggers that
+fired, what has been bought and at what status, and what is still outstanding with mandatory first.
+A completed service pushes onto the charge sheet in one action, so nothing is done for free.
+
+A mandatory service that is missing, declined or failed **blocks the stage gate** from the cargo
+plan onwards and raises a critical exception — and the client's refusal stays on the record, because
+that is the evidence when the container is turned back.
+
+### Incidents and claims
+Sixteen incident types across carrier, customs, cargo and commercial: rollover, vessel omission,
+cancelled booking, short shipment, gate rejection, customs hold, document discrepancy,
+misdeclaration, damage, shortage, temperature deviation, return to origin, demurrage, detention,
+customer cancellation and payment default. Choosing a type shows its **playbook** — what a competent
+desk does first.
+
+Each incident records what it cost, what is recoverable and from whom, what has actually come back,
+the claim reference, a dated action log, and a **root cause that is required before it can be
+closed**. High and critical open incidents surface on the Control Tower. Recovery rate, net loss and
+cost by liable party are reported, so the pattern is visible rather than just the individual case.
+
+### Document standards
+A document is not finished because a file exists; it is finished when it carries what the party
+checking it will look for. Each governed type declares its field standard — a commercial invoice
+needs the Incoterm with its named place, the HS code per line, arithmetic that foots and the country
+of origin; a VGM certificate needs the method, the weighing place and a **named** authorised person,
+because SOLAS says so. The register shows completeness per document, sorts by actual risk, and
+**refuses to let a document be marked approved, issued or surrendered while a mandatory field is
+empty**.
+
+### The forwarder's own record
+Everything else describes the customer; this describes us. Legal entity, tax and business
+registration, the licences we trade under (freight forwarding, PPJK, NVOCC, AEO, IATA, bonded
+warehouse, FIATA and ALFI membership) with issuer, scope and expiry, the branches and the ports each
+covers, bank accounts per invoicing currency, and the freight liability cover with the standard
+trading conditions that cap it. A licence inside 60 days of expiry raises an exception; a lapsed one
+or expired cover raises a critical — trading uninsured is not a filing detail.
+
+### Access and accounts
+Sign in, registration limited to company domains, and a two-step password reset. The negative paths
+are the point: unknown email, wrong password with the attempts counted down, a lockout after five
+failures that an administrator can release, unverified and suspended accounts, expired and reused
+reset links, duplicate registration and weak passwords — each refused with a remedy rather than a
+dead end. A reset request gives the same answer whether or not the address is registered.
+
+> **This is a demo, not a security control.** There is no backend, so the seeded user list holds
+> clear-text passwords and every check runs in the browser. A real deployment authenticates
+> server-side, stores only a hash, and never lets a credential reach the client. The source says so
+> where it matters.
+
 ### Consignment
 Handled as a first-class job type rather than a note in a remarks field: agreement number, title
 retention, settlement cycle, commission, minimum guaranteed units, unsold-return window, units
@@ -233,10 +300,12 @@ src/
 └─ store/            Zustand store
 ```
 
-`src/lib/shipping.ts`, `src/lib/analytics.ts` and `src/lib/analytics2.ts` hold the domain logic —
+`src/lib/shipping.ts`, `src/lib/analytics.ts`, `src/lib/analytics2.ts` and `src/lib/services.ts` hold
+the domain logic —
 check-digit validation, utilisation, load-plan suggestion, stage gating, document compliance, the
 exception engine, job costing, the finance reports, quote pricing and win/loss, milestone
-punctuality, warehouse dwell, customs readiness, LARTAS screening, partner scoring and the KPI set.
+punctuality, warehouse dwell, customs readiness, LARTAS screening, partner scoring, service-trigger
+detection, document-standard checking, incident exposure, licence alerts and the KPI set.
 They are pure functions and are the first place to look when wiring this to a real backend.
 
 ## Demo data
@@ -247,5 +316,7 @@ phytosanitary certificate, two over-planned containers, a customer over their cr
 blocked job, a disputed demurrage charge, an unbalanced-ready draft journal entry, a container
 number with a bad ISO 6346 check digit, a PEB blocked on a missing CEISA 4.0 upload, one in
 *jalur kuning* and one that drew *jalur merah*, a quotation lost on credit terms, a suspended
-trucker with three claims, two agency contracts weeks from expiry, and consignment stock at day 96
-of a 120-day return window.
+trucker with three claims, two agency contracts weeks from expiry, consignment stock at day 96 of a
+120-day return window, a shipper who refused mandatory fumigation on a furniture job, a failed BMSB
+treatment blocking an Australian sailing, four issued documents short of their own field standard, a
+lapsed IATA accreditation and a PPJK registration three weeks from expiry.

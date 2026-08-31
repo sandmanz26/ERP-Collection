@@ -408,7 +408,7 @@ export function QuotationsPage() {
         importSample={{
           number: 'QT-2026-0100', customerCode: 'CUS-0001', commodity: 'Teak furniture', mode: 'FCL',
           polCode: 'IDSRG', podCode: 'NLRTM', incoterm: 'FOB', currency: 'USD', validFrom: '2026-09-01',
-          validTo: '2026-09-30', status: 'SENT', probability: '60', owner: 'Rina Wulandari', sellTotal: '6200',
+          validTo: '2026-09-30', status: 'SENT', probability: '60', owner: 'Elena Marchetti', sellTotal: '6200',
         }}
         toImportRow={(r) => ({
           number: r.number, customerCode: customers.find((c) => c.id === r.customerId)?.code ?? '',
@@ -450,7 +450,7 @@ export function QuotationsPage() {
                 validTo: r.validTo || now.slice(0, 10),
                 lines: existing?.lines ?? (sell ? [{ id: uid('ql'), chargeCode: 'OFR', description: 'All-in quoted rate', basis: 'PER_SHIPMENT' as const, quantity: 1, buyRate: sell * 0.8, sellRate: sell, currency: (r.currency || 'USD') as Quotation['currency'], vatApplicable: false, optional: false }] : []),
                 probability: Number(r.probability) || 50,
-                ownerName: r.owner || 'Rina Wulandari',
+                ownerName: r.owner || 'Elena Marchetti',
                 createdAt: existing?.createdAt ?? now, updatedAt: now,
                 events: existing?.events ?? [{ id: uid('qe'), at: now, type: 'CREATED' as const, note: 'Imported from CSV.', actor: 'Import' }],
               } as Quotation

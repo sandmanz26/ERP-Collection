@@ -167,7 +167,7 @@ export function LedgerPage() {
                 toast.push({ tone: 'error', title: 'Cannot post unbalanced entries', description: `${bad.map((b) => b.entryNo).join(', ')} do not balance.` })
                 return
               }
-              rows.forEach((r) => upsertJournal({ ...r, status: 'POSTED', postedAt: new Date().toISOString(), postedBy: 'Rina Wulandari' }))
+              rows.forEach((r) => upsertJournal({ ...r, status: 'POSTED', postedAt: new Date().toISOString(), postedBy: 'Elena Marchetti' }))
               toast.push({ tone: 'success', title: `${rows.length} entries posted` })
               clear()
             }}
@@ -338,7 +338,7 @@ function JournalForm({
             size="sm"
             disabled={!balance.balanced}
             onClick={() => {
-              upsertJournal({ ...draft, status: 'POSTED', postedAt: new Date().toISOString(), postedBy: 'Rina Wulandari' })
+              upsertJournal({ ...draft, status: 'POSTED', postedAt: new Date().toISOString(), postedBy: 'Elena Marchetti' })
               toast.push({ tone: 'success', title: 'Entry posted', description: draft.entryNo })
               onOpenChange(false)
             }}

@@ -1,19 +1,30 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type {
-  Account, AppSettings, Container, Customer, CustomsFiling, Invoice, JournalEntry, Milestone, Partner,
-  Project, ProjectCharge, Quotation, ServicePackage, ShipmentDocument, StageKey, WarehouseReceipt,
+  Account, AdditionalService, AppSettings, CompanyProfile, Container, Customer, CustomsFiling,
+  Incident, Invoice, JobService, JournalEntry, Milestone, Partner, Project, ProjectCharge, Quotation,
+  ServicePackage, ShipmentDocument, StageKey, WarehouseReceipt,
 } from '@/data/types'
 import { accounts as seedAccounts, charges as seedCharges, containers as seedContainers, customers as seedCustomers, documents as seedDocuments, invoices as seedInvoices, journal as seedJournal, packages as seedPackages, projects as seedProjects } from '@/data/seed'
 import {
   customsFilings as seedFilings, defaultSettings, milestones as seedMilestones, partners as seedPartners,
   quotations as seedQuotations, warehouseReceipts as seedReceipts,
 } from '@/data/seed2'
+import { company as seedCompany, incidents as seedIncidents, jobServices as seedJobServices } from '@/data/seed3'
+import { ADDITIONAL_SERVICES } from '@/data/reference'
 import { uid } from '@/lib/utils'
+import { useAuth } from './useAuth'
+
+/** The audit trail records who did it, so it has to ask the session, not a constant. */
+const actor = () => {
+  const { users, currentUserId } = useAuth.getState()
+  return users.find((u) => u.id === currentUserId)?.fullName ?? 'System'
+}
 
 export type EntityKey =
   | 'customers' | 'packages' | 'projects' | 'containers' | 'documents' | 'charges' | 'accounts'
   | 'journal' | 'invoices' | 'quotations' | 'partners' | 'milestones' | 'receipts' | 'filings'
+  | 'services' | 'jobServices' | 'incidents'
 
 export interface ActivityLog {
   id: string
@@ -39,6 +50,10 @@ interface ErpState {
   milestones: Milestone[]
   receipts: WarehouseReceipt[]
   filings: CustomsFiling[]
+  services: AdditionalService[]
+  jobServices: JobService[]
+  incidents: Incident[]
+  company: CompanyProfile
   settings: AppSettings
   activity: ActivityLog[]
 
@@ -105,6 +120,21 @@ interface ErpState {
   removeFilings: (ids: string[]) => void
   importFilings: (rows: CustomsFiling[]) => void
 
+  upsertService: (s: AdditionalService) => void
+  removeServices: (ids: string[]) => void
+  importServices: (rows: AdditionalService[]) => void
+
+  upsertJobService: (s: JobService) => void
+  removeJobServices: (ids: string[]) => void
+  importJobServices: (rows: JobService[]) => void
+  attachServices: (projectId: string, rows: JobService[]) => void
+  pushServiceToCharges: (jobServiceId: string) => void
+
+  upsertIncident: (i: Incident) => void
+  removeIncidents: (ids: string[]) => void
+  importIncidents: (rows: Incident[]) => void
+
+  updateCompany: (patch: Partial<CompanyProfile>) => void
   updateSettings: (patch: Partial<AppSettings>) => void
   clearActivity: () => void
 
@@ -126,6 +156,10 @@ const seedState = () => ({
   milestones: seedMilestones,
   receipts: seedReceipts,
   filings: seedFilings,
+  services: ADDITIONAL_SERVICES,
+  jobServices: seedJobServices,
+  incidents: seedIncidents,
+  company: structuredClone(seedCompany),
   settings: structuredClone(defaultSettings),
   activity: [] as ActivityLog[],
 })
@@ -146,7 +180,7 @@ export const useErp = create<ErpState>()(
       log: (action, entity, detail) =>
         set((s) => ({
           activity: [
-            { id: uid('log'), at: new Date().toISOString(), action, entity, detail, actor: 'Rina Wulandari' },
+            { id: uid('log'), at: new Date().toISOString(), action, entity, detail, actor: actor() },
             ...s.activity,
           ].slice(0, 200),
         })),
@@ -240,7 +274,7 @@ export const useErp = create<ErpState>()(
                   updatedAt: new Date().toISOString(),
                   stages: p.stages.map((st) => (st.key === to && !st.enteredAt ? { ...st, enteredAt: new Date().toISOString() } : st)),
                   timeline: [
-                    { id: uid('tl'), at: new Date().toISOString(), type: 'STATUS' as const, title: `Moved to ${to.replace(/_/g, ' ').toLowerCase()}`, actor: 'Rina Wulandari' },
+                    { id: uid('tl'), at: new Date().toISOString(), type: 'STATUS' as const, title: `Moved to ${to.replace(/_/g, ' ').toLowerCase()}`, actor: 'Elena Marchetti' },
                     ...p.timeline,
                   ],
                 },
@@ -376,7 +410,7 @@ export const useErp = create<ErpState>()(
           createdAt: now,
           updatedAt: now,
           events: [
-            { id: uid('qe'), at: now, type: 'REVISED', note: `Revision ${source.version + 1} opened from ${source.number} v${source.version}.`, actor: 'Rina Wulandari' },
+            { id: uid('qe'), at: now, type: 'REVISED', note: `Revision ${source.version + 1} opened from ${source.number} v${source.version}.`, actor: 'Elena Marchetti' },
             ...source.events,
           ],
         }
@@ -404,7 +438,7 @@ export const useErp = create<ErpState>()(
                     {
                       id: uid('qe'), at: now, type: 'DECIDED' as const,
                       note: payload?.note ?? (outcome === 'ACCEPTED' ? 'Accepted by the client.' : 'Lost.'),
-                      actor: 'Rina Wulandari',
+                      actor: 'Elena Marchetti',
                     },
                     ...q.events,
                   ],
@@ -429,7 +463,7 @@ export const useErp = create<ErpState>()(
                   convertedProjectId: project.id,
                   updatedAt: now,
                   events: [
-                    { id: uid('qe'), at: now, type: 'CONVERTED' as const, note: `Converted to job ${project.code} with ${charges.length} charge lines.`, actor: 'Rina Wulandari' },
+                    { id: uid('qe'), at: now, type: 'CONVERTED' as const, note: `Converted to job ${project.code} with ${charges.length} charge lines.`, actor: 'Elena Marchetti' },
                     ...q.events,
                   ],
                 },
@@ -484,7 +518,7 @@ export const useErp = create<ErpState>()(
                 ? { ...prior, plannedAt: p.plannedAt }
                 : {
                     id: uid('ms'), projectId, code: p.code, plannedAt: p.plannedAt,
-                    source: 'MANUAL' as const, recordedBy: 'Rina Wulandari', recordedAt: now,
+                    source: 'MANUAL' as const, recordedBy: 'Elena Marchetti', recordedAt: now,
                   }
             )
           })
@@ -528,6 +562,108 @@ export const useErp = create<ErpState>()(
         get().log('import', 'Customs filing', `${rows.length} records`)
       },
 
+      upsertService: (svc) => {
+        set((st) => ({ services: upsert(st.services, svc) }))
+        get().log('save', 'Service', `${svc.code} — ${svc.name}`)
+      },
+      removeServices: (ids) => {
+        const inUse = get().jobServices.filter((j) => ids.includes(j.serviceId))
+        if (inUse.length) {
+          get().log('refused', 'Service', `${inUse.length} job service(s) still reference this catalogue entry`)
+          return
+        }
+        set((st) => ({ services: st.services.filter((x) => !ids.includes(x.id)) }))
+        get().log('delete', 'Service', `${ids.length} catalogue entries`)
+      },
+      importServices: (rows) => {
+        set((st) => {
+          let list = st.services
+          rows.forEach((r) => (list = upsert(list, r)))
+          return { services: list }
+        })
+        get().log('import', 'Service', `${rows.length} records`)
+      },
+
+      upsertJobService: (svc) => {
+        set((st) => ({ jobServices: upsert(st.jobServices, svc) }))
+        get().log('save', 'Job service', `${svc.code} on ${svc.projectId}`)
+      },
+      removeJobServices: (ids) => {
+        set((st) => ({ jobServices: st.jobServices.filter((x) => !ids.includes(x.id)) }))
+        get().log('delete', 'Job service', `${ids.length} records`)
+      },
+      importJobServices: (rows) => {
+        set((st) => {
+          let list = st.jobServices
+          rows.forEach((r) => (list = upsert(list, r)))
+          return { jobServices: list }
+        })
+        get().log('import', 'Job service', `${rows.length} records`)
+      },
+      attachServices: (projectId, rows) => {
+        set((st) => {
+          let list = st.jobServices
+          rows.forEach((r) => (list = upsert(list, r)))
+          return { jobServices: list }
+        })
+        get().log('save', 'Job service', `${rows.length} service(s) added to ${projectId}`)
+      },
+      /** Turn a completed service into a billable line so nothing is done for free. */
+      pushServiceToCharges: (jobServiceId) => {
+        const st = get()
+        const js = st.jobServices.find((x) => x.id === jobServiceId)
+        if (!js || js.chargeId) return
+        const cat = st.services.find((x) => x.id === js.serviceId)
+        const charge: ProjectCharge = {
+          id: uid('chg'),
+          projectId: js.projectId,
+          chargeCode: cat?.chargeCode ?? 'ADMIN',
+          description: js.name,
+          category: 'ORIGIN',
+          basis: cat?.basis ?? 'PER_SHIPMENT',
+          quantity: js.quantity,
+          buyRate: js.buyRate,
+          sellRate: js.sellRate,
+          currency: js.currency,
+          fxRate: 1,
+          vatApplicable: true,
+          whtApplicable: false,
+          vendor: undefined,
+          partnerId: js.providerPartnerId,
+          status: 'DRAFT',
+          billable: true,
+          freightTerm: 'PREPAID',
+          remarks: `Raised from additional service ${js.code}.`,
+        } as ProjectCharge
+        set((state) => ({
+          charges: [charge, ...state.charges],
+          jobServices: state.jobServices.map((x) => (x.id === jobServiceId ? { ...x, chargeId: charge.id } : x)),
+        }))
+        get().log('save', 'Charge', `${js.code} billed to the job from the service record`)
+      },
+
+      upsertIncident: (i) => {
+        set((st) => ({ incidents: upsert(st.incidents, i) }))
+        get().log('save', 'Incident', `${i.reference} — ${i.title}`)
+      },
+      removeIncidents: (ids) => {
+        set((st) => ({ incidents: st.incidents.filter((x) => !ids.includes(x.id)) }))
+        get().log('delete', 'Incident', `${ids.length} records`)
+      },
+      importIncidents: (rows) => {
+        set((st) => {
+          let list = st.incidents
+          rows.forEach((r) => (list = upsert(list, r)))
+          return { incidents: list }
+        })
+        get().log('import', 'Incident', `${rows.length} records`)
+      },
+
+      updateCompany: (patch) => {
+        set((st) => ({ company: { ...st.company, ...patch } }))
+        get().log('save', 'Company profile', Object.keys(patch).join(', '))
+      },
+
       updateSettings: (patch) => {
         set((s) => ({ settings: { ...s.settings, ...patch } }))
         get().log('save', 'Settings', Object.keys(patch).join(', '))
@@ -538,6 +674,6 @@ export const useErp = create<ErpState>()(
         set({ ...seedState() })
       },
     }),
-    { name: 'nusantara-freight-erp', version: 4 },
+    { name: 'meridian-freight-erp', version: 5 },
   ),
 )

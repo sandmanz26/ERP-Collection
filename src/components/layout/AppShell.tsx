@@ -1,8 +1,8 @@
 import * as React from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Anchor, Bell, ChevronsLeft, Clock3, Command, Monitor, Moon, PanelLeftClose, PanelLeftOpen,
-  RotateCcw, Search, Sun, TriangleAlert,
+  Anchor, Bell, ChevronsLeft, Clock3, Command, LogOut, Monitor, Moon, PanelLeftClose, PanelLeftOpen,
+  RotateCcw, Search, ShieldCheck, Sun, TriangleAlert, UserRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAV } from './nav'
@@ -15,21 +15,33 @@ import { Badge } from '@/components/ui/badge'
 import { Segmented } from '@/components/ui/checkbox'
 import { useTheme } from '@/hooks/useTheme'
 import { useErp } from '@/store/useErp'
+import { useAuth, useCurrentUser } from '@/store/useAuth'
+import { incidentStatusOpen, roleLabel } from '@/data/reference'
 import { buildExceptions } from '@/lib/analytics'
 import { buildPhase2Exceptions, filingReadiness, isQuoteOpen } from '@/lib/analytics2'
+import { buildPhase3Exceptions } from '@/lib/services'
 import { fmtDateTime } from '@/lib/format'
 import { useToast } from '@/components/ui/toast'
 
 export function AppShell() {
-  const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem('nf-sidebar') === '1')
+  const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem('mf-sidebar') === '1')
   const [paletteOpen, setPaletteOpen] = React.useState(false)
   const { mode, setMode } = useTheme()
   const location = useLocation()
   const store = useErp()
   const toast = useToast()
+  const navigate = useNavigate()
+  const signOut = useAuth((s) => s.signOut)
+  const user = useCurrentUser()
+  const initials = (user?.fullName ?? 'Meridian User')
+    .split(' ')
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase()
 
   React.useEffect(() => {
-    localStorage.setItem('nf-sidebar', collapsed ? '1' : '0')
+    localStorage.setItem('mf-sidebar', collapsed ? '1' : '0')
   }, [collapsed])
 
   React.useEffect(() => {
@@ -56,12 +68,18 @@ export function AppShell() {
       quotations: store.quotations, partners: store.partners, milestones: store.milestones,
       receipts: store.receipts, filings: store.filings, projects: store.projects, settings: store.settings,
     })
+    const phase3 = buildPhase3Exceptions({
+      projects: store.projects, containers: store.containers, documents: store.documents,
+      jobServices: store.jobServices, services: store.services, incidents: store.incidents,
+      company: store.company,
+    })
     const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2 } as const
-    return [...core, ...extra].sort((a, b) => order[a.severity] - order[b.severity])
+    return [...core, ...extra, ...phase3].sort((a, b) => order[a.severity] - order[b.severity])
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     store.projects, store.containers, store.documents, store.charges, store.customers, store.invoices,
     store.quotations, store.partners, store.milestones, store.receipts, store.filings, store.settings,
+    store.jobServices, store.services, store.incidents, store.company,
   ])
   const critical = exceptions.filter((e) => e.severity === 'CRITICAL').length
 
@@ -71,6 +89,7 @@ export function AppShell() {
     exceptions: critical,
     quotes: store.quotations.filter(isQuoteOpen).length,
     customs: store.filings.filter((f) => f.status === 'DRAFT' && !filingReadiness(f).canSubmit).length,
+    incidents: store.incidents.filter((i) => incidentStatusOpen(i.status)).length,
   }
 
   return (
@@ -88,7 +107,7 @@ export function AppShell() {
           </span>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="truncate text-[13.5px] font-semibold leading-tight tracking-[-0.01em] text-fg">Nusantara Freight</p>
+              <p className="truncate text-[13.5px] font-semibold leading-tight tracking-[-0.01em] text-fg">Meridian Freight</p>
               <p className="truncate text-[11px] leading-tight text-fg-subtle">Export Operations Suite</p>
             </div>
           )}
@@ -267,15 +286,54 @@ export function AppShell() {
 
           <Separator vertical className="h-6" />
 
-          <div className="flex items-center gap-2.5">
-            <span className="grid size-8 place-items-center rounded-full bg-primary-soft text-[11.5px] font-semibold text-primary-soft-fg">
-              RW
-            </span>
-            <div className="hidden leading-tight lg:block">
-              <p className="text-[12.5px] font-medium text-fg">Rina Wulandari</p>
-              <p className="text-[11px] text-fg-subtle">Export Operations Lead</p>
-            </div>
-          </div>
+          <Menu>
+            <MenuTrigger asChild>
+              <button
+                type="button"
+                className="flex items-center gap-2.5 rounded-lg py-1 pl-1 pr-1.5 transition-colors hover:bg-bg-muted"
+                aria-label="Account menu"
+              >
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary-soft text-[11.5px] font-semibold text-primary-soft-fg">
+                  {initials}
+                </span>
+                <div className="hidden text-left leading-tight lg:block">
+                  <p className="text-[12.5px] font-medium text-fg">{user?.fullName ?? 'Signed out'}</p>
+                  <p className="text-[11px] text-fg-subtle">{user?.jobTitle ?? '—'}</p>
+                </div>
+              </button>
+            </MenuTrigger>
+            <MenuContent align="end" className="w-64">
+              <div className="px-2 py-1.5">
+                <p className="truncate text-[13px] font-medium text-fg">{user?.fullName}</p>
+                <p className="truncate text-[11.5px] text-fg-subtle">{user?.email}</p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  <Badge tone="primary" size="sm">{user ? roleLabel(user.role) : '—'}</Badge>
+                  {user?.branchCode && <Badge tone="outline" size="sm">{user.branchCode}</Badge>}
+                  {user?.twoFactorEnabled && (
+                    <Badge tone="success" size="sm">
+                      <ShieldCheck className="size-3" />
+                      2FA
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <MenuSeparator />
+              <MenuItem icon={<UserRound />} onSelect={() => navigate('/settings')}>
+                Company & account settings
+              </MenuItem>
+              <MenuSeparator />
+              <MenuItem
+                icon={<LogOut />}
+                danger
+                onSelect={() => {
+                  signOut()
+                  navigate('/login', { replace: true })
+                }}
+              >
+                Sign out
+              </MenuItem>
+            </MenuContent>
+          </Menu>
         </header>
 
         <main key={location.pathname} className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
