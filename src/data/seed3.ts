@@ -1,8 +1,9 @@
 import type {
-  CompanyProfile, Incident, IncidentAction, JobService, PasswordResetToken, UserAccount,
+  CompanyProfile, Incident, IncidentAction, JobService, PasswordResetToken, StuffingJob,
+  StuffingLocationType, StuffingStatus, UserAccount,
 } from './types'
 import { ADDITIONAL_SERVICES, docFieldSpecs } from './reference'
-import { containers, documents, projects } from './seed'
+import { charges, containers, customers, documents, projects } from './seed'
 import { recommendServices } from '@/lib/services'
 
 let seed = 31415926
@@ -513,3 +514,159 @@ for (const doc of documents) {
 }
 
 export const SERVICE_CATALOGUE = ADDITIONAL_SERVICES
+
+/* ================================================================
+   STUFFING — one event per container that has one, plus the ones
+   still on the schedule ahead
+   ================================================================ */
+
+const STUFF_SUPERVISORS = ['Tomas Weber', 'Agus Setiawan', 'Rina Hartati', 'Bayu Nugroho', 'Dewi Kartika']
+const TALLY_CLERKS = ['Hendra Wijaya', 'Sari Melati', 'Joko Prasetyo', 'Lina Kusuma']
+const HAULIERS = ['B 9214 KZU', 'L 8877 UGF', 'BK 1042 XN', 'DK 7731 AB', 'B 9508 TRP']
+const DRIVERS = ['Slamet Riyadi', 'Ujang Suherman', 'Marno Hadi', 'Wayan Sudira', 'Iwan Setiabudi']
+
+const LOCATION_FOR: Record<string, { type: StuffingLocationType; address: string }> = {
+  FACTORY: { type: 'FACTORY', address: 'Kawasan Industri Jababeka II, Blok C, Cikarang' },
+  CFS: { type: 'CFS', address: 'Jl. Raya Cakung Cilincing KM 3, Jakarta Utara' },
+  DEPOT: { type: 'DEPOT', address: 'Jl. Yos Sudarso Kav. 22, Tanjung Priok' },
+  WAREHOUSE: { type: 'WAREHOUSE', address: 'Jl. Rungkut Industri III/44, Surabaya' },
+}
+
+/** The place a crew is actually sent to, named so a driver could find it. */
+const locationName = (type: StuffingLocationType, shipperName: string, city: string) => {
+  const shipper = shipperName.replace(/^PT /, '').split(' ').slice(0, 2).join(' ')
+  switch (type) {
+    case 'FACTORY': return `${shipper} — ${city} plant`
+    case 'CFS': return 'Meridian CFS Cakung'
+    case 'DEPOT': return 'Depo Graha Segara'
+    case 'WAREHOUSE': return `${shipper} — ${city} warehouse`
+    default: return `${city} port yard`
+  }
+}
+
+/** Container status tells us how far the stuffing got. */
+const STUFF_STATUS_BY_CONTAINER: Record<string, StuffingStatus> = {
+  PLANNED: 'PLANNED',
+  BOOKED: 'PLANNED',
+  AT_DEPOT: 'EMPTY_RELEASED',
+  STUFFED: 'SEALED',
+  GATE_IN: 'GATE_IN',
+  LOADED: 'COMPLETED',
+  IN_TRANSIT: 'COMPLETED',
+  DISCHARGED: 'COMPLETED',
+  DELIVERED: 'COMPLETED',
+  RETURNED: 'COMPLETED',
+}
+
+export const stuffingJobs: StuffingJob[] = []
+let stfIdx = 0
+
+for (const c of containers) {
+  const p = projects.find((x) => x.id === c.projectId)
+  if (!p) continue
+  stfIdx++
+
+  const status = STUFF_STATUS_BY_CONTAINER[c.status] ?? 'PLANNED'
+  const done = ['SEALED', 'GATE_IN', 'COMPLETED'].includes(status)
+
+  /* LCL consolidates at our own CFS; a full container usually goes to the shipper */
+  const locKey = c.type === 'LCL' ? 'CFS' : p.polCode === 'IDSUB' ? 'WAREHOUSE' : rnd() < 0.7 ? 'FACTORY' : 'DEPOT'
+  const loc = LOCATION_FOR[locKey]
+  const shipper = customers.find((x) => x.id === p.shipperId)
+  const office = shipper?.offices.find((o) => o.id === p.shipperOfficeId)
+
+  const packages = c.items.reduce((a, i) => a + i.quantity, 0)
+  const cbm = c.items.reduce((a, i) => a + ((i.lengthCm * i.widthCm * i.heightCm) / 1_000_000) * i.quantity, 0)
+
+  /* two units come up short against the packing list — that is what a tally is for */
+  const shortBy = stfIdx === 6 ? 14 : stfIdx === 19 ? 3 : 0
+
+  /* Work that has happened keeps the container's own date. Work that has not
+     is scheduled ahead — a container waiting to be stuffed cannot have a date
+     three weeks in the past and still be waiting. */
+  const stuffedAt = done
+    ? status === 'SEALED'
+      /* Sealed but not yet gated in: this only makes sense as recent work —
+         a box sealed a month ago and still sitting is a different problem. */
+      ? day(-int(0, 3))
+      : (c.stuffingDate ?? day(-int(2, 20)))
+    : day(int(1, 13))
+  /* A stuffing that already happened was, by definition, done before its own
+     cut-off — otherwise the box would not be on the water. Anything still open
+     keeps the job's real cut-off so the check has something to bite on. */
+  const jobCutoff = p.gateInCutoff ?? day(int(2, 14), 16)
+  const cutoff = done
+    ? new Date(new Date(stuffedAt).getTime() + int(1, 3) * 86_400_000).toISOString()
+    : jobCutoff
+
+  stuffingJobs.push({
+    id: `stf_${stfIdx}`,
+    reference: `STF-2026-${String(1000 + stfIdx).slice(1)}`,
+    projectId: p.id,
+    containerId: c.id,
+    stuffingDate: stuffedAt,
+    shift: (['MORNING', 'AFTERNOON', 'NIGHT'] as const)[int(0, 2)],
+    startTime: done ? '08:15' : undefined,
+    endTime: done ? '12:40' : undefined,
+    locationType: loc.type,
+    locationName: locationName(loc.type, shipper?.legalName ?? 'Shipper', office?.city ?? p.polName),
+    addressLine: loc.address,
+    polCode: p.polCode,
+    polName: p.polName,
+    terminal: p.polCode === 'IDTPP' ? 'JICT Terminal 2' : p.polCode === 'IDSUB' ? 'TPS Terminal' : undefined,
+    depot: c.depot,
+    emptyReleaseDate: status === 'PLANNED' ? undefined : day(-int(1, 3)),
+    truckPlate: status === 'PLANNED' ? undefined : HAULIERS[int(0, HAULIERS.length - 1)],
+    driverName: status === 'PLANNED' ? undefined : DRIVERS[int(0, DRIVERS.length - 1)],
+    supervisor: STUFF_SUPERVISORS[int(0, STUFF_SUPERVISORS.length - 1)],
+    tallyClerk: done ? TALLY_CLERKS[int(0, TALLY_CLERKS.length - 1)] : undefined,
+    labourCount: c.type === 'LCL' ? int(3, 5) : int(6, 10),
+    plannedPackages: packages,
+    stuffedPackages: done ? packages - shortBy : 0,
+    plannedCbm: +cbm.toFixed(2),
+    stuffedCbm: done ? +(cbm - shortBy * 0.35).toFixed(2) : 0,
+    sealNo: c.sealNo,
+    sealedAt: done ? stuffedAt : undefined,
+    photosTaken: done ? int(6, 14) : 0,
+    tallySheetRef: done ? `TLY/26/${int(1000, 9999)}` : undefined,
+    gateInCutoff: cutoff,
+    gateInAt: c.gateInDate,
+    status,
+    remarks:
+      shortBy > 0
+        ? `Tally came up ${shortBy} packages short of the packing list. Stuffing held while the shipper recounted; the balance was never produced.`
+        : loc.type === 'FACTORY' && status === 'PLANNED'
+          ? 'Shipper has not confirmed the loading bay slot — chase the day before.'
+          : undefined,
+  })
+}
+
+/* one job is scheduled after its own gate-in cut-off, which should never pass review */
+const tooLate = stuffingJobs.find((s) => s.status === 'PLANNED')
+if (tooLate?.gateInCutoff) {
+  const d = new Date(tooLate.gateInCutoff)
+  d.setDate(d.getDate() + 1)
+  tooLate.stuffingDate = d.toISOString()
+  tooLate.remarks = 'Booked into the yard a day after the terminal cut-off — needs re-planning or the box will roll.'
+}
+
+/* ================================================================
+   FIELD COST SETTLEMENTS
+   Cash advanced to the operators, and what came back with receipts.
+   ================================================================ */
+for (const c of charges) {
+  if (c.costType !== 'FIELD') continue
+  /* Field cash is handed over in rupiah at the port, whatever currency the
+     line is quoted in — so the advance is the IDR equivalent, not the figure. */
+  const cost = c.buyRate * c.quantity * (c.fxRate || 1)
+  /* most are settled; a few are still out, which is what finance chases */
+  const outstanding = charges.indexOf(c) % 7 === 2
+  c.settlement = {
+    advanceAmount: Math.round((cost * 1.1) / 1000) * 1000,
+    advancedAt: day(-int(4, 20)),
+    advancedTo: STUFF_SUPERVISORS[int(0, STUFF_SUPERVISORS.length - 1)],
+    settledAmount: outstanding ? 0 : Math.round(cost / 1000) * 1000,
+    settledAt: outstanding ? undefined : day(-int(1, 10)),
+    receiptNo: outstanding ? undefined : `KW/26/${int(1000, 9999)}`,
+  }
+}

@@ -12,7 +12,9 @@ export function CardHeader({
   icon,
   className,
   ...props
-}: React.HTMLAttributes<HTMLDivElement> & {
+/* `title` on a div is the tooltip attribute, a plain string — omit it so the
+   header's own title can be a node without the two collapsing into `string & ReactNode`. */
+}: Omit<React.HTMLAttributes<HTMLDivElement>, 'title'> & {
   title?: React.ReactNode
   description?: React.ReactNode
   actions?: React.ReactNode

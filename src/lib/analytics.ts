@@ -63,6 +63,8 @@ export function evaluateStageGate(
     filings?: { type: string; status: string; channel: string; supportingDocs: { mandatory: boolean; uploaded: boolean; label: string }[] }[]
     /** mandatory additional services that are missing, refused or failed */
     serviceBlockers?: string[]
+    /** stuffing booked past a cut-off, short against the tally, or sealed without a seal */
+    stuffingBlockers?: string[]
   },
 ): GateResult {
   const stage = project.stages.find((s) => s.key === project.stage)
@@ -76,6 +78,12 @@ export function evaluateStageGate(
      cargo plan onwards — the cargo is refused at the border, not at our desk. */
   if (stageIndex(project.stage) >= stageIndex('CARGO_PLAN')) {
     ;(extra?.serviceBlockers ?? []).forEach((b) => blockers.push(b))
+  }
+
+  /* From stuffing onwards the yard is the constraint: a slot booked past the
+     terminal cut-off, or a tally short of the packing list, stops the job. */
+  if (stageIndex(project.stage) >= stageIndex('STUFFING')) {
+    ;(extra?.stuffingBlockers ?? []).forEach((b) => blockers.push(b))
   }
 
   if (project.stage === 'INQUIRY' && customer) {

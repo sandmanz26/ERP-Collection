@@ -1,4 +1,6 @@
-import type { AccountType, ChargeCategory, ContainerType, DocType, Incoterm, RateBasis, StageKey } from './types'
+import type {
+  AccountType, ChargeCategory, ContainerType, CostType, DocType, Incoterm, RateBasis, StageKey,
+} from './types'
 
 export const COUNTRIES = [
   { code: 'ID', name: 'Indonesia', flag: '🇮🇩', region: 'ASEAN', currency: 'IDR' },
@@ -93,34 +95,34 @@ export const INCOTERMS: { code: Incoterm; label: string; transferPoint: string; 
   { code: 'DDP', label: 'Delivered Duty Paid', transferPoint: 'Destination, duties paid', sellerPaysFreight: true, sellerInsures: true },
 ]
 
-export const CHARGE_CODES: { code: string; name: string; category: ChargeCategory; basis: RateBasis; vat: boolean }[] = [
-  { code: 'OFR', name: 'Ocean Freight', category: 'FREIGHT', basis: 'PER_CONTAINER', vat: false },
-  { code: 'BAF', name: 'Bunker Adjustment Factor', category: 'SURCHARGE', basis: 'PER_CONTAINER', vat: false },
-  { code: 'CAF', name: 'Currency Adjustment Factor', category: 'SURCHARGE', basis: 'PER_CONTAINER', vat: false },
-  { code: 'LSS', name: 'Low Sulphur Surcharge', category: 'SURCHARGE', basis: 'PER_CONTAINER', vat: false },
-  { code: 'PSS', name: 'Peak Season Surcharge', category: 'SURCHARGE', basis: 'PER_CONTAINER', vat: false },
-  { code: 'THC-O', name: 'Terminal Handling — Origin', category: 'ORIGIN', basis: 'PER_CONTAINER', vat: true },
-  { code: 'THC-D', name: 'Terminal Handling — Destination', category: 'DESTINATION', basis: 'PER_CONTAINER', vat: false },
-  { code: 'DOC', name: 'Documentation Fee', category: 'DOCUMENTATION', basis: 'PER_BL', vat: true },
-  { code: 'BL', name: 'Bill of Lading Fee', category: 'DOCUMENTATION', basis: 'PER_BL', vat: true },
-  { code: 'SEAL', name: 'Container Seal', category: 'ORIGIN', basis: 'PER_CONTAINER', vat: true },
-  { code: 'VGM', name: 'VGM Weighing & Submission', category: 'ORIGIN', basis: 'PER_CONTAINER', vat: true },
-  { code: 'LOLO', name: 'Lift On / Lift Off', category: 'ORIGIN', basis: 'PER_CONTAINER', vat: true },
-  { code: 'TRUCK', name: 'Inland Trucking', category: 'TRUCKING', basis: 'PER_CONTAINER', vat: true },
-  { code: 'STUFF', name: 'Stuffing / Labour', category: 'ORIGIN', basis: 'PER_CONTAINER', vat: true },
-  { code: 'CFS', name: 'CFS Handling (LCL)', category: 'ORIGIN', basis: 'PER_CBM', vat: true },
-  { code: 'PEB', name: 'Export Declaration (PEB)', category: 'CUSTOMS', basis: 'PER_DOCUMENT', vat: true },
-  { code: 'CLR', name: 'Customs Clearance Handling', category: 'CUSTOMS', basis: 'PER_SHIPMENT', vat: true },
-  { code: 'COO', name: 'Certificate of Origin / SKA', category: 'CUSTOMS', basis: 'PER_DOCUMENT', vat: true },
-  { code: 'FUMI', name: 'Fumigation', category: 'ORIGIN', basis: 'PER_CONTAINER', vat: true },
-  { code: 'PHYTO', name: 'Phytosanitary Certificate', category: 'CUSTOMS', basis: 'PER_DOCUMENT', vat: true },
-  { code: 'INS', name: 'Marine Cargo Insurance', category: 'INSURANCE', basis: 'PERCENT_OF_VALUE', vat: false },
-  { code: 'DEM', name: 'Demurrage', category: 'PENALTY', basis: 'PER_CONTAINER', vat: false },
-  { code: 'DET', name: 'Detention', category: 'PENALTY', basis: 'PER_CONTAINER', vat: false },
-  { code: 'STOR', name: 'Storage / Warehousing', category: 'PENALTY', basis: 'PER_CBM', vat: true },
-  { code: 'DO', name: 'Delivery Order Release', category: 'DESTINATION', basis: 'PER_BL', vat: false },
-  { code: 'AMS', name: 'AMS / ENS Filing', category: 'DOCUMENTATION', basis: 'PER_BL', vat: false },
-  { code: 'ADMIN', name: 'Agency & Admin Fee', category: 'OTHER', basis: 'PER_SHIPMENT', vat: true },
+export const CHARGE_CODES: { code: string; name: string; category: ChargeCategory; basis: RateBasis; vat: boolean; costType: CostType }[] = [
+  { code: 'OFR', name: 'Ocean Freight', category: 'FREIGHT', basis: 'PER_CONTAINER', vat: false, costType: 'MASTER' },
+  { code: 'BAF', name: 'Bunker Adjustment Factor', category: 'SURCHARGE', basis: 'PER_CONTAINER', vat: false, costType: 'MASTER' },
+  { code: 'CAF', name: 'Currency Adjustment Factor', category: 'SURCHARGE', basis: 'PER_CONTAINER', vat: false, costType: 'MASTER' },
+  { code: 'LSS', name: 'Low Sulphur Surcharge', category: 'SURCHARGE', basis: 'PER_CONTAINER', vat: false, costType: 'MASTER' },
+  { code: 'PSS', name: 'Peak Season Surcharge', category: 'SURCHARGE', basis: 'PER_CONTAINER', vat: false, costType: 'MASTER' },
+  { code: 'THC-O', name: 'Terminal Handling — Origin', category: 'ORIGIN', basis: 'PER_CONTAINER', vat: true, costType: 'MASTER' },
+  { code: 'THC-D', name: 'Terminal Handling — Destination', category: 'DESTINATION', basis: 'PER_CONTAINER', vat: false, costType: 'MASTER' },
+  { code: 'DOC', name: 'Documentation Fee', category: 'DOCUMENTATION', basis: 'PER_BL', vat: true, costType: 'MASTER' },
+  { code: 'BL', name: 'Bill of Lading Fee', category: 'DOCUMENTATION', basis: 'PER_BL', vat: true, costType: 'MASTER' },
+  { code: 'SEAL', name: 'Container Seal', category: 'ORIGIN', basis: 'PER_CONTAINER', vat: true, costType: 'FIELD' },
+  { code: 'VGM', name: 'VGM Weighing & Submission', category: 'ORIGIN', basis: 'PER_CONTAINER', vat: true, costType: 'FIELD' },
+  { code: 'LOLO', name: 'Lift On / Lift Off', category: 'ORIGIN', basis: 'PER_CONTAINER', vat: true, costType: 'FIELD' },
+  { code: 'TRUCK', name: 'Inland Trucking', category: 'TRUCKING', basis: 'PER_CONTAINER', vat: true, costType: 'MASTER' },
+  { code: 'STUFF', name: 'Stuffing / Labour', category: 'ORIGIN', basis: 'PER_CONTAINER', vat: true, costType: 'FIELD' },
+  { code: 'CFS', name: 'CFS Handling (LCL)', category: 'ORIGIN', basis: 'PER_CBM', vat: true, costType: 'MASTER' },
+  { code: 'PEB', name: 'Export Declaration (PEB)', category: 'CUSTOMS', basis: 'PER_DOCUMENT', vat: true, costType: 'REIMBURSEMENT' },
+  { code: 'CLR', name: 'Customs Clearance Handling', category: 'CUSTOMS', basis: 'PER_SHIPMENT', vat: true, costType: 'MASTER' },
+  { code: 'COO', name: 'Certificate of Origin / SKA', category: 'CUSTOMS', basis: 'PER_DOCUMENT', vat: true, costType: 'REIMBURSEMENT' },
+  { code: 'FUMI', name: 'Fumigation', category: 'ORIGIN', basis: 'PER_CONTAINER', vat: true, costType: 'MASTER' },
+  { code: 'PHYTO', name: 'Phytosanitary Certificate', category: 'CUSTOMS', basis: 'PER_DOCUMENT', vat: true, costType: 'REIMBURSEMENT' },
+  { code: 'INS', name: 'Marine Cargo Insurance', category: 'INSURANCE', basis: 'PERCENT_OF_VALUE', vat: false, costType: 'REIMBURSEMENT' },
+  { code: 'DEM', name: 'Demurrage', category: 'PENALTY', basis: 'PER_CONTAINER', vat: false, costType: 'REIMBURSEMENT' },
+  { code: 'DET', name: 'Detention', category: 'PENALTY', basis: 'PER_CONTAINER', vat: false, costType: 'REIMBURSEMENT' },
+  { code: 'STOR', name: 'Storage / Warehousing', category: 'PENALTY', basis: 'PER_CBM', vat: true, costType: 'MASTER' },
+  { code: 'DO', name: 'Delivery Order Release', category: 'DESTINATION', basis: 'PER_BL', vat: false, costType: 'MASTER' },
+  { code: 'AMS', name: 'AMS / ENS Filing', category: 'DOCUMENTATION', basis: 'PER_BL', vat: false, costType: 'MASTER' },
+  { code: 'ADMIN', name: 'Agency & Admin Fee', category: 'OTHER', basis: 'PER_SHIPMENT', vat: true, costType: 'MASTER' },
 ]
 
 export const DOC_TYPES: { type: DocType; label: string; stage: StageKey; mandatoryDefault: boolean; hint: string }[] = [
@@ -145,6 +147,10 @@ export const DOC_TYPES: { type: DocType; label: string; stage: StageKey; mandato
   { type: 'ARRIVAL_NOTICE', label: 'Arrival Notice', stage: 'ARRIVAL', mandatoryDefault: false, hint: 'Sent to consignee before ETA.' },
   { type: 'DELIVERY_ORDER', label: 'Delivery Order', stage: 'ARRIVAL', mandatoryDefault: false, hint: 'Released after BL surrender / telex.' },
   { type: 'PROOF_OF_DELIVERY', label: 'Proof of Delivery', stage: 'SETTLEMENT', mandatoryDefault: false, hint: 'Signed POD closes the transport leg.' },
+  { type: 'ISPM_15', label: 'ISPM-15 Declaration', stage: 'STUFFING', mandatoryDefault: false, hint: 'Declares the wood packaging treated and marked; separate from the treatment certificate.' },
+  { type: 'STUFFING_REPORT', label: 'Stuffing Report & Tally', stage: 'STUFFING', mandatoryDefault: false, hint: 'Tally sheet, stow photographs and the sealing record — the evidence on a shortage claim.' },
+  { type: 'SENDING_DOC', label: 'Sending Doc (original despatch)', stage: 'DEPARTURE', mandatoryDefault: false, hint: 'Covering note for the original set sent to the consignee, with the courier airway bill.' },
+  { type: 'JOB_SHEET', label: 'Job Sheet', stage: 'SETTLEMENT', mandatoryDefault: false, hint: 'Cost recap handed from operations to finance before the job is closed.' },
   { type: 'OTHER', label: 'Other Document', stage: 'DOCUMENTATION', mandatoryDefault: false, hint: '' },
 ]
 
@@ -826,6 +832,43 @@ export const DOC_FIELD_SPECS: Partial<Record<DocType, DocFieldSpec[]>> = {
   ],
 }
 
+/* the phase-4 additions, kept beside the set they extend */
+DOC_FIELD_SPECS.ISPM_15 = [
+  { key: 'treatmentMark', label: 'ISPM-15 mark', required: true, hint: 'Country code, producer number and treatment code (HT or MB), stencilled on every piece.' },
+  { key: 'woodType', label: 'Wood packaging type', required: true, hint: 'Pallets, crates, cases, dunnage — list what is actually in the container.' },
+  { key: 'producer', label: 'Registered producer', required: true, hint: 'Only a registered producer may apply the mark.' },
+  { key: 'declaration', label: 'Declaration wording', required: true, hint: 'Some destinations require an exact phrase — take it from the buyer in writing.' },
+  { key: 'containerNo', label: 'Container number', required: true, hint: '' },
+]
+
+DOC_FIELD_SPECS.STUFFING_REPORT = [
+  { key: 'stuffingDate', label: 'Stuffing date & place', required: true, hint: 'Must agree with the container record and the VGM weighing date.' },
+  { key: 'containerSeal', label: 'Container & seal number', required: true, hint: 'The seal number is what the consignee checks before devanning.' },
+  { key: 'tally', label: 'Package tally', required: true, hint: 'Counted, not copied from the packing list — this is the whole point of the document.' },
+  { key: 'supervisor', label: 'Supervisor / tally clerk', required: true, hint: 'A named person, so the count can be stood behind.' },
+  { key: 'photos', label: 'Photograph set', required: true, hint: 'Empty, part-loaded, full, doors closed, seal fitted.' },
+  { key: 'condition', label: 'Container condition on release', required: false, hint: 'Note any damage or a failed light test before cargo goes in.' },
+]
+
+DOC_FIELD_SPECS.SENDING_DOC = [
+  { key: 'sentTo', label: 'Sent to (party & address)', required: true, hint: 'Usually the consignee or their bank under an L/C.' },
+  { key: 'contents', label: 'Documents enclosed', required: true, hint: 'Itemise them — "documents as agreed" is not a record.' },
+  { key: 'originals', label: 'Originals vs copies', required: true, hint: 'State how many originals left the office and how many we retain.' },
+  { key: 'courierAwb', label: 'Courier & airway bill', required: true, hint: 'The tracking number is the proof of despatch.' },
+  { key: 'sentAt', label: 'Date sent', required: true, hint: 'Starts the L/C presentation clock.' },
+  { key: 'receivedBy', label: 'Receipt confirmed by', required: false, hint: 'Completed when the courier confirms delivery.' },
+]
+
+DOC_FIELD_SPECS.JOB_SHEET = [
+  { key: 'jobNo', label: 'Job number', required: true, hint: '' },
+  { key: 'revenue', label: 'Total billed to the customer', required: true, hint: '' },
+  { key: 'masterCost', label: 'Master cost (biaya master)', required: true, hint: 'Vendor-invoiced, settled by finance on terms.' },
+  { key: 'fieldCost', label: 'Field cost (biaya lapangan)', required: true, hint: 'Cash spent at the port, settled against receipts.' },
+  { key: 'reimbursement', label: 'Reimbursement (reimbursemen)', required: true, hint: 'Paid on the customer’s behalf and re-billed at cost.' },
+  { key: 'margin', label: 'Gross margin', required: true, hint: 'Revenue less all three buckets.' },
+  { key: 'preparedBy', label: 'Prepared by', required: true, hint: 'Operations signs it before finance closes the job.' },
+]
+
 export const docFieldSpecs = (t: DocType): DocFieldSpec[] => DOC_FIELD_SPECS[t] ?? []
 
 /* ---------- access control ---------- */
@@ -888,3 +931,70 @@ export const licenceKindLabel = (k: LicenceKind) => LICENCE_KINDS.find((x) => x.
 
 /** Days before expiry at which a licence starts raising an exception. */
 export const LICENCE_WARNING_DAYS = 60
+
+/* ==================================================================
+   PHASE 4 reference data — stuffing and the cost buckets
+   ================================================================== */
+import type { StuffingLocationType, StuffingShift, StuffingStatus } from './types'
+
+export const STUFFING_LOCATION_TYPES: { value: StuffingLocationType; label: string; hint: string }[] = [
+  { value: 'FACTORY', label: 'Shipper factory', hint: 'We send the empty to the shipper and stuff on their yard.' },
+  { value: 'CFS', label: 'Our CFS', hint: 'Cargo comes to us — the usual choice for LCL and consolidation.' },
+  { value: 'DEPOT', label: 'Container depot', hint: 'Stuffed at the depot where the empty is released.' },
+  { value: 'WAREHOUSE', label: 'Third-party warehouse', hint: 'The customer’s own or a rented facility.' },
+  { value: 'PORT_YARD', label: 'Port yard', hint: 'Inside the terminal — fastest to gate, hardest to supervise.' },
+]
+
+export const stuffingLocationLabel = (t: StuffingLocationType) =>
+  STUFFING_LOCATION_TYPES.find((x) => x.value === t)?.label ?? t
+
+export const STUFFING_SHIFTS: { value: StuffingShift; label: string; window: string }[] = [
+  { value: 'MORNING', label: 'Morning', window: '08:00 – 12:00' },
+  { value: 'AFTERNOON', label: 'Afternoon', window: '13:00 – 17:00' },
+  { value: 'NIGHT', label: 'Night', window: '19:00 – 23:00' },
+]
+
+export const shiftWindow = (s: StuffingShift) => STUFFING_SHIFTS.find((x) => x.value === s)?.window ?? ''
+
+export const STUFFING_STATUSES: { value: StuffingStatus; label: string; tone: string; open: boolean; hint: string }[] = [
+  { value: 'PLANNED', label: 'Planned', tone: 'neutral', open: true, hint: 'On the schedule; the empty has not moved yet.' },
+  { value: 'EMPTY_RELEASED', label: 'Empty released', tone: 'info', open: true, hint: 'Equipment collected from the depot and on its way.' },
+  { value: 'IN_PROGRESS', label: 'Stuffing', tone: 'info', open: true, hint: 'Loading under way — the tally is being taken.' },
+  { value: 'SEALED', label: 'Sealed', tone: 'primary', open: true, hint: 'Doors closed and sealed; the seal number is the record.' },
+  { value: 'GATE_IN', label: 'Gated in', tone: 'success', open: true, hint: 'Accepted at the terminal before the cut-off.' },
+  { value: 'COMPLETED', label: 'Completed', tone: 'success', open: false, hint: 'Tally, photographs and seal all filed.' },
+  { value: 'CANCELLED', label: 'Cancelled', tone: 'danger', open: false, hint: 'Called off — the booking, the cargo or the equipment fell through.' },
+]
+
+export const stuffingStatusMeta = (s: StuffingStatus) => STUFFING_STATUSES.find((x) => x.value === s)
+export const stuffingIsOpen = (s: StuffingStatus) => stuffingStatusMeta(s)?.open ?? true
+
+/** A stuffing crew is booked in advance; below this many days out it is a scramble. */
+export const STUFFING_LEAD_DAYS = 2
+
+/* ---------- cost buckets ---------- */
+
+export const COST_TYPES: { value: CostType; label: string; local: string; tone: string; hint: string }[] = [
+  {
+    value: 'MASTER', label: 'Master cost', local: 'Biaya master', tone: 'primary',
+    hint: 'Contracted centrally. The vendor invoices us and finance pays on terms — carrier freight, THC, trucking, agency.',
+  },
+  {
+    value: 'FIELD', label: 'Field cost', local: 'Biaya lapangan', tone: 'warning',
+    hint: 'Cash spent at the port from an operator’s float — labour, lift on/off, seals, small handling. Advanced first, settled against receipts after.',
+  },
+  {
+    value: 'REIMBURSEMENT', label: 'Reimbursement', local: 'Reimbursemen', tone: 'accent',
+    hint: 'Paid on the customer’s behalf and re-billed at cost. Carries no margin, so pricing it like a service inflates the quoted rate.',
+  },
+]
+
+export const costTypeMeta = (c: CostType) => COST_TYPES.find((x) => x.value === c)
+export const costTypeLabel = (c: CostType) => costTypeMeta(c)?.label ?? c
+
+/** The bucket a charge code funds from, unless the desk overrides it on the line. */
+export const defaultCostType = (chargeCode: string): CostType =>
+  CHARGE_CODES.find((c) => c.code === chargeCode)?.costType ?? 'MASTER'
+
+/** A field advance older than this without receipts is chased. */
+export const FIELD_SETTLEMENT_DAYS = 7

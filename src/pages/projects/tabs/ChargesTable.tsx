@@ -1,8 +1,8 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle2, ExternalLink, Pencil, Plus, Receipt, Trash2 } from 'lucide-react'
-import type { ChargeStatus, Project, ProjectCharge } from '@/data/types'
-import { CHARGE_CODES } from '@/data/reference'
+import type { ChargeStatus, CostType, Project, ProjectCharge } from '@/data/types'
+import { CHARGE_CODES, COST_TYPES, costTypeMeta, defaultCostType } from '@/data/reference'
 import { useErp } from '@/store/useErp'
 import { DataTable } from '@/components/data-table/DataTable'
 import type { Column } from '@/components/data-table/types'
@@ -30,6 +30,7 @@ export function ChargesTable({ project, scoped }: { project?: Project; scoped?: 
   const [deleting, setDeleting] = React.useState<ProjectCharge | null>(null)
   const [status, setStatus] = React.useState<string[]>([])
   const [category, setCategory] = React.useState<string[]>([])
+  const [costType, setCostType] = React.useState<string[]>([])
 
   const data = scoped && project ? charges.filter((c) => c.projectId === project.id) : charges
   const projectOf = (c: ProjectCharge) => projects.find((p) => p.id === c.projectId)
@@ -132,6 +133,23 @@ export function ChargesTable({ project, scoped }: { project?: Project; scoped?: 
       ),
     },
     {
+      key: 'costType', header: 'Cost bucket', width: 'w-[162px]', sortable: true,
+      sortValue: (r) => r.costType, exportValue: (r) => r.costType,
+      cell: (r) => {
+        const meta = costTypeMeta(r.costType)
+        const unsettled =
+          r.costType === 'FIELD' && r.settlement && r.settlement.settledAmount < r.settlement.advanceAmount
+        return (
+          <Tooltip content={`${meta?.local ?? ''} — ${meta?.hint ?? ''}`}>
+            <span className="flex items-center gap-1.5">
+              <Badge tone={(meta?.tone ?? 'neutral') as never} size="sm">{meta?.label ?? r.costType}</Badge>
+              {unsettled && <Badge tone="warning" size="sm">unsettled</Badge>}
+            </span>
+          </Tooltip>
+        )
+      },
+    },
+    {
       key: 'vendor', header: 'Vendor', width: 'min-w-[170px]', sortable: true, defaultHidden: true,
       sortValue: (r) => r.vendor ?? '', exportValue: (r) => r.vendor ?? '',
       cell: (r) => <span className="text-[12px] text-fg-muted">{r.vendor ?? '—'}</span>,
@@ -190,6 +208,11 @@ export function ChargesTable({ project, scoped }: { project?: Project; scoped?: 
             match: (r, v) => v.includes(r.status),
           },
           {
+            key: 'costType', label: 'Cost bucket', values: costType, onChange: setCostType,
+            options: COST_TYPES.map((c) => ({ value: c.value, label: `${c.label} · ${c.local}` })),
+            match: (r, v) => v.includes(r.costType),
+          },
+          {
             key: 'category', label: 'Category', values: category, onChange: setCategory,
             options: ['FREIGHT', 'ORIGIN', 'DESTINATION', 'CUSTOMS', 'DOCUMENTATION', 'TRUCKING', 'SURCHARGE', 'INSURANCE', 'PENALTY', 'OTHER'].map((v) => ({ value: v, label: titleCase(v) })),
             match: (r, v) => v.includes(r.category),
@@ -208,6 +231,7 @@ export function ChargesTable({ project, scoped }: { project?: Project; scoped?: 
                     added.forEach((l) =>
                       upsertCharge({
                         id: uid('chg'), projectId: project.id, chargeCode: l.chargeCode, description: l.description,
+                        costType: defaultCostType(l.chargeCode),
                         category: CHARGE_CODES.find((c) => c.code === l.chargeCode)?.category ?? 'OTHER',
                         basis: l.basis, quantity: 1, buyRate: l.buyRate, sellRate: l.sellRate, currency: l.currency,
                         fxRate: project.fxRate, vatApplicable: l.vatApplicable, whtApplicable: false,
@@ -265,17 +289,18 @@ export function ChargesTable({ project, scoped }: { project?: Project; scoped?: 
           { key: 'currency', label: 'Currency' },
           { key: 'fxRate', label: 'FX rate to IDR' },
           { key: 'vendor', label: 'Vendor' },
+          { key: 'costType', label: 'Cost bucket', hint: 'MASTER / FIELD / REIMBURSEMENT' },
           { key: 'status', label: 'Status' },
         ]}
         importSample={{
           projectCode: project?.code ?? 'PRJ-2026-0041', chargeCode: 'OFR', description: 'Ocean Freight',
           basis: 'PER_CONTAINER', quantity: '3', buyRate: '1180', sellRate: '1480', currency: 'USD',
-          fxRate: '16250', vendor: 'Maersk Line', status: 'DRAFT',
+          fxRate: '16250', vendor: 'Maersk Line', costType: 'MASTER', status: 'DRAFT',
         }}
         toImportRow={(r) => ({
           projectCode: projectOf(r)?.code ?? '', chargeCode: r.chargeCode, description: r.description,
           basis: r.basis, quantity: r.quantity, buyRate: r.buyRate, sellRate: r.sellRate,
-          currency: r.currency, fxRate: r.fxRate, vendor: r.vendor ?? '', status: r.status,
+          currency: r.currency, fxRate: r.fxRate, vendor: r.vendor ?? '', costType: r.costType, status: r.status,
         })}
         onImport={(rows) => {
           const mapped = rows
@@ -285,6 +310,7 @@ export function ChargesTable({ project, scoped }: { project?: Project; scoped?: 
               const meta = CHARGE_CODES.find((c) => c.code === r.chargeCode)
               return {
                 id: uid('chg'), projectId: proj.id, chargeCode: r.chargeCode,
+                costType: (COST_TYPES.some((c) => c.value === r.costType) ? r.costType : defaultCostType(r.chargeCode)) as CostType,
                 description: r.description || meta?.name || r.chargeCode,
                 category: meta?.category ?? 'OTHER',
                 basis: (r.basis || meta?.basis || 'PER_SHIPMENT') as ProjectCharge['basis'],
@@ -455,10 +481,24 @@ function ChargeForm({
             onChange={(v) => {
               const meta = CHARGE_CODES.find((c) => c.code === v)!
               setDraft((d) => ({
-                ...d, chargeCode: v, description: meta.name, category: meta.category, basis: meta.basis, vatApplicable: meta.vat,
+                ...d, chargeCode: v, description: meta.name, category: meta.category, basis: meta.basis,
+                vatApplicable: meta.vat, costType: meta.costType,
               }))
             }}
             options={CHARGE_CODES.map((c) => ({ value: c.code, label: c.name, description: `${c.code} · ${titleCase(c.basis)}`, group: titleCase(c.category) }))}
+          />
+        </Field>
+        <Field
+          label="Cost bucket"
+          required
+          className="sm:col-span-2"
+          help="How this cost is funded and settled — biaya master, biaya lapangan or reimbursemen. Defaults from the charge code."
+          hint={costTypeMeta(draft.costType)?.local}
+        >
+          <Select
+            value={draft.costType}
+            onChange={(v) => set('costType', v)}
+            options={COST_TYPES.map((c) => ({ value: c.value, label: `${c.label} — ${c.local}`, description: c.hint }))}
           />
         </Field>
         <Field label="Description" className="sm:col-span-2">
@@ -574,6 +614,7 @@ function ChargeForm({
 function blank(project: Project): ProjectCharge {
   return {
     id: uid('chg'), projectId: project.id, chargeCode: 'OFR', description: 'Ocean Freight', category: 'FREIGHT',
+    costType: 'MASTER',
     basis: 'PER_CONTAINER', quantity: 1, buyRate: 0, sellRate: 0, currency: project.currency, fxRate: project.fxRate,
     vatApplicable: false, whtApplicable: false, freightTerm: project.freightTerm, billable: true, status: 'DRAFT',
     fromPackage: false, createdAt: new Date().toISOString(),

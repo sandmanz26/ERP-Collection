@@ -25,6 +25,7 @@ import { AnalyticsPage } from '@/pages/analytics/AnalyticsPage'
 import { SettingsPage } from '@/pages/settings/SettingsPage'
 import { ServicesPage } from '@/pages/services/ServicesPage'
 import { IncidentsPage } from '@/pages/incidents/IncidentsPage'
+import { StuffingPage } from '@/pages/stuffing/StuffingPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
@@ -59,6 +60,7 @@ export default function App() {
                 <Route path="/customs" element={<CustomsPage />} />
                 <Route path="/services" element={<ServicesPage />} />
                 <Route path="/incidents" element={<IncidentsPage />} />
+                <Route path="/stuffing" element={<StuffingPage />} />
                 <Route path="/analytics" element={<AnalyticsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/customers" element={<CustomersPage />} />

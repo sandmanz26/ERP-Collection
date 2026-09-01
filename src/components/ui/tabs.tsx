@@ -22,7 +22,7 @@ export function Tabs<T extends string>({
             key={it.value}
             onClick={() => onChange(it.value)}
             className={cn(
-              'inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-all [&_svg]:size-4',
+              'inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-[13px] font-medium transition-all [&_svg]:size-4',
               value === it.value ? 'bg-surface text-fg shadow-card' : 'text-fg-muted hover:text-fg',
             )}
           >
@@ -43,7 +43,7 @@ export function Tabs<T extends string>({
           key={it.value}
           onClick={() => onChange(it.value)}
           className={cn(
-            'relative -mb-px inline-flex items-center gap-2 border-b-2 px-3 py-2.5 text-[13px] font-medium transition-colors [&_svg]:size-4',
+            'relative -mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-[13px] font-medium transition-colors [&_svg]:size-4',
             value === it.value
               ? 'border-primary text-fg'
               : 'border-transparent text-fg-muted hover:border-border-strong hover:text-fg',

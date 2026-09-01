@@ -373,6 +373,63 @@ Everything else in the suite describes the customer. This describes us.
 
 ---
 
+## 6B. Phase 4 requirements
+
+Two things the legacy system tracked that this build did not: the stuffing event itself, and the
+three cost buckets a desk settles against. Both came out of a walkthrough of the old document menu.
+
+### 6B.1 Stuffing `[P0]`
+
+Stuffing is where a job stops being paperwork. It was previously implied by three fields on the
+container; it needs to be its own record, because a container can be re-stuffed after a rejection
+and because the yard works by date rather than by job.
+
+**Requirements**
+
+- A stuffing carries: stuffing date and shift; location type (shipper factory, our CFS, depot,
+  third-party warehouse, port yard), name and address; **port of loading** and terminal; empty
+  pick-up depot and release date; truck, driver and haulier; supervisor, tally clerk and labour
+  count; planned versus stuffed packages and CBM; seal number and time; photograph count and tally
+  sheet reference; gate-in cut-off and actual.
+- The **yard schedule** is the primary view — work still to do bucketed by day, with anything
+  scheduled for a date already past marked as still open.
+- Sealing writes the seal, date and location back onto the container so the two cannot drift.
+- Three checks, each with a stated consequence rather than a bare flag:
+
+| Check | Behaviour |
+| --- | --- |
+| Slot at or after the terminal gate-in cut-off | Blocks the stage gate from the stuffing stage onwards; critical exception |
+| Stuffed short of the packing list | Critical exception naming the amendments it forces to the invoice, packing list and B/L |
+| Sealed with no seal number | Blocks — the terminal refuses the unit at the gate |
+| No tally sheet or photographs | Warning — without them a shortage claim lands on the forwarder |
+| Booked with under two days' notice | Warning — the crew and equipment need confirming today |
+
+### 6B.2 Cost buckets and the job sheet `[P0]`
+
+Charges were classified by what they are for. A forwarding desk also needs them classified by **how
+they are funded and settled**, because the three behave differently at month end and must never be
+pooled.
+
+**Requirements**
+
+- Every charge carries a cost type, defaulted from its charge code and overridable on the line:
+  **Master** *(biaya master)*, **Field** *(biaya lapangan)*, **Reimbursement** *(reimbursemen)*.
+- A field cost carries a cash advance — amount, date, who holds it — and a settlement with the
+  receipt reference. Cash out with nothing back is exposure; unspent float returned is not.
+- The **job sheet** recaps billed, cost by bucket, gross margin and field cash still out, and lists
+  what finance would otherwise query: advances unsettled past seven days, reimbursements billed
+  above cost, and billable lines still in draft.
+- An unsettled advance past seven days raises an exception against the job.
+
+### 6B.3 Document set parity `[P1]`
+
+The legacy menu carried four documents this build did not: **ISPM-15 declaration** (distinct from
+the treatment certificate), **stuffing report and tally**, **sending doc** (the covering note for
+the original set, with the courier airway bill) and the **job sheet**. Each gets a field standard on
+the same footing as the rest, so the completeness check and the issuance guard apply to them too.
+
+---
+
 ## 7. Data model additions
 
 ```
@@ -414,6 +471,18 @@ ShipmentDocument ── + fields: DocFieldValue[]   (checked against DOC_FIELD_S
 CompanyProfile ────┬─ CompanyLicence[]  (kind, number, issuer, expiresAt)
                    ├─ CompanyBranch[]   (code, servesPorts[], manager)
                    └─ BankAccount[]     (currency, swift, isPrimary)
+
+── phase 4 ───────────────────────────────────────────────────────────────────
+
+StuffingJob ───────┬─ projectId, containerId?, stuffingDate, shift
+                   ├─ locationType/Name/address, polCode/polName, terminal
+                   ├─ depot, emptyReleaseDate, truckPlate, driver, haulierPartnerId?
+                   ├─ supervisor, tallyClerk, labourCount
+                   ├─ planned vs stuffed packages and CBM
+                   └─ sealNo, photosTaken, tallySheetRef, gateInCutoff, gateInAt
+
+ProjectCharge ───── + costType: MASTER | FIELD | REIMBURSEMENT
+                    + settlement?: FieldSettlement (advance, settled, receiptNo)
 ```
 
 **Derived, never stored**
@@ -435,6 +504,9 @@ CompanyProfile ────┬─ CompanyLicence[]  (kind, number, issuer, expir
 - A JobService that has raised a charge keeps that charge when the service is removed from the job,
   and the confirmation says so.
 - An Incident cannot move to a closed status without a root cause.
+- Sealing a StuffingJob writes the seal, date and location onto its Container; the two are never
+  edited independently.
+- A stuffing slot at or after the job's gate-in cut-off is refused as a plan, not merely warned about.
 
 ---
 
@@ -459,7 +531,8 @@ CompanyProfile ────┬─ CompanyLicence[]  (kind, number, issuer, expir
 | **1.0** | Customers, offices, packages, projects + stepper, containers, documents, charges, finance, control tower | Shipped |
 | **2.0** | Quotations & pipeline, partners, milestone tracking, warehouse, customs filings, operations analytics, settings, audit trail | This document |
 | **3.0** | Sign-in, registration and password reset; additional-services catalogue with trigger rules; incidents and claims; per-document standards; the forwarder's own company record | This document |
-| **3.1** | Printable quotation / invoice / draft B/L, SOP per customer, approval routing | Next |
+| **3.5** | Stuffing schedule with cut-off and tally checks; Master / Field / Reimbursement cost buckets with advance and settlement; job sheet; ISPM-15, stuffing report, sending doc and job sheet documents | This document |
+| **3.6** | Printable quotation / invoice / draft B/L, SOP per customer, approval routing | Next |
 | **4.0** | Backend, server-side auth and role enforcement, carrier EDI ingestion, CEISA 4.0 and Coretax connectors, customer portal | Planned |
 
 ---
@@ -483,3 +556,9 @@ CompanyProfile ────┬─ CompanyLicence[]  (kind, number, issuer, expir
    derived from the service rather than declared twice?
 7. **Incident cost attribution.** Incident cost sits on the incident. Whether it should also post to
    the job's margin — and therefore to job profitability — is an accounting-policy decision.
+8. **Field cash floats.** An advance is recorded per charge line. Whether the float should instead be
+   held per operator across jobs — which is how the cash actually moves — depends on whether finance
+   wants to reconcile by person or by job.
+9. **Stuffing and VGM.** The VGM weighing date sits on the container while the stuffing date sits on
+   the stuffing. They must agree, and today nothing enforces it. Should the VGM move onto the
+   stuffing record?

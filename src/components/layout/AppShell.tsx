@@ -16,10 +16,11 @@ import { Segmented } from '@/components/ui/checkbox'
 import { useTheme } from '@/hooks/useTheme'
 import { useErp } from '@/store/useErp'
 import { useAuth, useCurrentUser } from '@/store/useAuth'
-import { incidentStatusOpen, roleLabel } from '@/data/reference'
+import { incidentStatusOpen, roleLabel, stuffingIsOpen } from '@/data/reference'
 import { buildExceptions } from '@/lib/analytics'
 import { buildPhase2Exceptions, filingReadiness, isQuoteOpen } from '@/lib/analytics2'
 import { buildPhase3Exceptions } from '@/lib/services'
+import { buildStuffingExceptions, checkStuffing } from '@/lib/stuffing'
 import { fmtDateTime } from '@/lib/format'
 import { useToast } from '@/components/ui/toast'
 
@@ -73,13 +74,16 @@ export function AppShell() {
       jobServices: store.jobServices, services: store.services, incidents: store.incidents,
       company: store.company,
     })
+    const yard = buildStuffingExceptions({
+      projects: store.projects, charges: store.charges, stuffingJobs: store.stuffingJobs,
+    })
     const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2 } as const
-    return [...core, ...extra, ...phase3].sort((a, b) => order[a.severity] - order[b.severity])
+    return [...core, ...extra, ...phase3, ...yard].sort((a, b) => order[a.severity] - order[b.severity])
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     store.projects, store.containers, store.documents, store.charges, store.customers, store.invoices,
     store.quotations, store.partners, store.milestones, store.receipts, store.filings, store.settings,
-    store.jobServices, store.services, store.incidents, store.company,
+    store.jobServices, store.services, store.incidents, store.company, store.stuffingJobs,
   ])
   const critical = exceptions.filter((e) => e.severity === 'CRITICAL').length
 
@@ -90,6 +94,7 @@ export function AppShell() {
     quotes: store.quotations.filter(isQuoteOpen).length,
     customs: store.filings.filter((f) => f.status === 'DRAFT' && !filingReadiness(f).canSubmit).length,
     incidents: store.incidents.filter((i) => incidentStatusOpen(i.status)).length,
+    stuffing: store.stuffingJobs.filter((j) => stuffingIsOpen(j.status) && checkStuffing(j).blockers.length > 0).length,
   }
 
   return (

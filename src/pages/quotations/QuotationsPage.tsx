@@ -5,7 +5,7 @@ import {
   Trash2, TrendingUp, Trophy, XCircle,
 } from 'lucide-react'
 import type { LossReason, Project, ProjectCharge, Quotation } from '@/data/types'
-import { CHARGE_CODES, LOSS_REASONS, countryFlag } from '@/data/reference'
+import { CHARGE_CODES, LOSS_REASONS, countryFlag, defaultCostType } from '@/data/reference'
 import { useErp } from '@/store/useErp'
 import { DataTable } from '@/components/data-table/DataTable'
 import type { Column } from '@/components/data-table/types'
@@ -108,6 +108,7 @@ export function QuotationsPage() {
       .filter((l) => !l.optional)
       .map((l) => ({
         id: uid('chg'), projectId, chargeCode: l.chargeCode, description: l.description,
+        costType: defaultCostType(l.chargeCode),
         category: CHARGE_CODES.find((c) => c.code === l.chargeCode)?.category ?? 'OTHER',
         basis: l.basis, quantity: l.quantity, buyRate: l.buyRate, sellRate: l.sellRate,
         currency: l.currency, fxRate: q.fxRate, vatApplicable: l.vatApplicable, whtApplicable: false,

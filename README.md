@@ -5,8 +5,9 @@ carrier, stuffs a factory's cargo into containers, clears it through Bea Cukai a
 vessel bound for Rotterdam, Yokohama or Savannah — and then has to prove it made money doing so.
 
 This is a **front-end only** build. All data lives in the browser (Zustand + `localStorage`), seeded
-with a realistic operating book of 14 jobs, 8 customers, 23 containers, 205 documents, 18 catalogue
-services, 16 logged incidents, a charge sheet and a posted general ledger. There is no backend and
+with a realistic operating book of 14 jobs, 8 customers, 23 containers and their stuffings, 261
+documents, 18 catalogue services, 16 logged incidents, a bucketed charge sheet and a posted general
+ledger. There is no backend and
 no API layer.
 
 Sign in with any of the seeded accounts — `elena.marchetti@meridianfreight.com` and the rest — using
@@ -46,6 +47,10 @@ does not pretend to be authoritative. The parts of this job that actually cost m
 | A rollover, a red-lane hold or a reefer deviation lives in an email thread and is never claimed | Incident register with liability, cost impact against recovery, claim reference, dated action log and a mandatory root cause before closing |
 | A B/L is marked issued while the description does not match the L/C | Per-document-type field standards, with approval and issuance blocked while a mandatory field is empty |
 | Our own PPJK licence lapses and every filing under it is challengeable | Company record with licence and liability-cover expiry raising exceptions 60 days out |
+| A crew is booked to stuff a container after the terminal's own gate-in cut-off | Every stuffing slot is checked against the cut-off before it can be saved, and a late slot blocks the stage gate |
+| The tally comes up short and nobody notices until the consignee devans | Planned against stuffed packages on every stuffing, with the shortfall raised as a critical exception and the amendment it forces spelled out |
+| Cash advanced to an operator at the port never comes back with receipts | Field costs carry their own advance and settlement, and an advance older than seven days is chased on the job sheet |
+| A disbursement gets marked up and turns a pass-through into revenue the customer never agreed to | Reimbursements are a separate cost bucket, and anything billed above cost is flagged before the job closes |
 
 Every number on the Control Tower is derived from the jobs, containers, documents and charges in
 the store — nothing is a hand-typed dashboard figure.
@@ -55,7 +60,7 @@ the store — nothing is a hand-typed dashboard figure.
 ## Modules
 
 **Commercial** — Quotations & pipeline · Customers · Country offices · Service packages · Partners & vendors
-**Operations** — Projects · Tracking · Containers · Documents · Customs · Warehouse & CFS · Additional services · Incidents & claims · Charges
+**Operations** — Projects · Tracking · Containers · Stuffing · Documents · Customs · Warehouse & CFS · Additional services · Incidents & claims · Charges
 **Finance** — General ledger · Chart of accounts · Invoices & bills · Financial reports · Job profitability
 **Insight** — Operations analytics · Settings & audit
 
@@ -113,6 +118,31 @@ gross/net weight. CBM and gross weight are computed live and checked against the
 capacity and maximum payload, with the limiting factor (volume or weight) called out and a concrete
 remedy — "move 13,020 kg to another unit, or step up to a larger container type".
 
+### Stuffing (sub-menu of a project)
+The event where a job stops being paperwork. Each stuffing carries the **stuffing date** and shift,
+where it happens (shipper factory, our CFS, a depot, a third-party warehouse or the port yard) with
+the address a driver could find, the **port of loading** and terminal, the depot the empty came from
+and when it was released, the truck and driver, the named supervisor, tally clerk and labour count,
+the seal and when it was fitted, and the photograph and tally-sheet references.
+
+It is a record separate from the container because a container can be re-stuffed after a rejection,
+and because the yard works by date, not by job. The **yard schedule** is therefore the primary view:
+work still to do, bucketed by day, with anything scheduled for a date already past marked as still
+open.
+
+Three checks run on every slot:
+
+- **Against the cut-off.** A stuffing booked at or after the terminal's gate-in cut-off cannot make
+  the sailing, so it is refused as a plan and blocks the stage gate from the stuffing stage onwards.
+- **Against the packing list.** Planned packages and CBM are compared to what the tally actually
+  counted. A shortfall is critical, and the system says what it forces: the invoice, packing list
+  and B/L all have to be amended to what really shipped.
+- **Against the evidence.** A unit marked sealed with no seal number will be turned away at the
+  gate; one with no tally sheet or photographs has no defence when a shortage is claimed.
+
+Sealing a stuffing writes the seal, date and location back onto the container, so the two records
+cannot drift apart.
+
 ### Documents (sub-menu of a project)
 The full register — SI, commercial invoice, packing list, PEB, NPE, VGM certificate, draft/house/
 master B/L, COO/SKA, insurance certificate, phytosanitary, fumigation, MSDS, L/C, consignment
@@ -125,6 +155,23 @@ Buy and sell per line, with basis, quantity, currency and FX rate to IDR, Indone
 and withholding (PPh 23 2%), vendor, freight term, billable flag and an approval lifecycle
 (draft → pending approval → approved → invoiced → paid, or disputed). Margin is computed per line
 and rolled up per job.
+
+### Cost buckets and the job sheet
+Every charge is classified by **how it is funded and settled**, not by what it is for — the
+distinction an Indonesian forwarding desk actually works to:
+
+- **Master cost** *(biaya master)* — contracted centrally. The vendor invoices us and finance pays
+  on terms: carrier freight, THC, trucking, agency.
+- **Field cost** *(biaya lapangan)* — cash spent at the port out of an operator's float: labour,
+  lift on/off, seals, small handling. It carries its own **advance and settlement**, so the system
+  knows what went out, what came back with receipts, and what is still in somebody's pocket.
+- **Reimbursement** *(reimbursemen)* — paid on the customer's behalf and re-billed at cost. It
+  carries no margin, so pricing it like a service quietly inflates the quoted rate.
+
+The **job sheet** is the recap operations hands finance before a job closes: billed, cost by bucket,
+gross margin, and the field cash still out. Before it can be signed off it lists what finance would
+otherwise send back — advances unsettled past seven days with the name of who holds them,
+reimbursements billed above cost, and billable lines still sitting in draft.
 
 ### Finance
 Indonesian-shaped chart of accounts (freight revenue split by mode, cost of service separate from
@@ -300,12 +347,13 @@ src/
 └─ store/            Zustand store
 ```
 
-`src/lib/shipping.ts`, `src/lib/analytics.ts`, `src/lib/analytics2.ts` and `src/lib/services.ts` hold
-the domain logic —
+`src/lib/shipping.ts`, `src/lib/analytics.ts`, `src/lib/analytics2.ts`, `src/lib/services.ts` and
+`src/lib/stuffing.ts` hold the domain logic —
 check-digit validation, utilisation, load-plan suggestion, stage gating, document compliance, the
 exception engine, job costing, the finance reports, quote pricing and win/loss, milestone
 punctuality, warehouse dwell, customs readiness, LARTAS screening, partner scoring, service-trigger
-detection, document-standard checking, incident exposure, licence alerts and the KPI set.
+detection, document-standard checking, incident exposure, licence alerts, stuffing checks, the yard
+schedule and the job sheet, plus the KPI set.
 They are pure functions and are the first place to look when wiring this to a real backend.
 
 ## Demo data
@@ -319,4 +367,5 @@ number with a bad ISO 6346 check digit, a PEB blocked on a missing CEISA 4.0 upl
 trucker with three claims, two agency contracts weeks from expiry, consignment stock at day 96 of a
 120-day return window, a shipper who refused mandatory fumigation on a furniture job, a failed BMSB
 treatment blocking an Australian sailing, four issued documents short of their own field standard, a
-lapsed IATA accreditation and a PPJK registration three weeks from expiry.
+lapsed IATA accreditation, a PPJK registration three weeks from expiry, two stuffings that came up
+short against the packing list, and slots booked past the terminal's own gate-in cut-off.

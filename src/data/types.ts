@@ -313,7 +313,8 @@ export type DocType =
   | 'SHIPPING_INSTRUCTION' | 'DRAFT_BL' | 'MASTER_BL' | 'HOUSE_BL' | 'COMMERCIAL_INVOICE' | 'PACKING_LIST'
   | 'CERTIFICATE_OF_ORIGIN' | 'PEB' | 'NPE' | 'INSURANCE_CERTIFICATE' | 'PHYTOSANITARY' | 'FUMIGATION'
   | 'VGM_CERTIFICATE' | 'DELIVERY_ORDER' | 'LETTER_OF_CREDIT' | 'CONSIGNMENT_AGREEMENT' | 'EXPORT_PERMIT'
-  | 'MSDS' | 'BOOKING_CONFIRMATION' | 'ARRIVAL_NOTICE' | 'PROOF_OF_DELIVERY' | 'OTHER'
+  | 'MSDS' | 'BOOKING_CONFIRMATION' | 'ARRIVAL_NOTICE' | 'PROOF_OF_DELIVERY'
+  | 'ISPM_15' | 'STUFFING_REPORT' | 'SENDING_DOC' | 'JOB_SHEET' | 'OTHER'
 
 export type DocStatus = 'REQUIRED' | 'DRAFT' | 'PENDING_REVIEW' | 'APPROVED' | 'ISSUED' | 'SURRENDERED' | 'REJECTED' | 'EXPIRED'
 
@@ -360,6 +361,10 @@ export interface ProjectCharge {
   vendor?: string
   /** set once the vendor is a managed partner rather than free text */
   partnerId?: ID
+  /** how this cost is funded and settled — biaya master / lapangan / reimbursemen */
+  costType: CostType
+  /** only meaningful on a FIELD cost: the cash advance and what came back */
+  settlement?: FieldSettlement
   freightTerm: FreightTerm
   billable: boolean
   status: ChargeStatus
@@ -914,4 +919,90 @@ export interface CompanyProfile {
   licences: CompanyLicence[]
   branches: CompanyBranch[]
   bankAccounts: BankAccount[]
+}
+
+/* ==================================================================
+   PHASE 4 — the stuffing event, and the cost buckets an Indonesian
+   forwarding desk actually settles against
+   ================================================================== */
+
+/* ---------- stuffing ---------- */
+export type StuffingLocationType = 'FACTORY' | 'CFS' | 'DEPOT' | 'WAREHOUSE' | 'PORT_YARD'
+export type StuffingShift = 'MORNING' | 'AFTERNOON' | 'NIGHT'
+export type StuffingStatus =
+  | 'PLANNED' | 'EMPTY_RELEASED' | 'IN_PROGRESS' | 'SEALED' | 'GATE_IN' | 'COMPLETED' | 'CANCELLED'
+
+/**
+ * One stuffing event: a container, a date, a place and the people who did it.
+ * Kept separate from the container because a container can be re-stuffed after a
+ * rejection, and because the yard schedule is worked by date, not by job.
+ */
+export interface StuffingJob {
+  id: ID
+  reference: string
+  projectId: ID
+  containerId?: ID
+
+  /** tanggal stuffing */
+  stuffingDate: ISODate
+  shift: StuffingShift
+  startTime?: string
+  endTime?: string
+
+  locationType: StuffingLocationType
+  locationName: string
+  addressLine?: string
+
+  /** port of loading for this unit — usually the job's, but a feeder can differ */
+  polCode: string
+  polName: string
+  terminal?: string
+
+  /** empty equipment */
+  depot?: string
+  emptyReleaseDate?: ISODate
+  truckPlate?: string
+  driverName?: string
+  haulierPartnerId?: ID
+
+  /** who was there — the tally is the evidence when a shortage is claimed */
+  supervisor: string
+  tallyClerk?: string
+  labourCount: number
+
+  plannedPackages: number
+  stuffedPackages: number
+  plannedCbm: number
+  stuffedCbm: number
+
+  sealNo?: string
+  sealedAt?: ISODate
+  photosTaken: number
+  tallySheetRef?: string
+
+  gateInCutoff?: ISODate
+  gateInAt?: ISODate
+
+  status: StuffingStatus
+  remarks?: string
+}
+
+/* ---------- cost buckets ---------- */
+/**
+ * How a cost is funded and settled, not what it is for.
+ * MASTER (biaya master)        — contracted centrally, vendor invoices, finance pays on terms.
+ * FIELD (biaya lapangan)       — cash spent at the port from an operator's float, settled after.
+ * REIMBURSEMENT (reimbursemen) — a disbursement paid on the customer's behalf, re-billed at cost.
+ */
+export type CostType = 'MASTER' | 'FIELD' | 'REIMBURSEMENT'
+
+export interface FieldSettlement {
+  /** cash handed to the operator before the job */
+  advanceAmount: number
+  advancedAt?: ISODate
+  advancedTo?: string
+  /** what came back with receipts */
+  settledAmount: number
+  settledAt?: ISODate
+  receiptNo?: string
 }

@@ -1,7 +1,7 @@
 import {
   Banknote, BarChart3, BookOpen, Boxes, Building2, Container, FileSignature, FileStack, Gauge,
   Globe2, Handshake, LineChart, Radio, Receipt, Settings, Ship, ShieldAlert, SprayCan, Stamp, Tags,
-  Wallet, Warehouse,
+  PackageCheck, Wallet, Warehouse,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -9,7 +9,7 @@ export interface NavItem {
   to: string
   label: string
   icon: LucideIcon
-  badgeKey?: 'exceptions' | 'projects' | 'overdue' | 'quotes' | 'customs' | 'incidents'
+  badgeKey?: 'exceptions' | 'projects' | 'overdue' | 'quotes' | 'customs' | 'incidents' | 'stuffing'
   description?: string
 }
 
@@ -39,6 +39,7 @@ export const NAV: NavGroup[] = [
       { to: '/projects', label: 'Projects', icon: Ship, badgeKey: 'projects', description: 'Export jobs from inquiry to settlement' },
       { to: '/tracking', label: 'Tracking', icon: Radio, description: 'Milestones, punctuality, event log' },
       { to: '/containers', label: 'Containers', icon: Container, description: 'Every unit across all jobs' },
+      { to: '/stuffing', label: 'Stuffing', icon: PackageCheck, badgeKey: 'stuffing', description: 'Yard schedule, tally and gate-in' },
       { to: '/documents', label: 'Documents', icon: FileStack, description: 'Document register and compliance' },
       { to: '/customs', label: 'Customs', icon: Stamp, badgeKey: 'customs', description: 'PEB filings, CEISA 4.0, LARTAS' },
       { to: '/warehouse', label: 'Warehouse & CFS', icon: Warehouse, description: 'Receipts, dwell and storage' },

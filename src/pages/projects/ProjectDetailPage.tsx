@@ -2,7 +2,8 @@ import * as React from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   AlertTriangle, ArrowLeft, ArrowRight, Building2, CalendarClock, CheckCircle2, Container as ContainerIcon,
-  FileSignature, FileStack, Info, Pencil, Radio, Receipt, Repeat, Ship, ShieldCheck, Sparkles, Stamp, Anchor,
+  FileSignature, FileStack, Info, PackageCheck, Pencil, Radio, Receipt, Repeat, Ship, ShieldCheck,
+  Sparkles, Stamp, Anchor,
 } from 'lucide-react'
 import { useErp } from '@/store/useErp'
 import { STAGES, countryFlag, stageIndex } from '@/data/reference'
@@ -21,7 +22,10 @@ import { ContainersTable } from './tabs/ContainersTable'
 import { DocumentsTable } from './tabs/DocumentsTable'
 import { ChargesTable } from './tabs/ChargesTable'
 import { ServicesPanel } from './tabs/ServicesPanel'
+import { JobSheetPanel } from './tabs/JobSheetPanel'
+import { StuffingPage } from '@/pages/stuffing/StuffingPage'
 import { recommendServices, serviceBlockers } from '@/lib/services'
+import { checkStuffing } from '@/lib/stuffing'
 import { MilestonesTable } from '@/pages/tracking/MilestonesTable'
 import { CustomsTable } from '@/pages/customs/CustomsTable'
 import { filingReadiness, milestoneHealth, quoteTotals } from '@/lib/analytics2'
@@ -31,7 +35,9 @@ import { itemCbm, itemGrossKg } from '@/lib/shipping'
 import { useToast } from '@/components/ui/toast'
 import type { StageKey } from '@/data/types'
 
-type TabKey = 'overview' | 'containers' | 'documents' | 'charges' | 'services' | 'tracking' | 'customs' | 'timeline'
+type TabKey =
+  | 'overview' | 'containers' | 'stuffing' | 'documents' | 'charges' | 'services' | 'jobsheet'
+  | 'tracking' | 'customs' | 'timeline'
 
 export function ProjectDetailPage() {
   const { id } = useParams()
@@ -65,6 +71,7 @@ export function ProjectDetailPage() {
   const documents = store.documents.filter((d) => d.projectId === project.id)
   const charges = store.charges.filter((c) => c.projectId === project.id)
   const projectServices = store.jobServices.filter((j) => j.projectId === project.id)
+  const projectStuffing = store.stuffingJobs.filter((j) => j.projectId === project.id)
   const client = store.customers.find((c) => c.id === project.clientId)
   const shipper = store.customers.find((c) => c.id === project.shipperId)
   const consignee = store.customers.find((c) => c.id === project.consigneeId)
@@ -82,7 +89,10 @@ export function ProjectDetailPage() {
     recommendServices(project, store.containers, projectServices, store.services),
     projectServices,
   )
-  const gate = evaluateStageGate(project, containers, documents, client, { filings, serviceBlockers: serviceGate })
+  const stuffingGate = projectStuffing.flatMap((j) => checkStuffing(j).blockers)
+  const gate = evaluateStageGate(project, containers, documents, client, {
+    filings, serviceBlockers: serviceGate, stuffingBlockers: stuffingGate,
+  })
   const fin = jobFinancials(charges)
   const compliance = documentCompliance(project, documents)
   const currentIdx = stageIndex(project.stage)
@@ -203,9 +213,11 @@ export function ProjectDetailPage() {
         items={[
           { value: 'overview', label: 'Overview', icon: <Info /> },
           { value: 'containers', label: 'Containers', icon: <ContainerIcon />, count: containers.length },
+          { value: 'stuffing', label: 'Stuffing', icon: <PackageCheck />, count: projectStuffing.length },
           { value: 'documents', label: 'Documents', icon: <FileStack />, count: documents.length },
           { value: 'charges', label: 'Charges', icon: <Receipt />, count: charges.length },
           { value: 'services', label: 'Services', icon: <Sparkles />, count: projectServices.length },
+          { value: 'jobsheet', label: 'Job sheet', icon: <Receipt /> },
           { value: 'tracking', label: 'Tracking', icon: <Radio />, count: milestones.length },
           { value: 'customs', label: 'Customs', icon: <Stamp />, count: filings.length },
           { value: 'timeline', label: 'Timeline', icon: <CalendarClock />, count: project.timeline.length },
@@ -522,6 +534,8 @@ export function ProjectDetailPage() {
       {tab === 'documents' && <DocumentsTable project={project} scoped />}
       {tab === 'charges' && <ChargesTable project={project} scoped />}
       {tab === 'services' && <ServicesPanel project={project} />}
+      {tab === 'stuffing' && <StuffingPage project={project} scoped />}
+      {tab === 'jobsheet' && <JobSheetPanel project={project} />}
       {tab === 'tracking' && <MilestonesTable project={project} scoped />}
       {tab === 'customs' && <CustomsTable project={project} scoped />}
 

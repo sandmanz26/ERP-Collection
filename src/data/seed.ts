@@ -2,7 +2,7 @@ import type {
   Account, Container, Customer, Invoice, JournalEntry, Project, ProjectCharge, ProjectStage,
   ServicePackage, ShipmentDocument, StageKey, StageTask, TimelineEvent,
 } from './types'
-import { CHARGE_CODES, DOC_TYPES, STAGES, TEAM, stageIndex } from './reference'
+import { CHARGE_CODES, DOC_TYPES, STAGES, TEAM, stageIndex, defaultCostType } from './reference'
 import { CONTAINER_SPECS } from '@/lib/shipping'
 
 /* deterministic pseudo-random so the demo dataset is stable across reloads */
@@ -760,6 +760,7 @@ for (const p of projects) {
     const status: ProjectCharge['status'] = idx >= 7 ? (p.status === 'COMPLETED' ? 'PAID' : 'INVOICED') : idx >= 5 ? 'APPROVED' : idx >= 2 ? 'PENDING_APPROVAL' : 'DRAFT'
     charges.push({
       id: `chg_${chIdx}`, projectId: p.id, chargeCode: line.chargeCode, description: line.description,
+      costType: defaultCostType(line.chargeCode),
       category: meta?.category ?? 'OTHER', basis: line.basis, quantity: qty,
       buyRate: line.basis === 'PERCENT_OF_VALUE' ? line.buyRate / 100 : line.buyRate,
       sellRate: line.basis === 'PERCENT_OF_VALUE' ? line.sellRate / 100 : line.sellRate,
@@ -774,7 +775,8 @@ for (const p of projects) {
 }
 /* an unbudgeted demurrage charge in dispute — the classic margin killer */
 charges.push({
-  id: 'chg_dem_1', projectId: 'prj_8', chargeCode: 'DEM', description: 'Demurrage — 2 days beyond free time at Savannah',
+  id: 'chg_dem_1', projectId: 'prj_8', chargeCode: 'DEM', costType: 'REIMBURSEMENT',
+  description: 'Demurrage — 2 days beyond free time at Savannah',
   category: 'PENALTY', basis: 'PER_CONTAINER', quantity: 4, buyRate: 165, sellRate: 165, currency: 'USD', fxRate: 16100,
   vatApplicable: false, whtApplicable: false, vendor: 'Hapag-Lloyd', freightTerm: 'PREPAID', billable: true,
   status: 'DISPUTED', fromPackage: false, remarks: 'Client disputes liability — consignee collected the D/O two days late. Evidence pack sent 12 Aug.',

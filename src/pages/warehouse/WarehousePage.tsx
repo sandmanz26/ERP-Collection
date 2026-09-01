@@ -274,7 +274,7 @@ export function WarehousePage() {
                 if (!m.storageCharge || !r.projectId) return
                 const meta = CHARGE_CODES.find((c) => c.code === 'STOR')!
                 upsertCharge({
-                  id: uid('chg'), projectId: r.projectId, chargeCode: 'STOR',
+                  id: uid('chg'), projectId: r.projectId, chargeCode: 'STOR', costType: 'MASTER',
                   description: `Storage — ${r.number}, ${m.chargeableDays} chargeable days`,
                   category: meta.category, basis: 'PER_CBM', quantity: +r.cbm.toFixed(2),
                   buyRate: r.storageRatePerCbmDay * m.chargeableDays * 0.7,

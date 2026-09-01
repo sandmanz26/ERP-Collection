@@ -2,7 +2,8 @@ import * as React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
   AlertTriangle, ArrowRight, Banknote, CalendarClock, Container as ContainerIcon, FileSignature, Gauge,
-  Radio, Ship, TrendingUp, Trophy, Wallet, Warehouse, Anchor, FileStack, ShieldAlert, Repeat,
+  Radio, Ship, TrendingUp, Trophy, Wallet, Warehouse, Anchor, FileStack, PackageCheck, ShieldAlert,
+  Repeat,
 } from 'lucide-react'
 import { useErp } from '@/store/useErp'
 import { countryFlag } from '@/data/reference'
@@ -16,6 +17,7 @@ import { StageChip } from '@/components/shared/StageChip'
 import { buildExceptions, jobFinancials, pipelineByStage, trialBalance, incomeStatement, arAging, type Exception } from '@/lib/analytics'
 import { buildPhase2Exceptions, milestoneHealth, pipelineSummary, warehouseSummary } from '@/lib/analytics2'
 import { buildPhase3Exceptions, incidentExposure } from '@/lib/services'
+import { buildStuffingExceptions, stuffingMetrics } from '@/lib/stuffing'
 import { itemCbm, itemGrossKg, utilisation } from '@/lib/shipping'
 import { fmtCurrency, fmtDate, fmtNumber, fmtPercent, pluralDays, relativeDays } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -25,21 +27,23 @@ export function DashboardPage() {
   const store = useErp()
   const { projects, containers, documents, charges, customers, invoices, accounts, journal } = store
   const { quotations, partners, milestones, receipts, filings, settings } = store
-  const { jobServices, services, incidents, company } = store
+  const { jobServices, services, incidents, company, stuffingJobs } = store
   const [sev, setSev] = React.useState<'ALL' | 'CRITICAL' | 'HIGH' | 'MEDIUM'>('ALL')
 
   const exceptions = React.useMemo(() => {
     const core = buildExceptions({ projects, containers, documents, charges, customers, invoices })
     const extra = buildPhase2Exceptions({ quotations, partners, milestones, receipts, filings, projects, settings })
     const phase3 = buildPhase3Exceptions({ projects, containers, documents, jobServices, services, incidents, company })
+    const yard = buildStuffingExceptions({ projects, charges, stuffingJobs })
     const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2 } as const
-    return [...core, ...extra, ...phase3].sort((a, b) => order[a.severity] - order[b.severity])
-  }, [projects, containers, documents, charges, customers, invoices, quotations, partners, milestones, receipts, filings, settings, jobServices, services, incidents, company])
+    return [...core, ...extra, ...phase3, ...yard].sort((a, b) => order[a.severity] - order[b.severity])
+  }, [projects, containers, documents, charges, customers, invoices, quotations, partners, milestones, receipts, filings, settings, jobServices, services, incidents, company, stuffingJobs])
 
   const quotePipeline = pipelineSummary(quotations)
   const tracking = milestoneHealth(milestones)
   const warehouse = warehouseSummary(receipts)
   const claims = incidentExposure(incidents)
+  const yard = stuffingMetrics(stuffingJobs)
   const filteredExceptions = sev === 'ALL' ? exceptions : exceptions.filter((e) => e.severity === sev)
 
   const activeJobs = projects.filter((p) => p.status === 'ACTIVE')
@@ -173,6 +177,18 @@ export function DashboardPage() {
           accent={warehouse.aged ? 'warning' : 'primary'}
           sub={`${warehouse.openCount} receipts · ${fmtCurrency(warehouse.storageAccrued, 'IDR', { compact: true })} storage accrued`}
           onClick={() => nav('/warehouse')}
+        />
+        <KpiCard
+          label="Stuffing this week"
+          value={yard.thisWeek}
+          icon={<PackageCheck />}
+          accent={yard.atRisk ? 'danger' : 'primary'}
+          sub={
+            yard.atRisk
+              ? `${yard.atRisk} at risk against the gate-in cut-off`
+              : `${yard.today} today · every slot clears its cut-off`
+          }
+          onClick={() => nav('/stuffing')}
         />
         <KpiCard
           label="Open claims"

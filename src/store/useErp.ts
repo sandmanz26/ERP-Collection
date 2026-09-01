@@ -3,14 +3,17 @@ import { persist } from 'zustand/middleware'
 import type {
   Account, AdditionalService, AppSettings, CompanyProfile, Container, Customer, CustomsFiling,
   Incident, Invoice, JobService, JournalEntry, Milestone, Partner, Project, ProjectCharge, Quotation,
-  ServicePackage, ShipmentDocument, StageKey, WarehouseReceipt,
+  ServicePackage, ShipmentDocument, StageKey, StuffingJob, WarehouseReceipt,
 } from '@/data/types'
 import { accounts as seedAccounts, charges as seedCharges, containers as seedContainers, customers as seedCustomers, documents as seedDocuments, invoices as seedInvoices, journal as seedJournal, packages as seedPackages, projects as seedProjects } from '@/data/seed'
 import {
   customsFilings as seedFilings, defaultSettings, milestones as seedMilestones, partners as seedPartners,
   quotations as seedQuotations, warehouseReceipts as seedReceipts,
 } from '@/data/seed2'
-import { company as seedCompany, incidents as seedIncidents, jobServices as seedJobServices } from '@/data/seed3'
+import {
+  company as seedCompany, incidents as seedIncidents, jobServices as seedJobServices,
+  stuffingJobs as seedStuffing,
+} from '@/data/seed3'
 import { ADDITIONAL_SERVICES } from '@/data/reference'
 import { uid } from '@/lib/utils'
 import { useAuth } from './useAuth'
@@ -24,7 +27,7 @@ const actor = () => {
 export type EntityKey =
   | 'customers' | 'packages' | 'projects' | 'containers' | 'documents' | 'charges' | 'accounts'
   | 'journal' | 'invoices' | 'quotations' | 'partners' | 'milestones' | 'receipts' | 'filings'
-  | 'services' | 'jobServices' | 'incidents'
+  | 'services' | 'jobServices' | 'incidents' | 'stuffingJobs'
 
 export interface ActivityLog {
   id: string
@@ -53,6 +56,7 @@ interface ErpState {
   services: AdditionalService[]
   jobServices: JobService[]
   incidents: Incident[]
+  stuffingJobs: StuffingJob[]
   company: CompanyProfile
   settings: AppSettings
   activity: ActivityLog[]
@@ -134,6 +138,10 @@ interface ErpState {
   removeIncidents: (ids: string[]) => void
   importIncidents: (rows: Incident[]) => void
 
+  upsertStuffing: (j: StuffingJob) => void
+  removeStuffing: (ids: string[]) => void
+  importStuffing: (rows: StuffingJob[]) => void
+
   updateCompany: (patch: Partial<CompanyProfile>) => void
   updateSettings: (patch: Partial<AppSettings>) => void
   clearActivity: () => void
@@ -159,6 +167,7 @@ const seedState = () => ({
   services: ADDITIONAL_SERVICES,
   jobServices: seedJobServices,
   incidents: seedIncidents,
+  stuffingJobs: seedStuffing,
   company: structuredClone(seedCompany),
   settings: structuredClone(defaultSettings),
   activity: [] as ActivityLog[],
@@ -659,6 +668,40 @@ export const useErp = create<ErpState>()(
         get().log('import', 'Incident', `${rows.length} records`)
       },
 
+      /* Sealing a stuffing job writes the seal and the date back onto the
+         container, so the two records cannot drift apart. */
+      upsertStuffing: (j) => {
+        set((st) => ({
+          stuffingJobs: upsert(st.stuffingJobs, j),
+          containers: j.containerId
+            ? st.containers.map((c) =>
+                c.id === j.containerId
+                  ? {
+                      ...c,
+                      sealNo: j.sealNo ?? c.sealNo,
+                      stuffingDate: j.stuffingDate,
+                      stuffingLocation: j.locationName,
+                      gateInDate: j.gateInAt ?? c.gateInDate,
+                    }
+                  : c,
+              )
+            : st.containers,
+        }))
+        get().log('save', 'Stuffing', `${j.reference} — ${j.locationName}`)
+      },
+      removeStuffing: (ids) => {
+        set((st) => ({ stuffingJobs: st.stuffingJobs.filter((x) => !ids.includes(x.id)) }))
+        get().log('delete', 'Stuffing', `${ids.length} records`)
+      },
+      importStuffing: (rows) => {
+        set((st) => {
+          let list = st.stuffingJobs
+          rows.forEach((r) => (list = upsert(list, r)))
+          return { stuffingJobs: list }
+        })
+        get().log('import', 'Stuffing', `${rows.length} records`)
+      },
+
       updateCompany: (patch) => {
         set((st) => ({ company: { ...st.company, ...patch } }))
         get().log('save', 'Company profile', Object.keys(patch).join(', '))
@@ -674,6 +717,6 @@ export const useErp = create<ErpState>()(
         set({ ...seedState() })
       },
     }),
-    { name: 'meridian-freight-erp', version: 5 },
+    { name: 'meridian-freight-erp', version: 6 },
   ),
 )

@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Anchor, Boxes, Building2, CalendarClock, HandCoins, Info, Repeat } from 'lucide-react'
 import type { Project } from '@/data/types'
-import { CARRIERS, INCOTERMS, PORTS, countryFlag, TEAM } from '@/data/reference'
+import { CARRIERS, INCOTERMS, PORTS, countryFlag, TEAM, defaultCostType } from '@/data/reference'
 import { Sheet } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
@@ -98,6 +98,7 @@ export function ProjectForm({
         .forEach((l) =>
           upsertCharge({
             id: uid('chg'), projectId: draft.id, chargeCode: l.chargeCode, description: l.description,
+            costType: defaultCostType(l.chargeCode),
             category: 'FREIGHT', basis: l.basis, quantity: 1, buyRate: l.buyRate, sellRate: l.sellRate,
             currency: l.currency, fxRate: draft.fxRate, vatApplicable: l.vatApplicable, whtApplicable: false,
             freightTerm: draft.freightTerm, billable: true, status: 'DRAFT', fromPackage: true,
