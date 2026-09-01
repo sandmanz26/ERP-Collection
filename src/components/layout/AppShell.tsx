@@ -1,11 +1,11 @@
 import * as React from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Anchor, Bell, ChevronsLeft, Clock3, Command, LogOut, Monitor, Moon, PanelLeftClose, PanelLeftOpen,
-  RotateCcw, Search, ShieldCheck, Sun, TriangleAlert, UserRound,
+  Anchor, Bell, ChevronsLeft, Clock3, Command, Gauge, LayoutList, LogOut, Monitor, Moon,
+  PanelLeftClose, PanelLeftOpen, RotateCcw, Search, ShieldCheck, Sun, TriangleAlert, UserRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { NAV } from './nav'
+import { NAV, OPERATOR_NAV } from './nav'
 import { CommandPalette } from './CommandPalette'
 import { Button } from '@/components/ui/button'
 import { Kbd, Separator } from '@/components/ui/misc'
@@ -21,6 +21,7 @@ import { buildExceptions } from '@/lib/analytics'
 import { buildPhase2Exceptions, filingReadiness, isQuoteOpen } from '@/lib/analytics2'
 import { buildPhase3Exceptions } from '@/lib/services'
 import { buildStuffingExceptions, checkStuffing } from '@/lib/stuffing'
+import { operatorBoard, operatorJobs } from '@/lib/operator'
 import { fmtDateTime } from '@/lib/format'
 import { useToast } from '@/components/ui/toast'
 
@@ -87,6 +88,31 @@ export function AppShell() {
   ])
   const critical = exceptions.filter((e) => e.severity === 'CRITICAL').length
 
+  /* An operator gets the four-phase workspace; everyone else gets the suite.
+     Anyone can switch, because a supervisor needs to see what their operators see. */
+  const [workspace, setWorkspace] = React.useState<'suite' | 'operator'>(() =>
+    (localStorage.getItem('mf-workspace') as 'suite' | 'operator') ?? 'suite',
+  )
+  React.useEffect(() => {
+    if (user?.role === 'OPERATOR') setWorkspace('operator')
+  }, [user?.role])
+  React.useEffect(() => {
+    localStorage.setItem('mf-workspace', workspace)
+  }, [workspace])
+
+  const myBoard = React.useMemo(() => {
+    const assigned = operatorJobs(store.projects, user)
+    const jobs = assigned.length > 0 || user?.role === 'OPERATOR' ? assigned : store.projects.filter((p) => p.status !== 'CANCELLED')
+    return operatorBoard(jobs, {
+      containers: store.containers, documents: store.documents, charges: store.charges,
+      stuffingJobs: store.stuffingJobs, milestones: store.milestones, filings: store.filings,
+      jobServices: store.jobServices,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.projects, store.containers, store.documents, store.charges, store.stuffingJobs, store.milestones, store.filings, store.jobServices, user])
+
+  const phaseCount = (key: string) => myBoard.byPhase.find((p) => p.phase.key === key)?.jobs.length ?? 0
+
   const badges: Record<string, number> = {
     projects: store.projects.filter((p) => p.status === 'ACTIVE').length,
     overdue: store.invoices.filter((i) => i.status === 'OVERDUE').length,
@@ -95,6 +121,11 @@ export function AppShell() {
     customs: store.filings.filter((f) => f.status === 'DRAFT' && !filingReadiness(f).canSubmit).length,
     incidents: store.incidents.filter((i) => incidentStatusOpen(i.status)).length,
     stuffing: store.stuffingJobs.filter((j) => stuffingIsOpen(j.status) && checkStuffing(j).blockers.length > 0).length,
+    myBlocking: myBoard.blocking,
+    myIntake: myBoard.awaitingAcceptance,
+    myExecute: phaseCount('EXECUTION'),
+    myDocs: myBoard.needsPaperwork.length,
+    myClosing: phaseCount('CLOSING'),
   }
 
   return (
@@ -119,7 +150,7 @@ export function AppShell() {
         </div>
 
         <nav className="scrollbar-thin flex-1 overflow-y-auto px-2 py-3">
-          {NAV.map((group) => (
+          {(workspace === 'operator' ? OPERATOR_NAV : NAV).map((group) => (
             <div key={group.label} className="mb-4 last:mb-0">
               {!collapsed && (
                 <p className="mb-1 px-2.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-fg-subtle">{group.label}</p>
@@ -322,6 +353,27 @@ export function AppShell() {
                   )}
                 </div>
               </div>
+              <MenuSeparator />
+              <MenuLabel>Workspace view</MenuLabel>
+              <div className="px-1.5 py-1">
+                <Segmented
+                  value={workspace}
+                  onChange={(v) => {
+                    setWorkspace(v as 'suite' | 'operator')
+                    navigate(v === 'operator' ? '/my' : '/')
+                  }}
+                  options={[
+                    { value: 'operator', label: 'Operator', icon: <LayoutList /> },
+                    { value: 'suite', label: 'Full suite', icon: <Gauge /> },
+                  ]}
+                  className="w-full [&>button]:flex-1"
+                />
+              </div>
+              <p className="px-3 pb-1.5 text-[11px] leading-relaxed text-fg-subtle">
+                {workspace === 'operator'
+                  ? 'Four phases, only your jobs — the view an operator works in.'
+                  : 'Every module in the suite, for supervisors and back office.'}
+              </p>
               <MenuSeparator />
               <MenuItem icon={<UserRound />} onSelect={() => navigate('/settings')}>
                 Company & account settings

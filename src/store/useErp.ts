@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware'
 import type {
   Account, AdditionalService, AppSettings, CompanyProfile, Container, Customer, CustomsFiling,
   Incident, Invoice, JobService, JournalEntry, Milestone, Partner, Project, ProjectCharge, Quotation,
-  ServicePackage, ShipmentDocument, StageKey, StuffingJob, WarehouseReceipt,
+  HandoverCheck, ServicePackage, ShipmentDocument, StageKey, StuffingJob, WarehouseReceipt,
 } from '@/data/types'
 import { accounts as seedAccounts, charges as seedCharges, containers as seedContainers, customers as seedCustomers, documents as seedDocuments, invoices as seedInvoices, journal as seedJournal, packages as seedPackages, projects as seedProjects } from '@/data/seed'
 import {
@@ -137,6 +137,11 @@ interface ErpState {
   upsertIncident: (i: Incident) => void
   removeIncidents: (ids: string[]) => void
   importIncidents: (rows: Incident[]) => void
+
+  acceptJob: (projectId: string, checklist: HandoverCheck[]) => void
+  declineJob: (projectId: string, reason: string) => void
+  reassignJob: (projectId: string, operatorId: string) => void
+  setHandoverCheck: (projectId: string, key: string, confirmed: boolean) => void
 
   upsertStuffing: (j: StuffingJob) => void
   removeStuffing: (ids: string[]) => void
@@ -668,6 +673,75 @@ export const useErp = create<ErpState>()(
         get().log('import', 'Incident', `${rows.length} records`)
       },
 
+      /* The hand-over. A job nobody has accepted is a job nobody is watching,
+         so acceptance is a state on the record rather than an assumption. */
+      acceptJob: (projectId, checklist) => {
+        const now = new Date().toISOString()
+        set((st) => ({
+          projects: st.projects.map((p) =>
+            p.id === projectId
+              ? {
+                  ...p,
+                  handover: {
+                    ...(p.handover ?? { offeredBy: 'Unassigned', offeredAt: now, checklist: [] }),
+                    status: 'ACCEPTED' as const,
+                    respondedAt: now,
+                    reason: undefined,
+                    checklist,
+                  },
+                  updatedAt: now,
+                }
+              : p,
+          ),
+        }))
+        const p = get().projects.find((x) => x.id === projectId)
+        get().log('accept', 'Job', `${p?.code} accepted`)
+      },
+      declineJob: (projectId, reason) => {
+        const now = new Date().toISOString()
+        set((st) => ({
+          projects: st.projects.map((p) =>
+            p.id === projectId && p.handover
+              ? { ...p, handover: { ...p.handover, status: 'DECLINED' as const, respondedAt: now, reason }, updatedAt: now }
+              : p,
+          ),
+        }))
+        const p = get().projects.find((x) => x.id === projectId)
+        get().log('decline', 'Job', `${p?.code} declined — ${reason.slice(0, 80)}`)
+      },
+      reassignJob: (projectId, operatorId) => {
+        const now = new Date().toISOString()
+        set((st) => ({
+          projects: st.projects.map((p) =>
+            p.id === projectId
+              ? {
+                  ...p,
+                  assignedOperatorId: operatorId,
+                  handover: p.handover
+                    ? { ...p.handover, status: 'OFFERED' as const, offeredAt: now, respondedAt: undefined, reason: undefined }
+                    : undefined,
+                  updatedAt: now,
+                }
+              : p,
+          ),
+        }))
+        get().log('reassign', 'Job', `${projectId} handed to another operator`)
+      },
+      setHandoverCheck: (projectId, key, confirmed) =>
+        set((st) => ({
+          projects: st.projects.map((p) =>
+            p.id === projectId && p.handover
+              ? {
+                  ...p,
+                  handover: {
+                    ...p.handover,
+                    checklist: p.handover.checklist.map((c) => (c.key === key ? { ...c, confirmed } : c)),
+                  },
+                }
+              : p,
+          ),
+        })),
+
       /* Sealing a stuffing job writes the seal and the date back onto the
          container, so the two records cannot drift apart. */
       upsertStuffing: (j) => {
@@ -717,6 +791,6 @@ export const useErp = create<ErpState>()(
         set({ ...seedState() })
       },
     }),
-    { name: 'meridian-freight-erp', version: 6 },
+    { name: 'meridian-freight-erp', version: 7 },
   ),
 )

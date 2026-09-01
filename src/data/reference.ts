@@ -875,7 +875,8 @@ export const docFieldSpecs = (t: DocType): DocFieldSpec[] => DOC_FIELD_SPECS[t] 
 
 export const USER_ROLES: { value: UserRole; label: string; hint: string }[] = [
   { value: 'ADMIN', label: 'Administrator', hint: 'Everything, including company settings, numbering and user accounts.' },
-  { value: 'OPERATIONS', label: 'Operations', hint: 'Jobs, containers, documents, services, incidents and tracking.' },
+  { value: 'OPERATIONS', label: 'Operations supervisor', hint: 'The full operational suite — jobs, containers, documents, services, incidents and tracking.' },
+  { value: 'OPERATOR', label: 'Operator', hint: 'A focused workspace: the jobs assigned to them, worked through four phases from hand-over to closing.' },
   { value: 'SALES', label: 'Sales', hint: 'Customers, quotations, packages and the pipeline.' },
   { value: 'FINANCE', label: 'Finance', hint: 'Charges, invoices, the ledger and financial reports.' },
   { value: 'WAREHOUSE', label: 'Warehouse', hint: 'Receipts, cargo intake and stuffing.' },

@@ -2,7 +2,7 @@ import type {
   CompanyProfile, Incident, IncidentAction, JobService, PasswordResetToken, StuffingJob,
   StuffingLocationType, StuffingStatus, UserAccount,
 } from './types'
-import { ADDITIONAL_SERVICES, docFieldSpecs } from './reference'
+import { ADDITIONAL_SERVICES, docFieldSpecs, stageIndex } from './reference'
 import { charges, containers, customers, documents, projects } from './seed'
 import { recommendServices } from '@/lib/services'
 
@@ -64,6 +64,18 @@ export const users: UserAccount[] = [
     fullName: 'Tomas Weber', jobTitle: 'Warehouse Supervisor', role: 'WAREHOUSE', status: 'ACTIVE',
     branchCode: 'BR-DPS', phone: '+62 361 720 1188', failedAttempts: 0,
     lastLoginAt: day(-3, 7), mustChangePassword: false, twoFactorEnabled: false, createdAt: day(-300),
+  },
+  {
+    id: 'usr_op1', email: 'rizky.pratama@meridianfreight.com', password: 'Meridian#2026',
+    fullName: 'Rizky Pratama', jobTitle: 'Export Operator', role: 'OPERATOR', status: 'ACTIVE',
+    branchCode: 'HO-JKT', phone: '+62 21 5099 1244', failedAttempts: 0,
+    lastLoginAt: day(0, 7), mustChangePassword: false, twoFactorEnabled: false, createdAt: day(-380),
+  },
+  {
+    id: 'usr_op2', email: 'maya.wulandari@meridianfreight.com', password: 'Meridian#2026',
+    fullName: 'Maya Wulandari', jobTitle: 'Export Operator', role: 'OPERATOR', status: 'ACTIVE',
+    branchCode: 'BR-SUB', phone: '+62 31 3300 4466', failedAttempts: 0,
+    lastLoginAt: day(0, 8), mustChangePassword: false, twoFactorEnabled: false, createdAt: day(-260),
   },
   /* --- the negative cases the sign-in screen has to handle --- */
   {
@@ -670,3 +682,61 @@ for (const c of charges) {
     receiptNo: outstanding ? undefined : `KW/26/${int(1000, 9999)}`,
   }
 }
+
+/* ================================================================
+   JOB ASSIGNMENT AND HAND-OVER
+   ----------------------------------------------------------------
+   Every job belongs to an operator. Two are still on the desk
+   waiting to be accepted, and one was refused with a reason — that
+   is a real outcome, not an error state.
+   ================================================================ */
+
+const OPERATORS = ['usr_op1', 'usr_op2']
+
+/* Surabaya-loading jobs go to the Surabaya operator; everything else to Jakarta. */
+const operatorFor = (polCode: string) => (polCode === 'IDSUB' || polCode === 'IDSRG' ? 'usr_op2' : 'usr_op1')
+
+const handoverCheck = (key: string, label: string, hint: string, required: boolean, confirmed: boolean) => ({
+  key, label, hint, required, confirmed,
+})
+
+for (const p of projects) {
+  p.assignedOperatorId = operatorFor(p.polCode)
+
+  /* Jobs already in flight were accepted when they were handed over. */
+  const inFlight = stageIndex(p.stage) > stageIndex('BOOKING') || p.status === 'COMPLETED'
+  p.handover = {
+    status: inFlight ? 'ACCEPTED' : 'OFFERED',
+    offeredBy: 'Sofia Reyes',
+    offeredAt: day(-int(2, 30), 9),
+    respondedAt: inFlight ? day(-int(1, 28), 11) : undefined,
+    checklist: [
+      handoverCheck('parties', 'Shipper, consignee and notify party confirmed',
+        'A consignee corrected after the B/L is issued costs an amendment fee and a re-presentation.', true, true),
+      handoverCheck('route', 'Route, Incoterm and freight term agreed',
+        `${p.incoterm} ${p.polName} → ${p.podName}.`, true, true),
+      handoverCheck('booking', 'Carrier booking and cut-off calendar received',
+        'Every alert on this job derives from the cut-offs.', true, !!p.bookingNo && !!p.gateInCutoff),
+      handoverCheck('cargo', 'Cargo description and HS codes supplied',
+        'The description on the B/L must match the invoice word for word.', true, p.hsCodes.length > 0),
+      handoverCheck('rates', 'Charge sheet priced',
+        'Work started before the rates are agreed is work you may not be paid for.', true, inFlight),
+      handoverCheck('special', 'Special requirements identified',
+        'Treatment, insurance, DG, reefer set point, inspection.', false, inFlight),
+      handoverCheck('lc', 'Letter of credit terms read, where one applies',
+        'The latest shipment date and the required documents come from the credit.',
+        p.paymentTerm === 'LC_AT_SIGHT', p.paymentTerm !== 'LC_AT_SIGHT'),
+    ],
+  }
+}
+
+/* One job was refused, and the reason is the useful part. */
+const refused = projects.find((p) => p.handover?.status === 'OFFERED' && p.type === 'CONSIGNMENT')
+if (refused?.handover) {
+  refused.handover.status = 'DECLINED'
+  refused.handover.respondedAt = day(-1, 15)
+  refused.handover.reason =
+    'The consignment settlement for the previous cycle is 58 days overdue and no sales report has come back. Shipping more stock before that is cleared just increases what we are chasing. Referred to the commercial manager.'
+}
+
+export const operatorIds = OPERATORS

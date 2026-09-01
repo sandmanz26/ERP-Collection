@@ -254,6 +254,10 @@ export interface Project {
   quotedRevenue: number
   consignment?: ConsignmentTerms
   ownerName: string
+  /** the operator who runs this job day to day */
+  assignedOperatorId?: ID
+  /** the hand-over: a job is not worked until an operator has taken it */
+  handover?: JobHandover
   createdAt: ISODate
   updatedAt: ISODate
   tags: string[]
@@ -306,6 +310,29 @@ export interface Container {
   unNumber?: string
   remarks?: string
   items: CargoItem[]
+}
+
+/* ---------- the hand-over to an operator ---------- */
+export type HandoverStatus = 'OFFERED' | 'ACCEPTED' | 'DECLINED' | 'REASSIGNED'
+
+export interface JobHandover {
+  status: HandoverStatus
+  /** who put it on the operator's desk */
+  offeredBy: string
+  offeredAt: ISODate
+  respondedAt?: ISODate
+  /** required on a decline — an unexplained refusal tells the desk nothing */
+  reason?: string
+  /** what the operator confirmed they had before taking it on */
+  checklist: HandoverCheck[]
+}
+
+export interface HandoverCheck {
+  key: string
+  label: string
+  hint: string
+  required: boolean
+  confirmed: boolean
 }
 
 /* ---------- documents ---------- */
@@ -706,7 +733,8 @@ export interface AppSettings {
    ================================================================== */
 
 /* ---------- authentication ---------- */
-export type UserRole = 'ADMIN' | 'OPERATIONS' | 'SALES' | 'FINANCE' | 'WAREHOUSE' | 'VIEWER'
+export type UserRole =
+  | 'ADMIN' | 'OPERATIONS' | 'OPERATOR' | 'SALES' | 'FINANCE' | 'WAREHOUSE' | 'VIEWER'
 export type AccountStatus = 'ACTIVE' | 'PENDING_VERIFICATION' | 'LOCKED' | 'SUSPENDED' | 'INVITED'
 
 export interface UserAccount {

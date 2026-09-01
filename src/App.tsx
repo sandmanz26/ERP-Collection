@@ -26,6 +26,11 @@ import { SettingsPage } from '@/pages/settings/SettingsPage'
 import { ServicesPage } from '@/pages/services/ServicesPage'
 import { IncidentsPage } from '@/pages/incidents/IncidentsPage'
 import { StuffingPage } from '@/pages/stuffing/StuffingPage'
+import { MyWorkPage } from '@/pages/my/MyWorkPage'
+import { IntakePage } from '@/pages/my/IntakePage'
+import { ExecutePage } from '@/pages/my/ExecutePage'
+import { MyDocumentsPage } from '@/pages/my/DocumentsPage'
+import { ClosingPage } from '@/pages/my/ClosingPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
@@ -48,6 +53,11 @@ export default function App() {
               <Route element={<RequireAuth />}>
               <Route element={<AppShell />}>
                 <Route path="/" element={<DashboardPage />} />
+                <Route path="/my" element={<MyWorkPage />} />
+                <Route path="/my/intake" element={<IntakePage />} />
+                <Route path="/my/execute" element={<ExecutePage />} />
+                <Route path="/my/documents" element={<MyDocumentsPage />} />
+                <Route path="/my/closing" element={<ClosingPage />} />
                 <Route path="/projects" element={<ProjectsPage />} />
                 <Route path="/projects/:id" element={<ProjectDetailPage />} />
                 <Route path="/containers" element={<ContainersPage />} />

@@ -8,10 +8,12 @@ import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { useAuth, type AuthResult } from '@/store/useAuth'
+import { homeFor } from '@/components/layout/RequireAuth'
 import { fmtDateTime } from '@/lib/format'
 
 /** Sign-ins the demo can reproduce on demand, including the ones that fail. */
 const DEMO_ACCOUNTS = [
+  { email: 'rizky.pratama@meridianfreight.com', label: 'Operator', tone: 'accent' as const },
   { email: 'elena.marchetti@meridianfreight.com', label: 'Administrator', tone: 'primary' as const },
   { email: 'marcus.bell@meridianfreight.com', label: 'Operations', tone: 'info' as const },
   { email: 'david.chen@meridianfreight.com', label: 'Finance', tone: 'accent' as const },
@@ -36,7 +38,9 @@ export function LoginPage() {
     const r = signIn(email, password)
     setResult(r)
     setBusy(false)
-    if (r.ok) navigate('/', { replace: true })
+    /* Where they land is decided by the route guard, which knows the role — so a
+       refresh or a deep link lands in the same place a sign-in does. */
+    if (r.ok) navigate(homeFor(users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase())?.role), { replace: true })
   }
 
   const failedUser = users.find((u) => u.email.toLowerCase() === email.trim().toLowerCase())
@@ -178,8 +182,8 @@ export function LoginPage() {
           Demo accounts — including the ones that fail
         </p>
         <p className="mt-1 text-[11.5px] leading-relaxed text-fg-subtle">
-          Every account uses the same password. The last three exist so the unverified, locked and suspended paths can
-          be seen without breaking anything.
+          Every account uses the same password. Sign in as the operator to see the focused four-phase workspace; the
+          last three exist so the unverified, locked and suspended paths can be walked without breaking anything.
         </p>
         <div className="mt-2.5 flex flex-wrap gap-1.5">
           {DEMO_ACCOUNTS.map((a) => (
