@@ -64,8 +64,15 @@ the store — nothing is a hand-typed dashboard figure.
 **Finance** — General ledger · Chart of accounts · Invoices & bills · Financial reports · Job profitability
 **Insight** — Operations analytics · Settings & audit
 
-A product requirements document covering the research behind these, the gap analysis and the data
-model is in [`docs/PRD.md`](docs/PRD.md).
+**The operator's view.** Signing in as an operator replaces the twenty-three-item suite with eight:
+their own jobs, and the four phases a shipment passes through — take it on (*menerima project*), run
+it (*execute project*), paper it (*pengaturan dokumen*), close it out (*penutup*). Every job says what
+it needs next and what it costs to leave it. Anyone else can switch into the view from the account
+menu, because a supervisor needs to see what their operators see.
+
+Two product requirements documents sit in `docs/`: [`PRD.md`](docs/PRD.md) covers the whole suite,
+the research behind it and the data model; [`PRD-Operator.md`](docs/PRD-Operator.md) covers the
+operator workspace in plain language, with the user flow and user journey.
 
 ---
 
