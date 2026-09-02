@@ -45,7 +45,7 @@ export function KpiCard({
   deltaTone?: 'up' | 'down' | 'neutral'
   sub?: React.ReactNode
   icon?: React.ReactNode
-  accent?: 'primary' | 'accent' | 'success' | 'warning' | 'danger' | 'purple'
+  accent?: 'primary' | 'accent' | 'success' | 'warning' | 'danger' | 'purple' | 'neutral'
   onClick?: () => void
 }) {
   const accents = {
@@ -55,6 +55,7 @@ export function KpiCard({
     warning: 'bg-warning-soft text-warning-soft-fg',
     danger: 'bg-danger-soft text-danger-soft-fg',
     purple: 'bg-purple-soft text-purple-soft-fg',
+    neutral: 'bg-neutral-soft text-neutral-soft-fg',
   }
   const Comp = onClick ? 'button' : 'div'
   return (

@@ -1,16 +1,20 @@
 import * as React from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { Anchor, Monitor, Moon, Sun } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { Segmented } from '@/components/ui/checkbox'
-import { useTheme } from '@/hooks/useTheme'
-import { company } from '@/data/seed3'
+import { Link } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
+import { ShieldHalf } from 'lucide-react'
+import { company } from '@/data/seed-org'
+import { clients } from '@/data/seed-clients'
+import { projects } from '@/data/seed-projects'
+import { deployedHeadcount, isLiveProject } from '@/lib/domain'
 
-/** The three numbers on the marketing panel — real figures from the seeded book. */
+/** Three figures from the seeded book, so the panel is never a stock photograph. */
 const PROOF = [
-  { value: '14', label: 'live export jobs' },
-  { value: '23', label: 'containers on the water' },
-  { value: '18', label: 'destination countries' },
+  { value: String(projects.filter(isLiveProject).length), label: 'contracts running' },
+  {
+    value: projects.filter(isLiveProject).reduce((a, p) => a + deployedHeadcount(p), 0).toLocaleString('en-US'),
+    label: 'personnel on site today',
+  },
+  { value: String(clients.filter((c) => c.status === 'ACTIVE').length), label: 'active clients' },
 ]
 
 export function AuthLayout({
@@ -24,19 +28,18 @@ export function AuthLayout({
   children: React.ReactNode
   footer?: React.ReactNode
 }) {
-  const { mode, setMode } = useTheme()
   const { pathname } = useLocation()
 
   return (
     <div className="flex min-h-screen w-full bg-bg">
       {/* ---------- brand panel ---------- */}
-      <aside className="relative hidden w-[46%] max-w-[620px] shrink-0 overflow-hidden bg-auth-panel lg:flex lg:flex-col">
+      <aside className="relative hidden w-[45%] max-w-[600px] shrink-0 overflow-hidden bg-auth-panel lg:flex lg:flex-col">
         <div
           aria-hidden
-          className="absolute inset-0 opacity-[0.16]"
+          className="absolute inset-0 opacity-[0.14]"
           style={{
             backgroundImage:
-              'radial-gradient(circle at 18% 22%, rgb(255 255 255 / 0.9) 0, transparent 42%), radial-gradient(circle at 82% 78%, rgb(255 255 255 / 0.7) 0, transparent 46%)',
+              'radial-gradient(circle at 20% 20%, rgb(255 255 255 / 0.9) 0, transparent 44%), radial-gradient(circle at 80% 80%, rgb(255 255 255 / 0.7) 0, transparent 46%)',
           }}
         />
         <div
@@ -52,21 +55,21 @@ export function AuthLayout({
         <div className="relative flex h-full flex-col justify-between p-10 text-auth-panel-fg xl:p-14">
           <div className="flex items-center gap-3">
             <span className="grid size-10 place-items-center rounded-xl bg-white/15 backdrop-blur">
-              <Anchor className="size-5" />
+              <ShieldHalf className="size-5" />
             </span>
             <div>
-              <p className="text-[15px] font-semibold leading-tight tracking-[-0.01em]">Meridian Freight</p>
-              <p className="text-[12px] leading-tight text-auth-panel-fg/70">Export Operations Suite</p>
+              <p className="text-[15px] font-semibold leading-tight tracking-[-0.01em]">Tata Gemilang</p>
+              <p className="text-[12px] leading-tight text-auth-panel-fg/70">Outsourcing Management System</p>
             </div>
           </div>
 
           <div className="max-w-[430px]">
             <h1 className="text-[30px] font-semibold leading-[1.15] tracking-[-0.02em] xl:text-[34px]">
-              Every cut-off, certificate and charge on one job record.
+              Every post filled, every building accounted for.
             </h1>
             <p className="mt-4 text-[14px] leading-relaxed text-auth-panel-fg/75">
-              Quotation to settlement, with the gates that stop a container reaching the terminal without a VGM, a
-              treatment certificate or an accepted export declaration.
+              Clients, contracts and the people standing on site — plus the uniforms, chemicals and equipment it takes
+              to put them there.
             </p>
 
             <dl className="mt-9 grid grid-cols-3 gap-4 border-t border-white/15 pt-6">
@@ -80,8 +83,8 @@ export function AuthLayout({
           </div>
 
           <p className="max-w-[430px] text-[11px] leading-relaxed text-auth-panel-fg/50">
-            {company.legalName} · {company.registrationNo} · Business undertaken subject to ALFI Standard Trading
-            Conditions.
+            {company.legalName} · {company.licenceNo} · Front-end demonstration build; all data is fictional and held in
+            this browser.
           </p>
         </div>
       </aside>
@@ -91,19 +94,10 @@ export function AuthLayout({
         <header className="flex h-14 shrink-0 items-center justify-between px-5 lg:px-8">
           <Link to="/login" className="flex items-center gap-2.5 lg:invisible">
             <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-fg">
-              <Anchor className="size-[17px]" />
+              <ShieldHalf className="size-[17px]" />
             </span>
-            <span className="text-[13.5px] font-semibold tracking-[-0.01em] text-fg">Meridian Freight</span>
+            <span className="text-[13.5px] font-semibold tracking-[-0.01em] text-fg">Tata Gemilang</span>
           </Link>
-          <Segmented
-            value={mode}
-            onChange={(v) => setMode(v)}
-            options={[
-              { value: 'light', label: 'Light', icon: <Sun /> },
-              { value: 'dark', label: 'Dark', icon: <Moon /> },
-              { value: 'system', label: 'Auto', icon: <Monitor /> },
-            ]}
-          />
         </header>
 
         <main className="scrollbar-thin flex flex-1 items-center justify-center overflow-y-auto px-5 pb-10 lg:px-8">
@@ -119,46 +113,28 @@ export function AuthLayout({
   )
 }
 
-/** A result banner that always says what happened *and* what to do about it. */
+/** A failure the person can act on: what happened, then what to do about it. */
 export function AuthNotice({
   tone,
-  title,
-  detail,
+  message,
+  remedy,
   action,
 }: {
-  tone: 'danger' | 'warning' | 'success' | 'info'
-  title: string
-  detail?: string
+  tone: 'error' | 'success' | 'info'
+  message: string
+  remedy?: string
   action?: React.ReactNode
 }) {
-  const map = {
-    danger: 'border-danger/30 bg-danger-soft text-danger-soft-fg',
-    warning: 'border-warning/30 bg-warning-soft text-warning-soft-fg',
+  const styles = {
+    error: 'border-danger/30 bg-danger-soft text-danger-soft-fg',
     success: 'border-success/30 bg-success-soft text-success-soft-fg',
     info: 'border-info/30 bg-info-soft text-info-soft-fg',
-  } as const
+  }[tone]
   return (
-    <div role="alert" className={cn('rounded-lg border px-3.5 py-3', map[tone])}>
-      <p className="text-[13px] font-semibold leading-snug">{title}</p>
-      {detail && <p className="mt-1 text-[12.5px] leading-relaxed opacity-85">{detail}</p>}
+    <div className={`rounded-xl border px-3.5 py-3 ${styles}`} role="status">
+      <p className="text-[12.5px] font-semibold leading-snug">{message}</p>
+      {remedy && <p className="mt-1 text-[12px] leading-relaxed opacity-90">{remedy}</p>}
       {action && <div className="mt-2.5">{action}</div>}
     </div>
-  )
-}
-
-/** Live password strength, shown as the rules that are still unmet. */
-export function PasswordRules({ problems, touched }: { problems: string[]; touched: boolean }) {
-  if (!touched) return null
-  if (!problems.length) {
-    return <p className="text-[11.5px] font-medium text-success">Password meets every rule.</p>
-  }
-  return (
-    <ul className="flex flex-wrap gap-x-3 gap-y-1">
-      {problems.map((p) => (
-        <li key={p} className="text-[11.5px] text-fg-subtle before:mr-1 before:text-danger before:content-['·']">
-          {p}
-        </li>
-      ))}
-    </ul>
   )
 }

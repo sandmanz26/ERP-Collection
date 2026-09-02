@@ -134,3 +134,28 @@ export function Segmented<T extends string>({
     </div>
   )
 }
+
+/** A switch with the label and the sentence that explains what turning it on does. */
+export function SwitchField({
+  checked,
+  onChange,
+  label,
+  description,
+  disabled,
+}: {
+  checked: boolean
+  onChange: (next: boolean) => void
+  label: React.ReactNode
+  description?: React.ReactNode
+  disabled?: boolean
+}) {
+  return (
+    <label className={cn('flex cursor-pointer items-start gap-3', disabled && 'cursor-not-allowed opacity-60')}>
+      <Switch checked={checked} onChange={onChange} disabled={disabled} className="mt-0.5" />
+      <span className="min-w-0">
+        <span className="block text-[13px] font-medium text-fg">{label}</span>
+        {description && <span className="mt-0.5 block text-[11.5px] leading-relaxed text-fg-muted">{description}</span>}
+      </span>
+    </label>
+  )
+}

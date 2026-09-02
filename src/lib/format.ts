@@ -1,4 +1,4 @@
-const CURRENCY_MINOR: Record<string, number> = { IDR: 0, JPY: 0, USD: 2, EUR: 2, SGD: 2, AUD: 2, CNY: 2, KRW: 0 }
+const CURRENCY_MINOR: Record<string, number> = { IDR: 0, USD: 2, SGD: 2 }
 
 export function fmtMoney(value: number | undefined | null, currency = 'IDR', opts: { compact?: boolean; sign?: boolean } = {}) {
   if (value === undefined || value === null || Number.isNaN(value)) return '—'
@@ -70,13 +70,12 @@ export function initials(name: string) {
     .join('')
 }
 
-/** Terms that must keep their industry casing rather than being title-cased. */
+/** Terms that keep their own casing rather than being title-cased. */
 const ACRONYMS: Record<string, string> = {
-  fcl: 'FCL', lcl: 'LCL', air: 'Air', roro: 'RoRo', bl: 'B/L', vgm: 'VGM', si: 'SI', peb: 'PEB',
-  npe: 'NPE', coo: 'COO', ar: 'AR', ap: 'AP', vat: 'VAT', wht: 'WHT', ppn: 'PPN', hs: 'HS',
-  tt: 'TT', cad: 'CAD', lc: 'L/C', fx: 'FX', cbm: 'CBM', teu: 'TEU', usance: 'usance',
-  ims: 'IMS', cy: 'CY', cfs: 'CFS', imo: 'IMO', un: 'UN', po: 'PO', ams: 'AMS', ens: 'ENS',
-  jv: 'JV', gp: 'GP', hc: 'HC', rf: 'RF', ot: 'OT', fr: 'FR', pod: 'POD', pol: 'POL',
+  pdh: 'PDH', pdl: 'PDL', apd: 'APD', ppe: 'PPE', ht: 'HT', k3: 'K3', id: 'ID', sla: 'SLA',
+  ppn: 'PPN', pph: 'PPh', npwp: 'NPWP', umk: 'UMK', ump: 'UMP', bpjs: 'BPJS', cctv: 'CCTV',
+  me: 'ME', sku: 'SKU', uom: 'UoM', pcs: 'PCS', idr: 'IDR', ob: 'OB', pic: 'PIC', hepa: 'HEPA',
+  b3: 'B3', ac: 'AC', igd: 'IGD', thr: 'THR',
 }
 /** Words that stay lower-case inside a phrase. */
 const MINOR = new Set(['to', 'of', 'at', 'in', 'on', 'and', 'or', 'the', 'a', 'per', 'by', 'from'])

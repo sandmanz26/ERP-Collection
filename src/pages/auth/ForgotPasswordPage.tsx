@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, MailCheck } from 'lucide-react'
+import { KeyRound } from 'lucide-react'
 import { AuthLayout, AuthNotice } from './AuthLayout'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
@@ -10,89 +10,81 @@ import { useAuth } from '@/store/useAuth'
 
 export function ForgotPasswordPage() {
   const navigate = useNavigate()
-  const { requestReset } = useAuth()
-  const [email, setEmail] = React.useState('')
-  const [sent, setSent] = React.useState<{ ok: boolean; message?: string; remedy?: string; token?: string } | null>(null)
+  const requestReset = useAuth((s) => s.requestReset)
+  const lastEmail = useAuth((s) => s.lastEmail)
+  const [email, setEmail] = React.useState(lastEmail)
+  const [sent, setSent] = React.useState<{ message: string; token?: string } | null>(null)
+  const [error, setError] = React.useState<{ message: string; remedy?: string } | null>(null)
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    setSent(requestReset(email))
+    const result = requestReset(email)
+    if (result.ok) {
+      setSent({ message: result.message ?? 'Request received.', token: result.token })
+      setError(null)
+    } else {
+      setError({ message: result.message ?? 'Request failed.', remedy: result.remedy })
+      setSent(null)
+    }
   }
 
   return (
     <AuthLayout
-      title="Reset your password"
-      subtitle={`We send a single-use link that stays valid for ${AUTH_POLICY.resetTokenMinutes} minutes.`}
+      title="Forgot password"
+      subtitle={`Enter the address on the account. A reset link stays valid for ${AUTH_POLICY.resetTokenMinutes} minutes.`}
       footer={
-        <Link to="/login" className="inline-flex items-center gap-1.5 font-medium text-primary underline-offset-4 hover:underline">
-          <ArrowLeft className="size-3.5" />
-          Back to sign in
-        </Link>
+        <span>
+          Remembered it?{' '}
+          <Link to="/login" className="font-medium text-primary hover:underline">
+            Back to sign in
+          </Link>
+        </span>
       }
     >
-      <form onSubmit={submit} className="space-y-4" noValidate>
+      <form onSubmit={submit} className="space-y-4">
+        {error && <AuthNotice tone="error" message={error.message} remedy={error.remedy} />}
         {sent && (
           <AuthNotice
-            tone={sent.ok ? 'info' : 'danger'}
-            title={sent.message ?? ''}
-            detail={
-              sent.ok
-                ? 'The same answer is given whether or not the address has an account — a reset form should never confirm who is registered.'
-                : sent.remedy
+            tone="success"
+            message={sent.message}
+            remedy={
+              sent.token
+                ? 'There is no mail server in this demo, so the link is shown here instead.'
+                : 'If the address is registered, the link is on its way.'
             }
             action={
               sent.token ? (
                 <div className="space-y-2">
-                  <p className="text-[11.5px] leading-relaxed opacity-85">
-                    No mail server in this build, so here is the link that would have been emailed:
-                  </p>
-                  <code className="tnum block truncate rounded border border-border-strong/60 bg-surface px-2 py-1 text-[11.5px] text-fg">
+                  <code className="block rounded-lg border border-success/30 bg-surface px-2.5 py-1.5 font-mono text-[12.5px] text-fg">
                     {sent.token}
                   </code>
-                  <Button size="xs" variant="secondary" onClick={() => navigate(`/reset-password?token=${sent.token}`)}>
-                    Open the reset link
+                  <Button size="sm" variant="primary" onClick={() => navigate(`/reset-password?token=${sent.token}`)}>
+                    Open the reset form
                   </Button>
                 </div>
-              ) : null
+              ) : undefined
             }
           />
         )}
 
-        <Field label="Work email" required htmlFor="resetEmail">
+        <Field label="Email address" required>
           <Input
-            id="resetEmail"
             type="email"
-            autoComplete="username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@meridianfreight.com"
+            placeholder="nama@tatagemilang.co.id"
           />
         </Field>
 
         <Button type="submit" variant="primary" size="lg" className="w-full">
-          <MailCheck />
-          Send the reset link
+          <KeyRound /> Send reset link
         </Button>
       </form>
 
-      <div className="mt-6 rounded-lg border border-border bg-bg-muted/60 p-3.5">
-        <p className="text-[12px] font-semibold text-fg-muted">Links that will not work</p>
-        <ul className="mt-1.5 space-y-1 text-[11.5px] leading-relaxed text-fg-subtle">
-          <li>
-            <code className="text-fg">MF-RESET-EXPIRED-01</code> — issued two days ago, past its window.
-          </li>
-          <li>
-            <code className="text-fg">MF-RESET-USED-02</code> — already redeemed once.
-          </li>
-        </ul>
-        <p className="mt-2 text-[11.5px] text-fg-subtle">
-          Paste either into the{' '}
-          <Link to="/reset-password" className="text-primary underline-offset-4 hover:underline">
-            reset form
-          </Link>{' '}
-          to see how each is refused.
-        </p>
-      </div>
+      <p className="mt-6 text-[12px] leading-relaxed text-fg-subtle">
+        The answer is the same whether or not the address has an account — a reset form that says “no such user” tells an
+        attacker which addresses are worth attacking.
+      </p>
     </AuthLayout>
   )
 }

@@ -1,169 +1,188 @@
 import * as React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, UserPlus } from 'lucide-react'
-import { AuthLayout, AuthNotice, PasswordRules } from './AuthLayout'
+import { AuthLayout, AuthNotice } from './AuthLayout'
 import { Button } from '@/components/ui/button'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { AUTH_POLICY, USER_ROLES, passwordProblems } from '@/data/reference'
-import { useAuth, type AuthResult } from '@/store/useAuth'
+import { cn } from '@/lib/utils'
+import { AUTH_POLICY, ROLES, passwordProblems, passwordStrength } from '@/data/reference'
+import { useAuth } from '@/store/useAuth'
 import type { UserRole } from '@/data/types'
 
 export function RegisterPage() {
   const navigate = useNavigate()
-  const { register, verifyEmail } = useAuth()
-  const [fullName, setFullName] = React.useState('')
-  const [email, setEmail] = React.useState('')
-  const [jobTitle, setJobTitle] = React.useState('')
-  const [role, setRole] = React.useState<UserRole>('OPERATIONS')
-  const [password, setPassword] = React.useState('')
-  const [confirm, setConfirm] = React.useState('')
-  const [accepted, setAccepted] = React.useState(false)
-  const [reveal, setReveal] = React.useState(false)
-  const [touched, setTouched] = React.useState(false)
-  const [result, setResult] = React.useState<AuthResult | null>(null)
+  const register = useAuth((s) => s.register)
+  const verifyEmail = useAuth((s) => s.verifyEmail)
+  const [form, setForm] = React.useState({
+    fullName: '', email: '', jobTitle: '', role: 'AREA_COORDINATOR' as UserRole, password: '', confirm: '',
+  })
+  const [show, setShow] = React.useState(false)
+  const [error, setError] = React.useState<{ message: string; remedy?: string } | null>(null)
+  const [done, setDone] = React.useState(false)
 
-  const problems = passwordProblems(password)
+  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }))
+  const strength = passwordStrength(form.password)
+  const problems = passwordProblems(form.password)
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    setTouched(true)
-    if (!accepted) {
-      setResult({ ok: false, message: 'Accept the standard trading conditions before creating an account.' })
-      return
+    const result = register(form)
+    if (result.ok) {
+      setDone(true)
+      setError(null)
+    } else {
+      setError({ message: result.message ?? 'Registration failed.', remedy: result.remedy })
     }
-    setResult(register({ fullName, email, jobTitle, role, password, confirm }))
+  }
+
+  if (done) {
+    return (
+      <AuthLayout
+        title="Account created"
+        subtitle="One step left before the account can sign in."
+        footer={
+          <span>
+            Already verified?{' '}
+            <Link to="/login" className="font-medium text-primary hover:underline">
+              Go to sign in
+            </Link>
+          </span>
+        }
+      >
+        <AuthNotice
+          tone="success"
+          message={`A verification link has been sent to ${form.email}.`}
+          remedy="There is no mail server in this demo, so verify the address here instead."
+          action={
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => {
+                verifyEmail(form.email)
+                navigate('/login')
+              }}
+            >
+              Verify and continue to sign in
+            </Button>
+          }
+        />
+      </AuthLayout>
+    )
   }
 
   return (
     <AuthLayout
-      title="Create an account"
-      subtitle={`Registration is open to ${AUTH_POLICY.allowedRegistrationDomains[0]} addresses. Everyone else joins by invitation.`}
+      title="Register"
+      subtitle={`Accounts are limited to @${AUTH_POLICY.allowedRegistrationDomains[0]} addresses. Anyone outside the company is invited by an administrator instead.`}
       footer={
         <span>
           Already have an account?{' '}
-          <Link to="/login" className="font-medium text-primary underline-offset-4 hover:underline">
+          <Link to="/login" className="font-medium text-primary hover:underline">
             Sign in
           </Link>
         </span>
       }
     >
-      <form onSubmit={submit} className="space-y-4" noValidate>
-        {result && (
-          <AuthNotice
-            tone={result.ok ? 'success' : 'warning'}
-            title={result.message ?? (result.ok ? 'Account created.' : 'Could not create the account.')}
-            detail={
-              result.ok
-                ? 'A verification link would be emailed here. This build has no mail server, so verify it directly.'
-                : result.remedy
-            }
-            action={
-              result.ok ? (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="xs"
-                    variant="secondary"
-                    onClick={() => {
-                      verifyEmail(email)
-                      navigate('/login')
-                    }}
-                  >
-                    Verify and go to sign in
-                  </Button>
-                  <Button size="xs" variant="ghost" asChild>
-                    <Link to="/login">Sign in later</Link>
-                  </Button>
-                </div>
-              ) : result.message?.startsWith('An account already') ? (
-                <Button size="xs" variant="secondary" asChild>
-                  <Link to="/login">Go to sign in</Link>
-                </Button>
-              ) : null
-            }
+      <form onSubmit={submit} className="space-y-4">
+        {error && <AuthNotice tone="error" message={error.message} remedy={error.remedy} />}
+
+        <Field label="Full name" required>
+          <Input value={form.fullName} onChange={(e) => set('fullName', e.target.value)} placeholder="Dewi Anggraini" />
+        </Field>
+
+        <Field label="Company email" required>
+          <Input
+            type="email"
+            value={form.email}
+            onChange={(e) => set('email', e.target.value)}
+            placeholder="nama@tatagemilang.co.id"
           />
-        )}
+        </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Full name" required htmlFor="fullName">
-            <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Amira Yusuf" autoComplete="name" />
+          <Field label="Job title">
+            <Input value={form.jobTitle} onChange={(e) => set('jobTitle', e.target.value)} placeholder="Koordinator Area" />
           </Field>
-          <Field label="Job title" htmlFor="jobTitle">
-            <Input id="jobTitle" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="Export Documentation Officer" />
+          <Field label="Role" help="Determines which modules the account can work in once an administrator approves it.">
+            <Select
+              value={form.role}
+              onChange={(v) => set('role', v)}
+              options={ROLES.filter((r) => r.value !== 'DIRECTOR').map((r) => ({
+                value: r.value, label: r.label, description: r.description,
+              }))}
+            />
           </Field>
         </div>
 
-        <Field label="Work email" required htmlFor="regEmail" help="Only company domains may self-register; anyone else needs an invitation.">
+        <Field label="Password" required>
           <Input
-            id="regEmail"
-            type="email"
-            autoComplete="username"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder={`you@${AUTH_POLICY.allowedRegistrationDomains[0]}`}
-          />
-        </Field>
-
-        <Field label="Team" required help="Decides which modules open by default. An administrator can change it later.">
-          <Select
-            value={role}
-            onChange={setRole}
-            options={USER_ROLES.map((r) => ({ value: r.value, label: r.label, description: r.hint }))}
-          />
-        </Field>
-
-        <Field label="Password" required htmlFor="regPassword">
-          <Input
-            id="regPassword"
-            type={reveal ? 'text' : 'password'}
+            type={show ? 'text' : 'password'}
             autoComplete="new-password"
-            value={password}
-            invalid={touched && problems.length > 0}
-            onChange={(e) => {
-              setPassword(e.target.value)
-              setTouched(true)
-            }}
+            value={form.password}
+            onChange={(e) => set('password', e.target.value)}
             trailing={
-              <button
-                type="button"
-                onClick={() => setReveal((v) => !v)}
-                aria-label={reveal ? 'Hide password' : 'Show password'}
-                className="pointer-events-auto rounded p-0.5 text-fg-subtle transition-colors hover:text-fg"
-              >
-                {reveal ? <EyeOff /> : <Eye />}
+              <button type="button" onClick={() => setShow((v) => !v)} aria-label={show ? 'Hide password' : 'Show password'}>
+                {show ? <EyeOff /> : <Eye />}
               </button>
             }
           />
         </Field>
-        <PasswordRules problems={problems} touched={touched} />
+
+        {form.password && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="flex flex-1 gap-1">
+                {[0, 1, 2, 3, 4].map((i) => (
+                  <span
+                    key={i}
+                    className={cn(
+                      'h-1 flex-1 rounded-full',
+                      i < strength.score
+                        ? strength.tone === 'danger'
+                          ? 'bg-danger'
+                          : strength.tone === 'warning'
+                            ? 'bg-warning'
+                            : 'bg-success'
+                        : 'bg-neutral-soft',
+                    )}
+                  />
+                ))}
+              </div>
+              <span
+                className={cn(
+                  'text-[11.5px] font-semibold',
+                  strength.tone === 'danger' && 'text-danger',
+                  strength.tone === 'warning' && 'text-warning',
+                  strength.tone === 'success' && 'text-success',
+                )}
+              >
+                {strength.label}
+              </span>
+            </div>
+            {problems.length > 0 && (
+              <p className="text-[11.5px] text-fg-muted">Still needs: {problems.join(', ').toLowerCase()}.</p>
+            )}
+          </div>
+        )}
 
         <Field
           label="Confirm password"
           required
-          htmlFor="confirm"
-          error={confirm && confirm !== password ? 'The two passwords do not match.' : undefined}
+          error={form.confirm && form.confirm !== form.password ? 'The two passwords do not match' : undefined}
         >
           <Input
-            id="confirm"
-            type={reveal ? 'text' : 'password'}
+            type={show ? 'text' : 'password'}
             autoComplete="new-password"
-            value={confirm}
-            invalid={!!confirm && confirm !== password}
-            onChange={(e) => setConfirm(e.target.value)}
+            value={form.confirm}
+            onChange={(e) => set('confirm', e.target.value)}
+            invalid={!!form.confirm && form.confirm !== form.password}
           />
         </Field>
 
-        <Checkbox
-          checked={accepted}
-          onChange={setAccepted}
-          label="I accept the ALFI Standard Trading Conditions and the workspace data policy"
-        />
-
         <Button type="submit" variant="primary" size="lg" className="w-full">
-          <UserPlus />
-          Create account
+          <UserPlus /> Create account
         </Button>
       </form>
     </AuthLayout>

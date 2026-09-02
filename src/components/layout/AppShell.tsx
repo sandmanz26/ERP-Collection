@@ -1,44 +1,37 @@
 import * as React from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Anchor, Bell, ChevronsLeft, Clock3, Command, Gauge, LayoutList, Lightbulb, LogOut, Monitor, Moon,
-  PanelLeftClose, PanelLeftOpen, RotateCcw, Search, ShieldCheck, Sun, TriangleAlert,
-  UserRound,
+  Bell, LogOut, PanelLeftClose, PanelLeftOpen, RotateCcw, Search, Settings, ShieldCheck, ShieldHalf,
+  TriangleAlert,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { NAV, OPERATOR_NAV } from './nav'
+import { NAV } from './nav'
 import { CommandPalette } from './CommandPalette'
-import { TourGuide, startTour, useTourState } from '@/components/onboarding/Tour'
 import { Button } from '@/components/ui/button'
 import { Kbd, Separator } from '@/components/ui/misc'
 import { Tooltip } from '@/components/ui/tooltip'
 import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from '@/components/ui/menu'
 import { Badge } from '@/components/ui/badge'
-import { Segmented } from '@/components/ui/checkbox'
-import { useTheme } from '@/hooks/useTheme'
+import { useToast } from '@/components/ui/toast'
 import { useErp } from '@/store/useErp'
 import { useAuth, useCurrentUser } from '@/store/useAuth'
-import { incidentStatusOpen, roleLabel, stuffingIsOpen } from '@/data/reference'
-import { buildExceptions } from '@/lib/analytics'
-import { buildPhase2Exceptions, filingReadiness, isQuoteOpen } from '@/lib/analytics2'
-import { buildPhase3Exceptions } from '@/lib/services'
-import { buildStuffingExceptions, checkStuffing } from '@/lib/stuffing'
-import { operatorBoard, operatorJobs } from '@/lib/operator'
-import { fmtDateTime } from '@/lib/format'
-import { useToast } from '@/components/ui/toast'
+import { roleLabel } from '@/data/reference'
+import { buildAlerts, daysUntil, fulfilment, isLiveProject, stockStatus } from '@/lib/domain'
 
 export function AppShell() {
-  const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem('mf-sidebar') === '1')
+  const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem('tg-sidebar') === '1')
+  /* Below a laptop width there is no room for a 238px rail of labels, so the
+     sidebar falls back to icons whatever the stored preference says. */
+  const [narrow, setNarrow] = React.useState(() => window.matchMedia('(max-width: 1023px)').matches)
   const [paletteOpen, setPaletteOpen] = React.useState(false)
-  const { mode, setMode } = useTheme()
   const location = useLocation()
-  const store = useErp()
-  const toast = useToast()
   const navigate = useNavigate()
+  const toast = useToast()
+  const store = useErp()
   const signOut = useAuth((s) => s.signOut)
-  const resetTours = useTourState((s) => s.reset)
   const user = useCurrentUser()
-  const initials = (user?.fullName ?? 'Meridian User')
+
+  const initials = (user?.fullName ?? 'Tata Gemilang')
     .split(' ')
     .slice(0, 2)
     .map((w) => w[0])
@@ -46,8 +39,17 @@ export function AppShell() {
     .toUpperCase()
 
   React.useEffect(() => {
-    localStorage.setItem('mf-sidebar', collapsed ? '1' : '0')
+    localStorage.setItem('tg-sidebar', collapsed ? '1' : '0')
   }, [collapsed])
+
+  React.useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)')
+    const onChange = (e: MediaQueryListEvent) => setNarrow(e.matches)
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  const rail = collapsed || narrow
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -64,71 +66,24 @@ export function AppShell() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const exceptions = React.useMemo(() => {
-    const core = buildExceptions({
-      projects: store.projects, containers: store.containers, documents: store.documents,
-      charges: store.charges, customers: store.customers, invoices: store.invoices,
-    })
-    const extra = buildPhase2Exceptions({
-      quotations: store.quotations, partners: store.partners, milestones: store.milestones,
-      receipts: store.receipts, filings: store.filings, projects: store.projects, settings: store.settings,
-    })
-    const phase3 = buildPhase3Exceptions({
-      projects: store.projects, containers: store.containers, documents: store.documents,
-      jobServices: store.jobServices, services: store.services, incidents: store.incidents,
-      company: store.company,
-    })
-    const yard = buildStuffingExceptions({
-      projects: store.projects, charges: store.charges, stuffingJobs: store.stuffingJobs,
-    })
-    const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2 } as const
-    return [...core, ...extra, ...phase3, ...yard].sort((a, b) => order[a.severity] - order[b.severity])
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    store.projects, store.containers, store.documents, store.charges, store.customers, store.invoices,
-    store.quotations, store.partners, store.milestones, store.receipts, store.filings, store.settings,
-    store.jobServices, store.services, store.incidents, store.company, store.stuffingJobs,
-  ])
-  const critical = exceptions.filter((e) => e.severity === 'CRITICAL').length
-
-  /* An operator gets the four-phase workspace; everyone else gets the suite.
-     Anyone can switch, because a supervisor needs to see what their operators see. */
-  const [workspace, setWorkspace] = React.useState<'suite' | 'operator'>(() =>
-    (localStorage.getItem('mf-workspace') as 'suite' | 'operator') ?? 'suite',
+  const alerts = React.useMemo(
+    () =>
+      buildAlerts({
+        projects: store.projects, clients: store.clients, buildings: store.buildings,
+        positions: store.positions, items: store.items, stock: store.stock, warehouses: store.warehouses,
+      }),
+    [store.projects, store.clients, store.buildings, store.positions, store.items, store.stock, store.warehouses],
   )
-  React.useEffect(() => {
-    if (user?.role === 'OPERATOR') setWorkspace('operator')
-  }, [user?.role])
-  React.useEffect(() => {
-    localStorage.setItem('mf-workspace', workspace)
-  }, [workspace])
-
-  const myBoard = React.useMemo(() => {
-    const assigned = operatorJobs(store.projects, user)
-    const jobs = assigned.length > 0 || user?.role === 'OPERATOR' ? assigned : store.projects.filter((p) => p.status !== 'CANCELLED')
-    return operatorBoard(jobs, {
-      containers: store.containers, documents: store.documents, charges: store.charges,
-      stuffingJobs: store.stuffingJobs, milestones: store.milestones, filings: store.filings,
-      jobServices: store.jobServices,
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store.projects, store.containers, store.documents, store.charges, store.stuffingJobs, store.milestones, store.filings, store.jobServices, user])
-
-  const phaseCount = (key: string) => myBoard.byPhase.find((p) => p.phase.key === key)?.jobs.length ?? 0
+  const critical = alerts.filter((a) => a.severity === 'CRITICAL').length
 
   const badges: Record<string, number> = {
-    projects: store.projects.filter((p) => p.status === 'ACTIVE').length,
-    overdue: store.invoices.filter((i) => i.status === 'OVERDUE').length,
-    exceptions: critical,
-    quotes: store.quotations.filter(isQuoteOpen).length,
-    customs: store.filings.filter((f) => f.status === 'DRAFT' && !filingReadiness(f).canSubmit).length,
-    incidents: store.incidents.filter((i) => incidentStatusOpen(i.status)).length,
-    stuffing: store.stuffingJobs.filter((j) => stuffingIsOpen(j.status) && checkStuffing(j).blockers.length > 0).length,
-    myBlocking: myBoard.blocking,
-    myIntake: myBoard.awaitingAcceptance,
-    myExecute: phaseCount('EXECUTION'),
-    myDocs: myBoard.needsPaperwork.length,
-    myClosing: phaseCount('CLOSING'),
+    gaps: store.projects.filter((p) => isLiveProject(p) && fulfilment(p).gap > 0).length,
+    approvals: store.projects.filter((p) => p.status === 'PENDING_APPROVAL').length,
+    expiring: store.projects.filter((p) => isLiveProject(p) && daysUntil(p.periodEnd) <= 60 && daysUntil(p.periodEnd) >= 0).length,
+    lowStock: store.stock.filter((s) => {
+      const status = stockStatus(s, store.items.find((i) => i.id === s.itemId))
+      return status === 'LOW' || status === 'OUT_OF_STOCK'
+    }).length,
   }
 
   return (
@@ -137,28 +92,28 @@ export function AppShell() {
       <aside
         className={cn(
           'relative z-20 flex shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-200 ease-out',
-          collapsed ? 'w-[62px]' : 'w-[236px]',
+          rail ? 'w-[62px]' : 'w-[238px]',
         )}
       >
-        <div className={cn('flex h-14 items-center gap-2.5 border-b border-border px-3.5', collapsed && 'justify-center px-0')}>
+        <div className={cn('flex h-14 items-center gap-2.5 border-b border-border px-3.5', rail && 'justify-center px-0')}>
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-fg shadow-[inset_0_1px_0_0_rgb(255_255_255/0.2)]">
-            <Anchor className="size-[17px]" />
+            <ShieldHalf className="size-[17px]" />
           </span>
-          {!collapsed && (
+          {!rail && (
             <div className="min-w-0">
-              <p className="truncate text-[13.5px] font-semibold leading-tight tracking-[-0.01em] text-fg">Meridian Freight</p>
-              <p className="truncate text-[11px] leading-tight text-fg-subtle">Export Operations Suite</p>
+              <p className="truncate text-[13.5px] font-semibold leading-tight tracking-[-0.01em] text-fg">Tata Gemilang</p>
+              <p className="truncate text-[11px] leading-tight text-fg-subtle">Outsourcing Management</p>
             </div>
           )}
         </div>
 
         <nav className="scrollbar-thin flex-1 overflow-y-auto px-2 py-3">
-          {(workspace === 'operator' ? OPERATOR_NAV : NAV).map((group) => (
+          {NAV.map((group) => (
             <div key={group.label} className="mb-4 last:mb-0">
-              {!collapsed && (
+              {!rail && (
                 <p className="mb-1 px-2.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-fg-subtle">{group.label}</p>
               )}
-              {collapsed && <Separator className="mx-auto mb-2 w-6" />}
+              {rail && <Separator className="mx-auto mb-2 w-6" />}
               <div className="space-y-0.5">
                 {group.items.map((item) => {
                   const count = item.badgeKey ? badges[item.badgeKey] : 0
@@ -170,26 +125,24 @@ export function AppShell() {
                       className={({ isActive }) =>
                         cn(
                           'group relative flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] font-medium transition-colors',
-                          collapsed && 'justify-center px-0 py-2',
-                          isActive
-                            ? 'bg-primary-soft text-primary-soft-fg'
-                            : 'text-fg-muted hover:bg-bg-muted hover:text-fg',
+                          rail && 'justify-center px-0 py-2',
+                          isActive ? 'bg-primary-soft text-primary-soft-fg' : 'text-fg-muted hover:bg-bg-muted hover:text-fg',
                         )
                       }
                     >
                       {({ isActive }) => (
                         <>
-                          {isActive && !collapsed && (
+                          {isActive && !rail && (
                             <span className="absolute -left-2 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" />
                           )}
                           <item.icon className={cn('size-[17px] shrink-0', isActive && 'text-primary')} />
-                          {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
-                          {!collapsed && count > 0 && (
+                          {!rail && <span className="flex-1 truncate">{item.label}</span>}
+                          {!rail && count > 0 && (
                             <span
                               className={cn(
                                 'tnum rounded px-1.5 py-0.5 text-[10.5px] font-semibold',
-                                item.badgeKey === 'overdue' || item.badgeKey === 'customs'
-                                  ? 'bg-danger-soft text-danger-soft-fg'
+                                item.badgeKey === 'gaps' || item.badgeKey === 'lowStock'
+                                  ? 'bg-warning-soft text-warning-soft-fg'
                                   : 'bg-neutral-soft text-neutral-soft-fg',
                               )}
                             >
@@ -200,7 +153,7 @@ export function AppShell() {
                       )}
                     </NavLink>
                   )
-                  return collapsed ? (
+                  return rail ? (
                     <Tooltip key={item.to} content={item.label} side="right">
                       <div>{link}</div>
                     </Tooltip>
@@ -213,16 +166,16 @@ export function AppShell() {
           ))}
         </nav>
 
-        <div className={cn('border-t border-border p-2', collapsed && 'flex justify-center')}>
+        <div className={cn('border-t border-border p-2', rail && 'flex justify-center')}>
           <button
             onClick={() => setCollapsed((v) => !v)}
             className={cn(
               'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[12.5px] font-medium text-fg-muted transition-colors hover:bg-bg-muted hover:text-fg',
-              collapsed && 'w-auto justify-center px-2',
+              rail && 'w-auto justify-center px-2',
             )}
           >
-            {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
-            {!collapsed && (
+            {rail ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+            {!rail && (
               <>
                 <span className="flex-1 text-left">Collapse</span>
                 <Kbd>⌘\</Kbd>
@@ -240,7 +193,7 @@ export function AppShell() {
             className="group flex h-9 w-full max-w-sm items-center gap-2.5 rounded-lg border border-border-strong/70 bg-bg-muted/60 px-3 text-left text-[13px] text-fg-subtle transition-colors hover:border-border-strong hover:bg-bg-muted"
           >
             <Search className="size-4" />
-            <span className="flex-1 truncate">Search jobs, containers, customers…</span>
+            <span className="flex-1 truncate">Search clients, projects, items…</span>
             <Kbd className="bg-surface">⌘K</Kbd>
           </button>
 
@@ -248,7 +201,7 @@ export function AppShell() {
 
           <Menu>
             <MenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative" aria-label="Exceptions">
+              <Button variant="ghost" size="icon" className="relative" aria-label={`Attention: ${alerts.length} items`}>
                 <Bell />
                 {critical > 0 && (
                   <span className="absolute right-1.5 top-1.5 grid size-[15px] place-items-center rounded-full bg-danger text-[9.5px] font-bold text-white ring-2 ring-surface">
@@ -257,69 +210,29 @@ export function AppShell() {
                 )}
               </Button>
             </MenuTrigger>
-            <MenuContent className="w-[360px]">
-              <MenuLabel>Live exceptions</MenuLabel>
-              {exceptions.length === 0 && <p className="px-3 py-6 text-center text-[12.5px] text-fg-subtle">Nothing needs attention.</p>}
+            <MenuContent className="w-[380px]">
+              <MenuLabel>Needs attention</MenuLabel>
+              {alerts.length === 0 && (
+                <p className="px-3 py-6 text-center text-[12.5px] text-fg-subtle">Every post is filled and every level is healthy.</p>
+              )}
               <div className="scrollbar-thin max-h-80 overflow-y-auto">
-                {exceptions.slice(0, 12).map((e) => (
-                  <Link
-                    key={e.id}
-                    to={e.link}
-                    className="flex gap-2.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-bg-muted"
-                  >
+                {alerts.slice(0, 12).map((a) => (
+                  <Link key={a.id} to={a.link} className="flex gap-2.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-bg-muted">
                     <TriangleAlert
                       className={cn(
                         'mt-0.5 size-4 shrink-0',
-                        e.severity === 'CRITICAL' ? 'text-danger' : e.severity === 'HIGH' ? 'text-warning' : 'text-fg-subtle',
+                        a.severity === 'CRITICAL' ? 'text-danger' : a.severity === 'HIGH' ? 'text-warning' : 'text-fg-subtle',
                       )}
                     />
                     <span className="min-w-0">
-                      <span className="block truncate text-[12.5px] font-medium text-fg">{e.title}</span>
-                      <span className="mt-0.5 line-clamp-2 block text-[11.5px] leading-snug text-fg-muted">{e.detail}</span>
+                      <span className="block truncate text-[12.5px] font-medium text-fg">{a.title}</span>
+                      <span className="mt-0.5 line-clamp-2 block text-[11.5px] leading-snug text-fg-muted">{a.detail}</span>
                     </span>
                   </Link>
                 ))}
               </div>
               <MenuSeparator />
-              <MenuItem onSelect={() => (window.location.hash = '')}>
-                <Link to="/" className="w-full">
-                  Open the control tower
-                </Link>
-              </MenuItem>
-            </MenuContent>
-          </Menu>
-
-          <Menu>
-            <MenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Theme">
-                {mode === 'dark' ? <Moon /> : mode === 'light' ? <Sun /> : <Monitor />}
-              </Button>
-            </MenuTrigger>
-            <MenuContent>
-              <MenuLabel>Appearance</MenuLabel>
-              <div className="px-1.5 py-1">
-                <Segmented
-                  value={mode}
-                  onChange={(v) => setMode(v)}
-                  options={[
-                    { value: 'light', label: 'Light', icon: <Sun /> },
-                    { value: 'dark', label: 'Dark', icon: <Moon /> },
-                    { value: 'system', label: 'Auto', icon: <Monitor /> },
-                  ]}
-                  className="w-full [&>button]:flex-1"
-                />
-              </div>
-              <MenuSeparator />
-              <MenuLabel>Workspace</MenuLabel>
-              <MenuItem
-                icon={<RotateCcw />}
-                onSelect={() => {
-                  store.resetDemoData()
-                  toast.push({ tone: 'success', title: 'Demo data restored', description: 'All modules reset to the seeded dataset.' })
-                }}
-              >
-                Reset demo data
-              </MenuItem>
+              <MenuItem onSelect={() => navigate('/')}>Open the dashboard</MenuItem>
             </MenuContent>
           </Menu>
 
@@ -357,46 +270,17 @@ export function AppShell() {
                 </div>
               </div>
               <MenuSeparator />
-              <MenuItem icon={<Lightbulb />} onSelect={() => startTour()}>
-                Show me around this page
+              <MenuItem icon={<Settings />} onSelect={() => navigate('/settings')}>
+                Company & account settings
               </MenuItem>
               <MenuItem
                 icon={<RotateCcw />}
                 onSelect={() => {
-                  resetTours()
-                  toast.push({
-                    tone: 'success',
-                    title: 'Tours reset',
-                    description: 'Each page will introduce itself again the next time you open it.',
-                  })
+                  store.resetDemoData()
+                  toast.push({ tone: 'success', title: 'Demo data restored', description: 'Every module is back to the seeded dataset.' })
                 }}
               >
-                Replay every tour
-              </MenuItem>
-              <MenuSeparator />
-              <MenuLabel>Workspace view</MenuLabel>
-              <div className="px-1.5 py-1">
-                <Segmented
-                  value={workspace}
-                  onChange={(v) => {
-                    setWorkspace(v as 'suite' | 'operator')
-                    navigate(v === 'operator' ? '/my' : '/')
-                  }}
-                  options={[
-                    { value: 'operator', label: 'Operator', icon: <LayoutList /> },
-                    { value: 'suite', label: 'Full suite', icon: <Gauge /> },
-                  ]}
-                  className="w-full [&>button]:flex-1"
-                />
-              </div>
-              <p className="px-3 pb-1.5 text-[11px] leading-relaxed text-fg-subtle">
-                {workspace === 'operator'
-                  ? 'Four phases, only your jobs — the view an operator works in.'
-                  : 'Every module in the suite, for supervisors and back office.'}
-              </p>
-              <MenuSeparator />
-              <MenuItem icon={<UserRound />} onSelect={() => navigate('/settings')}>
-                Company & account settings
+                Reset demo data
               </MenuItem>
               <MenuSeparator />
               <MenuItem
@@ -414,25 +298,13 @@ export function AppShell() {
         </header>
 
         <main key={location.pathname} className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto flex min-h-full w-full max-w-[1560px] flex-col px-5 py-5 lg:px-7">
+          <div className="mx-auto flex min-h-full w-full max-w-[1720px] flex-col px-5 py-5 lg:px-7">
             <Outlet />
           </div>
         </main>
       </div>
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
-      <TourGuide />
     </div>
   )
 }
-
-export function LastSync() {
-  return (
-    <span className="inline-flex items-center gap-1.5 text-[11.5px] text-fg-subtle">
-      <Clock3 className="size-3.5" />
-      Synced {fmtDateTime(new Date().toISOString())}
-    </span>
-  )
-}
-
-export { ChevronsLeft, Command, Badge }

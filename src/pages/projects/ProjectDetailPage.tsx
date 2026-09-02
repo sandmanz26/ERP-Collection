@@ -1,660 +1,467 @@
 import * as React from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
-  AlertTriangle, ArrowLeft, ArrowRight, Building2, CalendarClock, CheckCircle2, Container as ContainerIcon,
-  FileSignature, FileStack, Info, PackageCheck, Pencil, Radio, Receipt, Repeat, Ship, ShieldCheck,
-  Sparkles, Stamp, Anchor,
+  ArrowLeft, Boxes, Building2, CalendarRange, CheckCircle2, ClipboardList, PauseCircle, Pencil,
+  PlayCircle, SendHorizontal, Users, Wallet,
 } from 'lucide-react'
+import type { Project } from '@/data/types'
+import { serviceLabel, shiftHours, shiftLabel } from '@/data/reference'
 import { useErp } from '@/store/useErp'
-import { STAGES, countryFlag, stageIndex } from '@/data/reference'
-import { PageHeader } from '@/components/shared/PageHeader'
+import { KpiCard, PageHeader } from '@/components/shared/PageHeader'
 import { MetaRow, StatusBadge } from '@/components/shared/status'
-import { Stepper } from '@/components/shared/Stepper'
+import { FulfilmentBar } from '@/components/shared/FulfilmentBar'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs } from '@/components/ui/tabs'
 import { EmptyState, Progress, Separator } from '@/components/ui/misc'
 import { Tooltip } from '@/components/ui/tooltip'
-import { ProjectForm } from './ProjectForm'
-import { ContainersTable } from './tabs/ContainersTable'
-import { DocumentsTable } from './tabs/DocumentsTable'
-import { ChargesTable } from './tabs/ChargesTable'
-import { ServicesPanel } from './tabs/ServicesPanel'
-import { JobSheetPanel } from './tabs/JobSheetPanel'
-import { StuffingPage } from '@/pages/stuffing/StuffingPage'
-import { recommendServices, serviceBlockers } from '@/lib/services'
-import { checkStuffing } from '@/lib/stuffing'
-import { MilestonesTable } from '@/pages/tracking/MilestonesTable'
-import { CustomsTable } from '@/pages/customs/CustomsTable'
-import { filingReadiness, milestoneHealth, quoteTotals } from '@/lib/analytics2'
-import { documentCompliance, evaluateStageGate, jobFinancials } from '@/lib/analytics'
-import { fmtCurrency, fmtDate, fmtDateTime, fmtNumber, fmtPercent, pluralDays, relativeDays, titleCase } from '@/lib/format'
-import { itemCbm, itemGrossKg } from '@/lib/shipping'
 import { useToast } from '@/components/ui/toast'
-import type { StageKey } from '@/data/types'
+import { ProjectForm } from './ProjectForm'
+import { fmtCurrency, fmtDate, fmtNumber } from '@/lib/format'
+import {
+  contractMonths, contractValue, daysUntil, fulfilment, isLiveProject, isStaffedProject, itemTotals,
+  monthlyMargin, periodProgress, periodState, projectIssueDemand, requiredHeadcount,
+} from '@/lib/domain'
 
-type TabKey =
-  | 'overview' | 'containers' | 'stuffing' | 'documents' | 'charges' | 'services' | 'jobsheet'
-  | 'tracking' | 'customs' | 'timeline'
+/** The status moves an operations manager actually makes, in the order they make them. */
+function nextStatuses(status: Project['status']): { to: Project['status']; label: string; icon: React.ReactNode }[] {
+  switch (status) {
+    case 'DRAFT':
+      return [{ to: 'PENDING_APPROVAL', label: 'Submit for approval', icon: <SendHorizontal /> }]
+    case 'PENDING_APPROVAL':
+      return [
+        { to: 'ACTIVE', label: 'Approve and activate', icon: <CheckCircle2 /> },
+        { to: 'DRAFT', label: 'Send back to draft', icon: <ArrowLeft /> },
+      ]
+    case 'ACTIVE':
+      return [
+        { to: 'SUSPENDED', label: 'Suspend', icon: <PauseCircle /> },
+        { to: 'COMPLETED', label: 'Mark completed', icon: <CheckCircle2 /> },
+        { to: 'TERMINATED', label: 'Terminate early', icon: <PauseCircle /> },
+      ]
+    case 'SUSPENDED':
+      return [
+        { to: 'ACTIVE', label: 'Resume', icon: <PlayCircle /> },
+        { to: 'TERMINATED', label: 'Terminate', icon: <PauseCircle /> },
+      ]
+    default:
+      return []
+  }
+}
 
 export function ProjectDetailPage() {
   const { id } = useParams()
   const nav = useNavigate()
   const toast = useToast()
-  const [params, setParams] = useSearchParams()
-  const store = useErp()
-  const project = store.projects.find((p) => p.id === id)
-  const [edit, setEdit] = React.useState(false)
-  const [selectedStage, setSelectedStage] = React.useState<StageKey>(project?.stage ?? 'INQUIRY')
+  const { projects, clients, buildings, positions, items, stock, setProjectStatus } = useErp()
+  const [tab, setTab] = React.useState<'overview' | 'manpower' | 'inventory'>('overview')
+  const [editOpen, setEditOpen] = React.useState(false)
 
-  React.useEffect(() => {
-    if (project) setSelectedStage(project.stage)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project?.id])
+  const project = projects.find((p) => p.id === id)
 
-  if (!project)
+  if (!project) {
     return (
       <EmptyState
-        icon={<Ship />}
-        title="Job not found"
-        description="It may have been deleted from this workspace."
-        action={<Button variant="secondary" size="sm" onClick={() => nav('/projects')}>Back to projects</Button>}
+        icon={<ClipboardList />}
+        title="This project is no longer in the register"
+        description="It may have been deleted. Open the project list to find another."
+        action={
+          <Button variant="primary" size="sm" onClick={() => nav('/projects')}>
+            Back to projects
+          </Button>
+        }
       />
     )
+  }
 
-  const tab = (params.get('tab') as TabKey) ?? 'overview'
-  const setTab = (t: TabKey) => setParams(t === 'overview' ? {} : { tab: t }, { replace: true })
+  const client = clients.find((c) => c.id === project.clientId)
+  const building = buildings.find((b) => b.id === project.buildingId)
+  const f = fulfilment(project)
+  const margin = monthlyMargin(project)
+  const months = contractMonths(project)
+  const state = periodState(project)
+  const daysLeft = daysUntil(project.periodEnd)
+  /* Only a running contract owes posts today, so only a running one can be short. */
+  const staffed = isStaffedProject(project)
+  const closed = project.status === 'COMPLETED' || project.status === 'TERMINATED'
 
-  const containers = store.containers.filter((c) => c.projectId === project.id)
-  const documents = store.documents.filter((d) => d.projectId === project.id)
-  const charges = store.charges.filter((c) => c.projectId === project.id)
-  const projectServices = store.jobServices.filter((j) => j.projectId === project.id)
-  const projectStuffing = store.stuffingJobs.filter((j) => j.projectId === project.id)
-  const client = store.customers.find((c) => c.id === project.clientId)
-  const shipper = store.customers.find((c) => c.id === project.shipperId)
-  const consignee = store.customers.find((c) => c.id === project.consigneeId)
-  const shipperOffice = shipper?.offices.find((o) => o.id === project.shipperOfficeId)
-  const consigneeOffice = consignee?.offices.find((o) => o.id === project.consigneeOfficeId)
-  const pkg = store.packages.find((p) => p.id === project.packageId)
-  const milestones = store.milestones.filter((m) => m.projectId === project.id)
-  const filings = store.filings.filter((f) => f.projectId === project.id)
-  const sourceQuote = store.quotations.find((q) => q.convertedProjectId === project.id)
-  const tracking = milestoneHealth(milestones)
-  const peb = filings.find((f) => f.type === 'PEB')
-  const pebReadiness = peb ? filingReadiness(peb) : null
+  /* Manpower rolled up by shift, which is how a coordinator plans a day. */
+  const byShift = ['PAGI', 'SIANG', 'MALAM', 'NON_SHIFT'].map((shift) => {
+    const lines = project.requirements.filter((r) => r.shift === shift)
+    return {
+      shift,
+      lines,
+      required: lines.reduce((a, r) => a + r.headcount, 0),
+      deployed: lines.reduce((a, r) => a + Math.min(r.deployed, r.headcount), 0),
+    }
+  }).filter((s) => s.lines.length > 0)
 
-  const serviceGate = serviceBlockers(
-    recommendServices(project, store.containers, projectServices, store.services),
-    projectServices,
-  )
-  const stuffingGate = projectStuffing.flatMap((j) => checkStuffing(j).blockers)
-  const gate = evaluateStageGate(project, containers, documents, client, {
-    filings, serviceBlockers: serviceGate, stuffingBlockers: stuffingGate,
-  })
-  const fin = jobFinancials(charges)
-  const compliance = documentCompliance(project, documents)
-  const currentIdx = stageIndex(project.stage)
-  const nextStage = STAGES[currentIdx + 1]
-  const selectedStageData = project.stages.find((s) => s.key === selectedStage)
-  const selectedMeta = STAGES.find((s) => s.key === selectedStage)
-
-  const totalCbm = containers.reduce((a, c) => a + c.items.reduce((s, i) => s + itemCbm(i), 0), 0)
-  const totalKg = containers.reduce((a, c) => a + c.items.reduce((s, i) => s + itemGrossKg(i), 0), 0)
+  /* What the contracted headcount will draw from the warehouse. */
+  const demand = Array.from(projectIssueDemand(project, positions).entries())
+    .map(([sku, qty]) => {
+      const item = items.find((i) => i.sku === sku)
+      const totals = item ? itemTotals(item.id, stock) : null
+      return { sku, qty, item, available: totals?.available ?? 0 }
+    })
+    .sort((a, b) => (a.item?.name ?? a.sku).localeCompare(b.item?.name ?? b.sku))
+  const shortages = demand.filter((d) => d.available < d.qty)
 
   return (
     <>
-      <Button variant="ghost" size="sm" className="-ml-2 mb-2 w-fit" onClick={() => nav('/projects')}>
-        <ArrowLeft /> Projects
-      </Button>
-
       <PageHeader
         eyebrow={
-          <>
-            <span className="font-mono text-[12px] text-fg-muted">{project.code}</span>
-            <span className="font-mono text-[11.5px] text-fg-subtle">{project.jobNo}</span>
-            <StatusBadge value={project.status} size="sm" />
-            {project.priority !== 'STANDARD' && <StatusBadge value={project.priority} size="sm" />}
-            <Badge tone={project.type === 'CONSIGNMENT' ? 'purple' : 'outline'} size="sm">{titleCase(project.type)}</Badge>
-          </>
+          <Link to="/projects" className="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-fg-muted hover:text-fg">
+            <ArrowLeft className="size-3.5" /> Projects
+          </Link>
         }
         title={project.name}
-        description={project.remarks}
+        description={
+          client && building
+            ? `${client.brandName || client.legalName} · ${building.name}, ${building.city}`
+            : 'A referenced client or building is missing from the register.'
+        }
         meta={
           <>
-            <span className="flex items-center gap-1.5 text-[12.5px] text-fg-muted">
-              <span className="text-[14px]">🇮🇩</span> {project.polName}
-              <ArrowRight className="size-3.5 text-fg-subtle" />
-              <span className="text-[14px]">{countryFlag(project.destCountry)}</span> {project.podName}
-            </span>
+            <StatusBadge value={project.status} />
+            {isLiveProject(project) && state !== 'RUNNING' && <StatusBadge value={state} />}
+            <span className="font-mono text-[12px] text-fg-subtle">{project.code}</span>
+            <span className="text-[12.5px] text-fg-muted">Contract {project.contractNo || '—'}</span>
             <span className="text-[12.5px] text-fg-muted">
-              <span className="text-fg-subtle">Mode</span> · {project.mode} {project.incoterm}
-            </span>
-            <span className="text-[12.5px] text-fg-muted">
-              <span className="text-fg-subtle">Vessel</span> · {project.vessel ?? '—'} {project.voyage ?? ''}
-            </span>
-            <span className="text-[12.5px] text-fg-muted">
-              <span className="text-fg-subtle">Owner</span> · {project.ownerName}
+              {fmtDate(project.periodStart)} – {fmtDate(project.periodEnd)} · {months} months
             </span>
           </>
         }
         actions={
           <>
-            <Button variant="secondary" onClick={() => setEdit(true)}>
-              <Pencil /> Edit job
-            </Button>
-            {nextStage && (
-              <Tooltip
-                content={
-                  gate.blockers.length
-                    ? `${gate.blockers.length} blocking item${gate.blockers.length === 1 ? '' : 's'} must be cleared first`
-                    : `Move this job to ${nextStage.label}`
-                }
+            {nextStatuses(project.status).map((action) => (
+              <Button
+                key={action.to}
+                variant={action.to === 'ACTIVE' ? 'primary' : 'secondary'}
+                onClick={() => {
+                  setProjectStatus(project.id, action.to)
+                  toast.push({ tone: 'success', title: `${project.code} is now ${action.to.replace(/_/g, ' ').toLowerCase()}` })
+                }}
               >
-                <span>
-                  <Button
-                    variant="primary"
-                    disabled={gate.blockers.length > 0}
-                    onClick={() => {
-                      store.advanceStage(project.id, nextStage.key)
-                      setSelectedStage(nextStage.key)
-                      toast.push({ tone: 'success', title: `Moved to ${nextStage.label}` })
-                    }}
-                  >
-                    Advance to {nextStage.short} <ArrowRight />
-                  </Button>
-                </span>
-              </Tooltip>
-            )}
+                {action.icon} {action.label}
+              </Button>
+            ))}
+            <Button variant="secondary" onClick={() => setEditOpen(true)}>
+              <Pencil /> Edit
+            </Button>
           </>
         }
       />
 
-      <div data-tour="job-stepper">
-        <Stepper project={project} selected={selectedStage} onSelect={setSelectedStage} className="mb-4" />
-      </div>
-
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-        <MiniStat label="Containers" value={`${containers.length}`} sub={`${fmtNumber(totalCbm, 1)} m³ · ${fmtNumber(totalKg / 1000, 1)} t`} icon={<ContainerIcon />} />
-        <MiniStat label="Documents" value={`${compliance.satisfiedCount}/${compliance.requiredCount}`} sub={`${compliance.pct.toFixed(0)}% complete`} icon={<FileStack />} tone={compliance.pct === 100 ? 'success' : 'warning'} />
-        <MiniStat label="Revenue" value={fmtCurrency(fin.revenue, 'IDR', { compact: true })} sub={`${charges.length} charge lines`} icon={<Receipt />} />
-        <MiniStat
-          label="Gross margin"
-          value={fmtCurrency(fin.margin, 'IDR', { compact: true })}
-          sub={fmtPercent(fin.marginPct)}
-          icon={<Receipt />}
-          tone={fin.marginPct >= 20 ? 'success' : fin.marginPct >= 8 ? 'warning' : 'danger'}
-        />
-        <MiniStat
-          label="On-time"
-          value={fmtPercent(tracking.onTimePct, 0)}
-          sub={`${tracking.recorded}/${tracking.total} events recorded`}
-          icon={<Radio />}
-          tone={tracking.onTimePct >= 90 ? 'success' : tracking.onTimePct >= 75 ? 'warning' : 'danger'}
-        />
-        <MiniStat
-          label="Open blockers"
-          value={`${gate.blockers.length}`}
+      <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard
+          label="Fulfilment"
+          value={staffed ? `${f.pct}%` : closed ? 'Closed' : 'Not started'}
+          icon={<Users />}
+          accent={!staffed ? 'neutral' : f.gap === 0 ? 'success' : f.pct >= 90 ? 'warning' : 'danger'}
           sub={
-            gate.warnings.length
-              ? `${gate.warnings.length} warning${gate.warnings.length === 1 ? '' : 's'} as well`
-              : gate.blockers.length
-                ? 'clear these to advance'
-                : 'nothing flagged'
+            !staffed
+              ? `${f.required} posts contracted, none deployed under this status`
+              : f.gap === 0
+                ? `All ${f.required} posts filled`
+                : `${f.gap} post${f.gap === 1 ? '' : 's'} unfilled`
           }
-          icon={<AlertTriangle />}
-          tone={gate.blockers.length ? 'danger' : 'success'}
+        />
+        <KpiCard
+          label="Contract period"
+          value={closed ? 'Ended' : daysLeft < 0 ? `${Math.abs(daysLeft)}d over` : `${daysLeft}d left`}
+          icon={<CalendarRange />}
+          accent={closed ? 'neutral' : daysLeft < 0 ? 'danger' : daysLeft <= 60 ? 'warning' : 'primary'}
+          sub={
+            closed
+              ? `Closed on ${fmtDate(project.periodEnd)}`
+              : `${periodProgress(project)}% elapsed · ${project.autoRenew ? 'auto-renews' : 'manual renewal'}`
+          }
+        />
+        <KpiCard label="Monthly value" value={fmtCurrency(margin.value, 'IDR', { compact: true })} icon={<Wallet />} accent="accent" sub={`${fmtCurrency(contractValue(project), 'IDR', { compact: true })} over the period`} />
+        <KpiCard
+          label="Monthly margin"
+          value={fmtCurrency(margin.margin, 'IDR', { compact: true })}
+          icon={<Wallet />}
+          accent={margin.pct >= 12 ? 'success' : 'warning'}
+          sub={`${margin.pct.toFixed(1)}% of billed value · fee ${project.managementFeePct}%`}
         />
       </div>
 
-      <div data-tour="job-tabs">
       <Tabs
         value={tab}
         onChange={setTab}
-        className="mb-4"
+        className="mb-5"
         items={[
-          { value: 'overview', label: 'Overview', icon: <Info /> },
-          { value: 'containers', label: 'Containers', icon: <ContainerIcon />, count: containers.length },
-          { value: 'stuffing', label: 'Stuffing', icon: <PackageCheck />, count: projectStuffing.length },
-          { value: 'documents', label: 'Documents', icon: <FileStack />, count: documents.length },
-          { value: 'charges', label: 'Charges', icon: <Receipt />, count: charges.length },
-          { value: 'services', label: 'Services', icon: <Sparkles />, count: projectServices.length },
-          { value: 'jobsheet', label: 'Job sheet', icon: <Receipt /> },
-          { value: 'tracking', label: 'Tracking', icon: <Radio />, count: milestones.length },
-          { value: 'customs', label: 'Customs', icon: <Stamp />, count: filings.length },
-          { value: 'timeline', label: 'Timeline', icon: <CalendarClock />, count: project.timeline.length },
+          { value: 'overview', label: 'Overview' },
+          { value: 'manpower', label: 'Manpower', count: project.requirements.length },
+          { value: 'inventory', label: 'Inventory demand', count: demand.length, badge: shortages.length ? <Badge tone="warning" size="sm">{shortages.length} short</Badge> : undefined },
         ]}
       />
-      </div>
 
       {tab === 'overview' && (
-        <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
-          <div className="space-y-4">
-            {(gate.blockers.length > 0 || gate.warnings.length > 0) && (
-              <Card data-tour="job-blockers" className={gate.blockers.length ? 'border-danger/30' : 'border-warning/30'}>
-                <CardHeader
-                  icon={<AlertTriangle />}
-                  title={gate.blockers.length ? `${gate.blockers.length} items block this stage` : `${gate.warnings.length} warnings`}
-                  description={
-                    gate.blockers.length
-                      ? `The job cannot advance past ${titleCase(project.stage)} until these are cleared.`
-                      : 'Nothing is blocking, but these are worth a look.'
-                  }
-                  className={gate.blockers.length ? 'bg-danger-soft/40' : 'bg-warning-soft/40'}
-                />
-                <CardBody className="space-y-2">
-                  {gate.blockers.map((b, i) => (
-                    <p key={i} className="flex items-start gap-2 text-[12.5px] leading-relaxed text-fg">
-                      <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-danger" />
-                      {b}
-                    </p>
-                  ))}
-                  {gate.warnings.map((w, i) => (
-                    <p key={i} className="flex items-start gap-2 text-[12.5px] leading-relaxed text-fg-muted">
-                      <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-warning" />
-                      {w}
-                    </p>
-                  ))}
-                </CardBody>
-              </Card>
-            )}
-
-            <Card>
-              <CardHeader
-                icon={<CheckCircle2 />}
-                title={selectedMeta?.label}
-                description={selectedMeta?.description}
-                actions={
-                  <Badge tone={selectedStage === project.stage ? 'primary' : stageIndex(selectedStage) < currentIdx ? 'success' : 'neutral'} size="md">
-                    {selectedStage === project.stage ? 'Current stage' : stageIndex(selectedStage) < currentIdx ? 'Completed' : 'Upcoming'}
-                  </Badge>
-                }
-              />
-              <div className="divide-y divide-border">
-                {selectedStageData?.tasks.map((t) => (
-                  <label
-                    key={t.id}
-                    className="flex cursor-pointer items-start gap-3 px-4 py-2.5 transition-colors hover:bg-bg-muted/50"
-                  >
-                    <span className="pt-0.5">
-                      <Checkbox checked={t.done} onChange={() => store.toggleStageTask(project.id, selectedStage, t.id)} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className={`block text-[13px] ${t.done ? 'text-fg-muted line-through' : 'text-fg'}`}>
-                        {t.label}
-                        {t.blocking && !t.done && (
-                          <Badge tone="danger" size="sm" className="ml-2">blocking</Badge>
-                        )}
-                      </span>
-                      {t.hint && <span className="mt-0.5 block text-[11.5px] leading-snug text-fg-subtle">{t.hint}</span>}
-                    </span>
-                    <span className="shrink-0 text-right text-[11px] text-fg-subtle">
-                      {t.owner && <span className="block">{t.owner}</span>}
-                      {t.done && t.completedAt ? <span className="block">{fmtDate(t.completedAt)}</span> : t.dueAt ? <span className="block">due {fmtDate(t.dueAt)}</span> : null}
-                    </span>
-                  </label>
-                ))}
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Card>
+            <CardHeader title="Contract" icon={<CalendarRange />} />
+            <CardBody className="divide-y divide-border py-1">
+              <MetaRow label="Contract number">
+                <span className="font-mono">{project.contractNo || '—'}</span>
+              </MetaRow>
+              <MetaRow label="Period">
+                {fmtDate(project.periodStart)} – {fmtDate(project.periodEnd)}
+              </MetaRow>
+              <MetaRow label="Duration">{months} months</MetaRow>
+              <MetaRow label="Renewal">{project.autoRenew ? `Automatic · ${project.renewalNoticeDays} days notice` : `Manual · ${project.renewalNoticeDays} days notice`}</MetaRow>
+              <MetaRow label="Payment term">Net {project.paymentTermDays} days</MetaRow>
+              <MetaRow label="Project manager">{project.projectManager}</MetaRow>
+              <MetaRow label="Site supervisor">{project.siteSupervisor || '—'}</MetaRow>
+              <div className="pt-3">
+                <div className="mb-1.5 flex items-center justify-between text-[11.5px] text-fg-muted">
+                  <span>Period elapsed</span>
+                  <span className="tnum">{periodProgress(project)}%</span>
+                </div>
+                <Progress value={periodProgress(project)} tone={daysLeft <= 60 ? 'warning' : 'primary'} />
               </div>
-              <div className="flex items-center gap-3 border-t border-border bg-surface-sunken/60 px-4 py-3">
-                <Progress
-                  value={
-                    selectedStageData?.tasks.length
-                      ? (selectedStageData.tasks.filter((t) => t.done).length / selectedStageData.tasks.length) * 100
-                      : 0
-                  }
-                  className="max-w-[220px]"
-                />
-                <span className="tnum text-[12px] text-fg-muted">
-                  {selectedStageData?.tasks.filter((t) => t.done).length} of {selectedStageData?.tasks.length} done
-                </span>
-              </div>
-            </Card>
+            </CardBody>
+          </Card>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Card>
-                <CardHeader icon={<Building2 />} title="Parties" />
-                <CardBody className="space-y-3">
-                  <PartyBlock
-                    role="Client — bill to"
-                    name={client?.tradeName || client?.legalName}
-                    detail={client?.offices.find((o) => o.id === project.clientOfficeId)?.name}
-                    country={client?.offices.find((o) => o.id === project.clientOfficeId)?.countryCode}
-                    to={client ? `/customers/${client.id}` : undefined}
-                    warn={client && client.creditLimit > 0 && client.outstandingAr > client.creditLimit ? 'over credit limit' : undefined}
-                  />
-                  <PartyBlock
-                    role="Shipper"
-                    name={shipper?.tradeName || shipper?.legalName}
-                    detail={shipperOffice ? `${shipperOffice.name} · ${shipperOffice.city}` : undefined}
-                    country={shipperOffice?.countryCode}
-                    to={shipper ? `/customers/${shipper.id}` : undefined}
-                  />
-                  <PartyBlock
-                    role="Consignee"
-                    name={consignee?.tradeName || consignee?.legalName}
-                    detail={consigneeOffice ? `${consigneeOffice.name} · ${consigneeOffice.city}` : undefined}
-                    country={consigneeOffice?.countryCode}
-                    to={consignee ? `/customers/${consignee.id}` : undefined}
-                    warn={consigneeOffice && !consigneeOffice.customsId ? 'no customs / EORI on file' : undefined}
-                  />
-                </CardBody>
-              </Card>
-
-              <Card>
-                <CardHeader icon={<Anchor />} title="Transport & B/L" />
-                <CardBody className="divide-y divide-border">
-                  <MetaRow label="Carrier">{project.carrier ?? '—'}</MetaRow>
-                  <MetaRow label="Vessel / voyage">{project.vessel ? `${project.vessel} ${project.voyage ?? ''}` : '—'}</MetaRow>
-                  <MetaRow label="Booking no.">
-                    <span className="font-mono text-[12px]">{project.bookingNo ?? '—'}</span>
-                  </MetaRow>
-                  <MetaRow label="Master B/L">
-                    <span className="font-mono text-[12px]">{project.masterBlNo ?? '—'}</span>
-                  </MetaRow>
-                  <MetaRow label="House B/L">
-                    <span className="font-mono text-[12px]">{project.houseBlNo ?? '—'}</span>
-                  </MetaRow>
-                  <MetaRow label="B/L type">{titleCase(project.blType)}</MetaRow>
-                  <MetaRow label="B/L status">
-                    <StatusBadge value={project.blStatus} size="sm" />
-                  </MetaRow>
-                  <MetaRow label="PEB">
-                    <span className="font-mono text-[12px]">{project.pebNumber ?? '—'}</span>
-                  </MetaRow>
-                  <MetaRow label="COO">
-                    {project.cooForm ? `${project.cooForm}${project.cooNumber ? ` · ${project.cooNumber}` : ''}` : '—'}
-                  </MetaRow>
-                </CardBody>
-              </Card>
-            </div>
-
-            {project.consignment && (
-              <Card className="border-purple/30">
-                <CardHeader
-                  icon={<Repeat />}
-                  title="Consignment terms"
-                  description={`Agreement ${project.consignment.agreementNo} — title stays with the shipper until the consignee sells.`}
-                  className="bg-purple-soft/40"
-                />
-                <CardBody>
-                  <div className="mb-4">
-                    <div className="mb-1.5 flex items-baseline justify-between">
-                      <span className="text-[12.5px] text-fg-muted">Sell-through</span>
-                      <span className="tnum text-[12.5px] font-semibold text-fg">
-                        {project.consignment.reportedUnitsSold} / {project.consignment.totalUnitsShipped} units
-                      </span>
-                    </div>
-                    <Progress
-                      value={(project.consignment.reportedUnitsSold / Math.max(1, project.consignment.totalUnitsShipped)) * 100}
-                      tone="accent"
-                    />
-                    {project.consignment.minimumGuaranteedUnits ? (
-                      <p className="mt-1.5 text-[11.5px] text-fg-muted">
-                        Minimum guarantee {project.consignment.minimumGuaranteedUnits} units —{' '}
-                        {project.consignment.reportedUnitsSold >= project.consignment.minimumGuaranteedUnits ? (
-                          <span className="text-success">met</span>
-                        ) : (
-                          <span className="text-warning">
-                            {project.consignment.minimumGuaranteedUnits - project.consignment.reportedUnitsSold} short, billable as a shortfall
-                          </span>
-                        )}
-                      </p>
-                    ) : null}
+          <Card>
+            <CardHeader title="Building served" icon={<Building2 />} description="One project, one building." />
+            {building ? (
+              <CardBody className="divide-y divide-border py-1">
+                <MetaRow label="Building">{building.name}</MetaRow>
+                <MetaRow label="Code">
+                  <span className="font-mono">{building.code}</span>
+                </MetaRow>
+                <MetaRow label="Address">
+                  <span className="block max-w-[220px] text-right">{building.address}</span>
+                </MetaRow>
+                <MetaRow label="City">{building.city}, {building.province}</MetaRow>
+                <MetaRow label="Size">{fmtNumber(building.areaSqm)} m² · {building.floors} floors</MetaRow>
+                <MetaRow label="Site contact">{building.picName}</MetaRow>
+                <MetaRow label="Phone">{building.picPhone}</MetaRow>
+                {building.accessNote && (
+                  <div className="pt-2.5">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-fg-subtle">Access notes</p>
+                    <p className="mt-1 text-[12px] leading-relaxed text-fg-muted">{building.accessNote}</p>
                   </div>
-                  <div className="grid gap-x-6 sm:grid-cols-2">
-                    <div className="divide-y divide-border">
-                      <MetaRow label="Settlement cycle">{project.consignment.settlementCycleDays} days</MetaRow>
-                      <MetaRow label="Commission">{project.consignment.commissionPct}%</MetaRow>
-                      <MetaRow label="Unsold return window">{project.consignment.unsoldReturnDays} days</MetaRow>
-                    </div>
-                    <div className="divide-y divide-border">
-                      <MetaRow label="Last sales report">{fmtDate(project.consignment.lastSalesReportAt)}</MetaRow>
-                      <MetaRow label="Settled to date">{fmtCurrency(project.consignment.settledAmount, project.consignment.currency)}</MetaRow>
-                      <MetaRow label="Unsold stock">
-                        {project.consignment.totalUnitsShipped - project.consignment.reportedUnitsSold} units
-                      </MetaRow>
-                    </div>
-                  </div>
-                </CardBody>
-              </Card>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <Card>
-              <CardHeader icon={<CalendarClock />} title="Cut-off calendar" description="Missing one of these rolls the job to the next sailing." />
-              <CardBody className="space-y-2.5">
-                <CutoffRow label="SI cut-off" iso={project.siCutoff} />
-                <CutoffRow label="VGM cut-off" iso={project.vgmCutoff} />
-                <CutoffRow label="Gate-in cut-off" iso={project.gateInCutoff} />
-                <Separator />
-                <CutoffRow label="ETD" iso={project.etd} actual={project.atd} />
-                <CutoffRow label="ETA" iso={project.eta} actual={project.ata} />
+                )}
               </CardBody>
-            </Card>
+            ) : (
+              <CardBody>
+                <p className="text-[12.5px] text-danger">The building this project serves is no longer in the register.</p>
+              </CardBody>
+            )}
+          </Card>
 
-            <Card>
-              <CardHeader icon={<ShieldCheck />} title="Commercial" />
-              <CardBody className="divide-y divide-border">
-                <MetaRow label="Incoterm">{project.incoterm}</MetaRow>
-                <MetaRow label="Freight term">{titleCase(project.freightTerm)}</MetaRow>
-                <MetaRow label="Payment term">{titleCase(project.paymentTerm)}</MetaRow>
-                <MetaRow label="Service scope">{titleCase(project.scope)}</MetaRow>
-                <MetaRow label="Package">
-                  {pkg ? (
-                    <Link to="/packages" className="text-primary hover:underline">
-                      {pkg.code}
-                    </Link>
+          <Card>
+            <CardHeader title="Coverage by shift" icon={<Users />} description="Where the gap actually sits." />
+            <CardBody className="space-y-3.5">
+              {byShift.map((s) => (
+                <div key={s.shift}>
+                  <div className="mb-1 flex items-baseline justify-between gap-2">
+                    <span className="text-[12.5px] font-medium text-fg">
+                      {shiftLabel(s.shift as 'PAGI')} <span className="text-fg-subtle">{shiftHours(s.shift as 'PAGI')}</span>
+                    </span>
+                    <span className="tnum text-[11.5px] text-fg-muted">{s.lines.length} line{s.lines.length === 1 ? '' : 's'}</span>
+                  </div>
+                  {staffed ? (
+                    <FulfilmentBar deployed={s.deployed} required={s.required} width="w-full" />
                   ) : (
-                    'priced manually'
+                    <p className="tnum text-[12px] text-fg-subtle">{s.required} posts contracted</p>
                   )}
-                </MetaRow>
-                <MetaRow label="Cargo value">{fmtCurrency(project.cargoValue, project.cargoCurrency)}</MetaRow>
-                <MetaRow label="Insurance">
-                  {project.insured ? fmtCurrency(project.insuranceValue ?? 0, project.cargoCurrency) : 'not insured'}
-                </MetaRow>
-                <MetaRow label="Commodity">{project.commodity}</MetaRow>
-                <MetaRow label="HS codes">
-                  <span className="font-mono text-[12px]">{project.hsCodes.join(', ') || '—'}</span>
-                </MetaRow>
-              </CardBody>
-            </Card>
-
-            {peb && (
-              <Card className={peb.channel === 'MERAH' ? 'border-danger/30' : peb.channel === 'KUNING' ? 'border-warning/30' : undefined}>
-                <CardHeader icon={<Stamp />} title="Customs" description="CEISA 4.0 filing and its response lane." />
-                <CardBody className="space-y-3">
-                  <div className="divide-y divide-border">
-                    <MetaRow label="PEB">
-                      <span className="font-mono text-[12px]">{peb.regNumber ?? 'not registered'}</span>
-                    </MetaRow>
-                    <MetaRow label="Response lane">
-                      <Badge
-                        tone={peb.channel === 'HIJAU' ? 'success' : peb.channel === 'KUNING' ? 'warning' : peb.channel === 'MERAH' ? 'danger' : 'neutral'}
-                        size="sm"
-                        dot
-                      >
-                        {peb.channel === 'PENDING' ? 'Awaiting response' : `Jalur ${titleCase(peb.channel)}`}
-                      </Badge>
-                    </MetaRow>
-                    <MetaRow label="Filed by">{peb.filedByName}</MetaRow>
+                </div>
+              ))}
+              {project.notes && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.07em] text-fg-subtle">Notes</p>
+                    <p className="mt-1.5 text-[12.5px] leading-relaxed text-fg-muted">{project.notes}</p>
                   </div>
-                  {pebReadiness && pebReadiness.mandatoryCount > 0 && (
-                    <div>
-                      <div className="mb-1.5 flex items-baseline justify-between">
-                        <span className="text-[12px] text-fg-muted">Supporting uploads</span>
-                        <span className="tnum text-[12px] font-semibold text-fg">
-                          {pebReadiness.uploadedCount}/{pebReadiness.mandatoryCount}
-                        </span>
-                      </div>
-                      <Progress value={pebReadiness.pct} tone={pebReadiness.canSubmit ? 'success' : 'warning'} />
-                      {!pebReadiness.canSubmit && (
-                        <p className="mt-1.5 text-[11.5px] text-warning">Missing: {pebReadiness.missing.join(', ')}</p>
-                      )}
-                    </div>
-                  )}
-                </CardBody>
-              </Card>
-            )}
-
-            {sourceQuote && (
-              <Card>
-                <CardHeader icon={<FileSignature />} title="Won from" description="The quotation this job was converted from." />
-                <CardBody className="divide-y divide-border">
-                  <MetaRow label="Quotation">
-                    <Link to="/quotations" className="font-mono text-[12px] text-primary hover:underline">
-                      {sourceQuote.number} v{sourceQuote.version}
-                    </Link>
-                  </MetaRow>
-                  <MetaRow label="Quoted value">
-                    {sourceQuote.currency} {fmtNumber(quoteTotals(sourceQuote).revenue, 2)}
-                  </MetaRow>
-                  <MetaRow label="Quoted margin">{fmtPercent(quoteTotals(sourceQuote).marginPct)}</MetaRow>
-                  <MetaRow label="Actual margin">
-                    <span className={fin.marginPct < quoteTotals(sourceQuote).marginPct - 3 ? 'text-danger' : 'text-success'}>
-                      {fmtPercent(fin.marginPct)}
-                    </span>
-                  </MetaRow>
-                </CardBody>
-              </Card>
-            )}
-
-            {project.tags.length > 0 && (
-              <Card>
-                <CardHeader title="Tags" />
-                <CardBody className="flex flex-wrap gap-1.5">
-                  {project.tags.map((t) => (
-                    <Badge key={t} tone="outline" size="md">{t}</Badge>
-                  ))}
-                </CardBody>
-              </Card>
-            )}
-          </div>
+                </>
+              )}
+            </CardBody>
+          </Card>
         </div>
       )}
 
-      {tab === 'containers' && <ContainersTable project={project} scoped />}
-      {tab === 'documents' && <DocumentsTable project={project} scoped />}
-      {tab === 'charges' && <ChargesTable project={project} scoped />}
-      {tab === 'services' && <ServicesPanel project={project} />}
-      {tab === 'stuffing' && <StuffingPage project={project} scoped />}
-      {tab === 'jobsheet' && <JobSheetPanel project={project} />}
-      {tab === 'tracking' && <MilestonesTable project={project} scoped />}
-      {tab === 'customs' && <CustomsTable project={project} scoped />}
-
-      {tab === 'timeline' && (
+      {tab === 'manpower' && (
         <Card>
-          <CardHeader icon={<CalendarClock />} title="Job timeline" description="Every operational and financial event recorded against this job." />
-          <div className="p-5">
-            <ol className="relative space-y-0 border-l border-border pl-5">
-              {project.timeline.map((e) => (
-                <li key={e.id} className="relative pb-5 last:pb-0">
-                  <span
-                    className={`absolute -left-[25px] top-1 grid size-3 place-items-center rounded-full ring-4 ring-surface ${
-                      e.type === 'EXCEPTION' ? 'bg-danger' : e.type === 'FINANCE' ? 'bg-success' : e.type === 'DOCUMENT' ? 'bg-info' : e.type === 'CUSTOMS' ? 'bg-purple' : 'bg-primary'
-                    }`}
-                  />
-                  <div className="flex flex-wrap items-baseline gap-x-2.5">
-                    <p className="text-[13px] font-medium text-fg">{e.title}</p>
-                    <Badge tone="outline" size="sm">{titleCase(e.type)}</Badge>
-                    <span className="tnum text-[11.5px] text-fg-subtle">{fmtDateTime(e.at)}</span>
-                  </div>
-                  {e.detail && <p className="mt-1 text-[12.5px] leading-relaxed text-fg-muted">{e.detail}</p>}
-                  <p className="mt-1 text-[11.5px] text-fg-subtle">by {e.actor}</p>
-                </li>
-              ))}
-            </ol>
+          <CardHeader
+            title="Manpower requirement"
+            icon={<Users />}
+            description="What the contract calls for, and how many of those posts are filled today."
+            actions={
+              <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
+                <Pencil /> Edit lines
+              </Button>
+            }
+          />
+          <div className="scrollbar-thin overflow-x-auto">
+            <table className="w-full border-separate border-spacing-0 text-[13px]">
+              <thead>
+                <tr>
+                  {['Position', 'Service', 'Shift', 'Days', 'Needed', 'Deployed', 'Fulfilment', 'Bill / person', 'Line value'].map((h) => (
+                    <th
+                      key={h}
+                      className="whitespace-nowrap border-b border-border bg-surface-sunken px-3 py-2 text-left text-[11.5px] font-semibold uppercase tracking-[0.055em] text-fg-muted"
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {project.requirements.map((line) => {
+                  const position = positions.find((p) => p.id === line.positionId)
+                  const gap = Math.max(0, line.headcount - line.deployed)
+                  return (
+                    <tr key={line.id} className={gap > 0 ? 'bg-warning-soft/25' : undefined}>
+                      <td className="border-b border-border px-3 py-2.5">
+                        <p className="font-medium text-fg">{position?.name ?? 'Position removed'}</p>
+                        {position && <p className="text-[11px] text-fg-subtle">{position.code} · {position.grade.toLowerCase()}</p>}
+                        {line.note && <p className="mt-1 max-w-[320px] text-[11.5px] leading-snug text-warning-soft-fg">{line.note}</p>}
+                      </td>
+                      <td className="border-b border-border px-3 py-2.5">
+                        {position && <Badge tone="outline" size="sm">{serviceLabel(position.serviceType)}</Badge>}
+                      </td>
+                      <td className="whitespace-nowrap border-b border-border px-3 py-2.5">
+                        <StatusBadge value={line.shift} size="sm" />
+                        <span className="ml-1.5 text-[11px] text-fg-subtle">{shiftHours(line.shift)}</span>
+                      </td>
+                      <td className="tnum border-b border-border px-3 py-2.5 text-fg-muted">{line.workDaysPerWeek}/wk</td>
+                      <td className="tnum border-b border-border px-3 py-2.5 font-medium text-fg">{line.headcount}</td>
+                      <td className="tnum border-b border-border px-3 py-2.5">
+                        <span className={gap > 0 ? 'font-medium text-warning-soft-fg' : 'text-fg'}>{line.deployed}</span>
+                      </td>
+                      <td className="border-b border-border px-3 py-2.5">
+                        <FulfilmentBar deployed={line.deployed} required={line.headcount} width="w-[112px]" size="sm" />
+                      </td>
+                      <td className="tnum whitespace-nowrap border-b border-border px-3 py-2.5 text-right text-fg-muted">
+                        {fmtCurrency(line.billRate, 'IDR', { compact: true })}
+                      </td>
+                      <td className="tnum whitespace-nowrap border-b border-border px-3 py-2.5 text-right font-medium text-fg">
+                        {fmtCurrency(line.billRate * line.headcount, 'IDR', { compact: true })}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={4} className="px-3 py-2.5 text-[12px] font-semibold text-fg-muted">
+                    {project.requirements.length} lines
+                  </td>
+                  <td className="tnum px-3 py-2.5 font-semibold text-fg">{f.required}</td>
+                  <td className="tnum px-3 py-2.5 font-semibold text-fg">{f.deployed}</td>
+                  <td className="px-3 py-2.5">
+                    <FulfilmentBar deployed={f.deployed} required={f.required} width="w-[112px]" size="sm" />
+                  </td>
+                  <td />
+                  <td className="tnum whitespace-nowrap px-3 py-2.5 text-right font-semibold text-fg">
+                    {fmtCurrency(margin.value, 'IDR', { compact: true })}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          {project.requirements.length === 0 && (
+            <EmptyState icon={<Users />} title="No manpower lines" description="Add the positions this contract has to keep on site." />
+          )}
+        </Card>
+      )}
+
+      {tab === 'inventory' && (
+        <Card>
+          <CardHeader
+            title="Inventory demand"
+            icon={<Boxes />}
+            description={`Standard issue for ${requiredHeadcount(project)} contracted personnel, checked against what is available across every warehouse.`}
+            actions={
+              shortages.length > 0 ? (
+                <Badge tone="warning" size="md">{shortages.length} item{shortages.length === 1 ? '' : 's'} short</Badge>
+              ) : (
+                <Badge tone="success" size="md">Fully covered</Badge>
+              )
+            }
+          />
+          <div className="scrollbar-thin overflow-x-auto">
+            <table className="w-full border-separate border-spacing-0 text-[13px]">
+              <thead>
+                <tr>
+                  {['SKU', 'Item', 'Category', 'Required', 'Available', 'Cover', 'Value at standard cost'].map((h) => (
+                    <th
+                      key={h}
+                      className="whitespace-nowrap border-b border-border bg-surface-sunken px-3 py-2 text-left text-[11.5px] font-semibold uppercase tracking-[0.055em] text-fg-muted"
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {demand.map((d) => {
+                  const short = d.available < d.qty
+                  return (
+                    <tr key={d.sku} className={short ? 'bg-warning-soft/25' : undefined}>
+                      <td className="border-b border-border px-3 py-2.5 font-mono text-[12px] text-fg-muted">{d.sku}</td>
+                      <td className="border-b border-border px-3 py-2.5">
+                        <p className="font-medium text-fg">{d.item?.name ?? 'Not in the item master'}</p>
+                        {d.item?.brand && <p className="text-[11px] text-fg-subtle">{d.item.brand}</p>}
+                      </td>
+                      <td className="border-b border-border px-3 py-2.5 text-[12px] text-fg-muted">
+                        {d.item ? d.item.category.replace(/_/g, ' ').toLowerCase() : '—'}
+                      </td>
+                      <td className="tnum border-b border-border px-3 py-2.5 font-medium text-fg">
+                        {fmtNumber(d.qty)} {d.item?.uom ?? ''}
+                      </td>
+                      <td className="tnum border-b border-border px-3 py-2.5 text-fg-muted">{fmtNumber(d.available)}</td>
+                      <td className="border-b border-border px-3 py-2.5">
+                        {short ? (
+                          <Tooltip content={`Short by ${fmtNumber(d.qty - d.available)} ${d.item?.uom ?? ''}`}>
+                            <span>
+                              <Badge tone="warning" size="sm">Short {fmtNumber(d.qty - d.available)}</Badge>
+                            </span>
+                          </Tooltip>
+                        ) : (
+                          <Badge tone="success" size="sm">Covered</Badge>
+                        )}
+                      </td>
+                      <td className="tnum whitespace-nowrap border-b border-border px-3 py-2.5 text-right text-fg-muted">
+                        {d.item ? fmtCurrency(d.item.standardCost * d.qty, 'IDR', { compact: true }) : '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          {demand.length === 0 && (
+            <EmptyState
+              icon={<Boxes />}
+              title="No standard issue defined"
+              description="The positions on this project do not list any standard issue items yet. Set them on the position master."
+              action={
+                <Button variant="secondary" size="sm" onClick={() => nav('/positions')}>
+                  Open positions
+                </Button>
+              }
+            />
+          )}
+          <div className="border-t border-border bg-surface-sunken/60 px-4 py-3 text-[12px] text-fg-muted">
+            Availability counts stock on hand less what is already reserved, across{' '}
+            {new Set(stock.map((s) => s.warehouseId)).size} warehouses. Reserving against this project is a warehouse
+            action, not a project one — see{' '}
+            <Link to="/inventory/stock" className="font-medium text-primary hover:underline">
+              warehouse stock
+            </Link>
+            . Total of {demand.reduce((a, d) => a + (d.item ? d.item.standardCost * d.qty : 0), 0).toLocaleString('en-US')} IDR at standard cost.
           </div>
         </Card>
       )}
 
-      <ProjectForm open={edit} onOpenChange={setEdit} initial={project} />
+      <ProjectForm open={editOpen} onOpenChange={setEditOpen} initial={project} />
     </>
-  )
-}
-
-function MiniStat({
-  label,
-  value,
-  sub,
-  icon,
-  tone,
-}: {
-  label: string
-  value: string
-  sub?: string
-  icon: React.ReactNode
-  tone?: 'success' | 'warning' | 'danger'
-}) {
-  const toneCls = tone === 'success' ? 'text-success' : tone === 'warning' ? 'text-warning' : tone === 'danger' ? 'text-danger' : 'text-fg'
-  return (
-    <div className="flex items-start gap-3 rounded-xl border border-border bg-surface px-3.5 py-3">
-      <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-md bg-bg-muted text-fg-muted [&_svg]:size-4">{icon}</span>
-      <div className="min-w-0">
-        <p className="truncate text-[11px] font-medium uppercase tracking-[0.06em] text-fg-subtle">{label}</p>
-        <p className={`tnum mt-1 truncate text-[17px] font-semibold leading-none tracking-[-0.02em] ${toneCls}`}>{value}</p>
-        {sub && <p className="mt-1 truncate text-[11.5px] text-fg-muted">{sub}</p>}
-      </div>
-    </div>
-  )
-}
-
-function PartyBlock({
-  role,
-  name,
-  detail,
-  country,
-  to,
-  warn,
-}: {
-  role: string
-  name?: string
-  detail?: string
-  country?: string
-  to?: string
-  warn?: string
-}) {
-  const body = (
-    <div className="flex items-start gap-2.5 rounded-lg border border-border bg-surface-sunken px-3 py-2.5 transition-colors hover:border-border-strong">
-      {country && <span className="mt-0.5 text-[16px]">{countryFlag(country)}</span>}
-      <div className="min-w-0 flex-1">
-        <p className="text-[10.5px] font-semibold uppercase tracking-[0.07em] text-fg-subtle">{role}</p>
-        <p className="mt-0.5 truncate text-[13px] font-medium text-fg">{name ?? '—'}</p>
-        {detail && <p className="truncate text-[11.5px] text-fg-muted">{detail}</p>}
-        {warn && (
-          <p className="mt-1 flex items-center gap-1 text-[11px] font-medium text-warning">
-            <AlertTriangle className="size-3" /> {warn}
-          </p>
-        )}
-      </div>
-    </div>
-  )
-  return to ? <Link to={to}>{body}</Link> : body
-}
-
-function CutoffRow({ label, iso, actual }: { label: string; iso?: string; actual?: string }) {
-  const d = relativeDays(iso)
-  const done = !!actual
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-[12px] text-fg-muted">{label}</span>
-      <span className="flex items-center gap-2">
-        <span className="tnum text-[12.5px] font-medium text-fg">{fmtDate(iso)}</span>
-        {done ? (
-          <Badge tone="success" size="sm">actual {fmtDate(actual)}</Badge>
-        ) : d === null ? (
-          <Badge tone="neutral" size="sm">not set</Badge>
-        ) : d < 0 ? (
-          <Badge tone="danger" size="sm">{pluralDays(d)} ago</Badge>
-        ) : d === 0 ? (
-          <Badge tone="warning" size="sm">today</Badge>
-        ) : d <= 2 ? (
-          <Badge tone="warning" size="sm">in {pluralDays(d)}</Badge>
-        ) : (
-          <Badge tone="neutral" size="sm">in {pluralDays(d)}</Badge>
-        )}
-      </span>
-    </div>
   )
 }

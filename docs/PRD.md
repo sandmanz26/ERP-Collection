@@ -1,564 +1,163 @@
-# Product Requirements Document
-## Meridian Freight — Export Operations Suite
+# PRD — PT Tata Gemilang Outsourcing Management System
 
-| | |
+**Phase 1 · front-end build with seeded data**
+
+---
+
+## 1. The business
+
+PT Tata Gemilang supplies outsourced personnel — principally security (satuan pengamanan) and
+cleaning service, plus supporting roles — to large companies across Indonesia. It signs a contract per
+building for a fixed period, agrees how many people of which position have to be on site in which
+shift, recruits and deploys them, equips them from its own warehouses, and invoices monthly.
+
+Its revenue is headcount × rate. Its risk is an empty post: a service-level breach, a deduction, and
+eventually a contract that is not renewed. Its second-largest cost after salaries is the equipment
+those people carry.
+
+## 2. The problem this phase solves
+
+Today the operating book lives in spreadsheets. Three questions cannot be answered quickly, and all
+three cost money:
+
+1. **How many contracted posts are actually filled right now, and where are the gaps?**
+   A coordinator knows their own sites. Nobody has the company-wide picture without rebuilding it by
+   hand, so recruitment is prioritised by whoever shouts loudest rather than by where the shortfall is.
+2. **Which contracts are about to end, and which of them need an extension letter?**
+   A contract without auto-renewal that reaches its notice period unnoticed is simply lost.
+3. **Can the warehouse equip the people we have promised?**
+   Uniform and equipment demand is a function of headcount, but it is planned separately from the
+   contracts that create it, so deployments wait on stock that was never ordered.
+
+## 3. Scope of this phase
+
+| In scope | Out of scope (stated so it is a decision, not an omission) |
 | --- | --- |
-| **Version** | 2.0 |
-| **Date** | 30 August 2026 |
-| **Status** | Approved for build — Phase 2 |
-| **Product** | ERP / TMS for an Indonesian sea- and air-freight forwarder (NVOCC + PPJK) |
-| **Scope of this document** | Front-end product definition. Persistence, auth and integrations are specified as contracts only. |
-
----
-
-## 1. Background
-
-A freight forwarder does not own ships. It sells *certainty* — that a factory's cargo will be
-priced correctly, loaded before the cut-off, documented so customs releases it, delivered, and
-invoiced at a margin that survives contact with reality. Every one of those five promises is a
-place where money leaks, and none of them is a CRUD screen.
-
-The industry reference points are CargoWise (enterprise, single global database, deep customs) and
-Magaya (mid-market, modular: shipping, warehousing, rate management, tracking, customs compliance,
-analytics, CRM). Both organise the product around one spine that the 2026 buyer's guides describe
-identically:
-
-> **Enquiry → RFQ → Rate → Quotation → Booking → Shipment → Documentation → Invoice → Payment →
-> Profitability**, without entering the same information twice.
-
-Phase 1 of this product built the **middle** of that spine — Booking through Profitability. It is
-strong where it exists: an eight-stage job workflow with blocking gates, ISO-6346 and payload
-validation on containers, a document register with destination-country compliance, buy/sell margin
-per charge line, and a double-entry ledger.
-
-It is missing both **ends**. There is no way to win the job (no CRM, no quotation, no rate search,
-no win/loss analysis), no way to manage the people who actually perform it (vendors, carriers,
-overseas agents are free-text strings), no structured event history to prove on-time performance,
-no warehouse, no customs filing record, and no analytics beyond finance.
-
-Phase 2 closes those gaps.
-
----
-
-## 2. Goals and non-goals
-
-### 2.1 Goals
-
-| # | Goal | Success measure |
-| --- | --- | --- |
-| G1 | Close the quote-to-cash loop so a won quotation becomes a job with zero re-keying | A quotation converts to a job carrying parties, route, terms and all charge lines in one action |
-| G2 | Make win/loss visible, by lane, salesperson and reason | Win rate and loss reasons are reportable without exporting to a spreadsheet |
-| G3 | Turn vendors from strings into managed counterparties with measurable performance | Every charge line references a partner record; partner scorecards are derived from job outcomes |
-| G4 | Prove service quality with structured milestones rather than prose | On-time performance is computed from planned vs. actual milestone timestamps |
-| G5 | Support the warehouse leg — CFS consolidation and consignment stock | Storage charges are derived from free time and dwell, not typed in |
-| G6 | Record customs filings to the standard Indonesian regulation demands | PEB filings track CEISA 4.0 supporting-document upload, response channel and PPJK responsibility |
-| G7 | Give the operations manager the KPI set the trade actually uses | On-time %, quote win rate, cost per shipment, DSO, dwell, margin per shipment on one page |
-| G8 | Make the system's own behaviour auditable and configurable | FX rates, tax rates, numbering, approval thresholds are settings; every mutation is in an audit trail |
-
-### 2.2 Non-goals for this phase
-
-- Real backend, authentication or multi-tenancy. State is browser-local by design.
-- Live carrier API / EDI connections. Milestone sources are modelled (`CARRIER_EDI`, `PORTAL`,
-  `AGENT`, `MANUAL`) and the ingestion contract is specified, but nothing is wired.
-- Actual CEISA 4.0 / INSW / Coretax submission. Filings are recorded, not transmitted.
-- Payroll, fixed assets, procurement-to-pay beyond vendor bills.
-- Air waybill stock control, dangerous-goods declaration generation, or a customer-facing portal.
-
----
-
-## 3. Users
-
-| Persona | What they do all day | What they need from this product |
-| --- | --- | --- |
-| **Sales / Commercial (Rina)** | Answers RFQs, chases lanes, negotiates against an incumbent | Quote fast from a rate card, version the revisions, see what was lost and why |
-| **Operations / Documentation (Ahmad)** | Books space, files SI and PEB, watches cut-offs | One screen per job with what is blocking it and what closes today |
-| **Load planner (Yoga)** | Decides what goes in which box | Live volume/payload validation and a load-plan suggestion |
-| **Finance (Dewi)** | Invoices, chases AR, closes the month | Job costing that ties to the ledger; ageing that ties to the invoice |
-| **Warehouse supervisor (Bagus)** | Receives, stores, releases cargo at the CFS | Warehouse receipts, stock on hand, dwell and storage charges |
-| **Managing director (Siti)** | Decides where to invest and who to fire | Win rate, on-time %, margin by lane, exposure by customer |
-
----
-
-## 4. Product principles
-
-1. **Nothing is typed twice.** A quotation becomes a job; a rate card becomes a charge sheet; a
-   milestone becomes an on-time statistic; a charge becomes a ledger line.
-2. **Every number is derived.** No hand-typed dashboard figures. If a KPI cannot be computed from
-   records, it does not appear.
-3. **Gates, not warnings.** Where the trade has a hard rule — no VGM, no loading — the system
-   blocks. Where it has a soft rule, it warns and lets the operator proceed.
-4. **The exception queue is the product.** A user should be able to open one screen and know what
-   costs money today.
-5. **Destructive actions state their blast radius** before they happen.
-6. **Every list imports and exports**, and the export round-trips back through the importer.
-
----
-
-## 5. Phase 1 (delivered) — summary
-
-| Module | Delivered |
-| --- | --- |
-| Customers & Country Offices | Multi-office customers, per-office port / customs ID / VAT / roles / contacts |
-| Service Packages | Rate cards per lane, buy/sell per line, validity, free time, inclusions/exclusions |
-| Projects | 8-stage stepper with blocking gates, cut-off calendar, B/L and Indonesian customs identity |
-| Containers | ISO 6346 check digit, live CBM/payload validation, VGM, load-plan suggestion |
-| Documents | Register with lifecycle, completeness meter, destination-country rules |
-| Charges | Buy/sell margin per line, PPN 11%, PPh 23, approval lifecycle |
-| Finance | Chart of accounts, double-entry ledger, AR/AP ageing, trial balance, P&L, balance sheet, job profitability |
-| Platform | Dark/light theming, custom listboxes, one DataTable with sort / sticky actions / bulk delete / import-export, command palette, exception engine |
-
----
-
-## 6. Phase 2 requirements
-
-### 6.1 Sales pipeline & quotations `[P0]`
-
-**Problem.** The job register starts at `INQUIRY`, which means an opportunity only exists once
-someone has already decided to open a file. Everything before that — the RFQ, the three revisions,
-the loss to a competitor on price — is invisible. Industry practice is that an RFQ carries 20–150
-lanes and is revised three to five times before it closes, so revisions are the unit of work, not
-an edge case.
-
-**Requirements**
-
-| ID | Requirement |
-| --- | --- |
-| Q1 | A **Quotation** is a first-class record with its own number series, owner, customer, contact, lane, mode, equipment, commodity and validity window |
-| Q2 | Quotation lines mirror charge lines: charge code, basis, quantity, buy rate, sell rate, currency, VAT flag, optional flag. Margin is shown per line and in total |
-| Q3 | A quotation can be **built from a service package** in one action, copying its mandatory lines |
-| Q4 | **Revisions** — a quotation can be revised, producing v2 linked to v1. History is preserved; the revision is the live document |
-| Q5 | Status lifecycle: `DRAFT → SENT → UNDER_NEGOTIATION → ACCEPTED / REJECTED / EXPIRED / WITHDRAWN`. Expiry is derived from `validTo`, not set by hand |
-| Q6 | A rejection **must** record a loss reason (price / transit time / space / service scope / credit terms / incumbent / no decision / other) and may record the competitor and the price lost to |
-| Q7 | **Accept → convert to job**: creates a Project pre-filled with parties, route, Incoterm, terms, currency and every quotation line as a charge line, and links the two records permanently |
-| Q8 | Weighted pipeline value = Σ(quote value × probability) for open quotations |
-| Q9 | Win rate reportable by lane, salesperson, customer and month; loss reasons ranked |
-| Q10 | A credit check runs at quotation stage, not only at job stage |
-
-**Out of scope this phase:** multi-lane tender import, automated carrier rate requests.
-
----
-
-### 6.2 Partners & vendors `[P0]`
-
-**Problem.** `vendor` is a free-text string on a charge line. That makes AP unmatched, performance
-unmeasurable and agent nomination impossible — yet a forwarder's cost base *is* its vendors, and
-the overseas agent is the party that decides whether the destination leg succeeds.
-
-**Requirements**
-
-| ID | Requirement |
-| --- | --- |
-| V1 | A **Partner** record with a code, legal name, one or more types (carrier, overseas agent, trucking, depot, customs broker, warehouse, surveyor, insurer, fumigation), country, city, contacts |
-| V2 | Commercial attributes: currency, payment term days, contract number and expiry, SCAC for carriers, tax ID |
-| V3 | Service coverage: which services and which lanes the partner serves — used to filter the picker on a charge line |
-| V4 | A **scorecard**: on-time %, document accuracy %, responsiveness, open disputes, and jobs handled. Scores are stored as measured values, and the UI shows a derived overall rating |
-| V5 | Charge lines reference a partner by id. Legacy free-text vendors are matched by name on migration and left as text where no match exists |
-| V6 | AP exposure per partner is derived from bills and unbilled approved cost |
-| V7 | Contract and insurance expiry raise exceptions before they lapse |
-| V8 | Status: `ACTIVE / PROSPECT / SUSPENDED`. A suspended partner cannot be selected on a new charge |
-
----
-
-### 6.3 Milestone tracking `[P0]`
-
-**Problem.** The job timeline is prose. On-time performance — the single most requested KPI from a
-shipper — cannot be computed from prose. The trade already has a standard for this: UN/EDIFACT
-**IFTSTA** reports consignment status at defined milestones (booked, collected, gated in, loaded,
-departed, arrived, discharged, delivered), each carrying a status code, a location and an event
-timestamp.
-
-**Requirements**
-
-| ID | Requirement |
-| --- | --- |
-| M1 | A fixed **milestone set** modelled on IFTSTA event codes, ordered along the journey, each with a planned and an actual timestamp, a location (UN/LOCODE where known) and a source |
-| M2 | Sources are typed: `MANUAL`, `CARRIER_EDI`, `PORTAL`, `AGENT`. The UI shows provenance because a manually keyed "delivered" is not evidence |
-| M3 | Milestones may be recorded at job level or **per container**, because units on the same booking can gate in on different days |
-| M4 | Variance = actual − planned, in days. On-time = variance ≤ 0 |
-| M5 | A job's on-time performance is the share of passed milestones that were on time; the company figure is the average across jobs |
-| M6 | Planned milestones are **seeded from the job's schedule** (cut-offs, ETD, transit days, ETA) rather than typed |
-| M7 | A global tracking board shows every in-flight job against its next expected milestone, sorted by risk |
-| M8 | The ingestion contract for `CARRIER_EDI` is specified: `{ shipmentRef, eventCode, eventDateTime, locationCode, vessel?, voyage?, equipmentNo? }`, mapped to the internal milestone set |
-
----
-
-### 6.4 Warehouse & CFS `[P1]`
-
-**Problem.** LCL consolidation, consignment stock and any door-to-door service all involve holding
-cargo. Free time and dwell decide whether storage is a service or a loss, and consignment stock at
-a destination showroom is inventory the shipper still owns.
-
-**Requirements**
-
-| ID | Requirement |
-| --- | --- |
-| W1 | A **Warehouse Receipt** records cargo received: warehouse, location, customer, optional job link, packages, CBM, weight, description, HS code, marks, PO number |
-| W2 | Status: `IN_STOCK / PARTIALLY_RELEASED / RELEASED / ON_HOLD`; a partial release reduces the quantity on hand |
-| W3 | **Dwell days** are derived from received to released (or today). Chargeable days = dwell − free days |
-| W4 | Storage charge = chargeable days × CBM × rate. It is computed, and can be pushed to the job's charge sheet as a `STOR` line |
-| W5 | Stock on hand by warehouse, by customer and by job |
-| W6 | Consignment jobs surface their destination stock here, tied to the sell-through figures on the job |
-| W7 | Ageing buckets on stock, because cargo sitting past 90 days is usually a dispute forming |
-
----
-
-### 6.5 Customs & compliance `[P1]`
-
-**Problem.** Indonesian export customs has moved. As of **KEP-163/BC/2026, effective 3 August 2026**,
-supporting documents for a PEB **must** be uploaded through **CEISA 4.0**; the exporter remains
-responsible for the accuracy of the data even when a PPJK files on their behalf. The PEB is also
-the supporting document for output VAT in Coretax / e-Faktur. A filing is therefore a record with
-its own lifecycle, not a number typed onto a job.
-
-**Requirements**
-
-| ID | Requirement |
-| --- | --- |
-| C1 | A **Customs Filing** record per job: type (`PEB`, `NPE`, `COO/SKA`, `PIB`, `PPFTZ`), registration number and date, CEISA reference, submitted/responded timestamps |
-| C2 | **Response channel** is recorded: `HIJAU` (green — released), `KUNING` (yellow — document check), `MERAH` (red — physical inspection), or pending. Yellow and red raise an exception with the expected delay |
-| C3 | A **supporting-document checklist** per filing reflecting the CEISA 4.0 upload mandate; a filing cannot be marked submitted while a mandatory document is unuploaded |
-| C4 | The filer is recorded — in-house PPJK or a broker partner — alongside the exporter of record, because responsibility for accuracy is split |
-| C5 | Declared FOB value and currency are captured and reconciled against the commercial invoice on the job; a mismatch raises an exception |
-| C6 | **LARTAS screening**: HS codes on the job are checked against a restricted-goods list; a hit requires an export permit document before the documentation gate opens |
-| C7 | Filings are exportable for the monthly Coretax / e-Faktur reconciliation |
-
----
-
-### 6.6 Operations analytics `[P1]`
-
-**Problem.** The finance reports answer "did we make money". They do not answer "are we good", which
-is what renews a contract. The trade's standard KPI set is well established.
-
-**Requirements**
-
-| ID | Requirement |
-| --- | --- |
-| A1 | **On-time performance** — share of milestones met, and share of jobs delivered by ETA |
-| A2 | **Quote win rate** — accepted ÷ decided, with loss reasons ranked |
-| A3 | **Cost per shipment** and **revenue per shipment**, by mode and by lane |
-| A4 | **Gross margin per shipment**, distribution not just average — the average hides the loss-makers |
-| A5 | **DSO** (days sales outstanding) from invoices, with the ageing profile |
-| A6 | **Container dwell** and **utilisation** — average fill and the count of units below 65% |
-| A7 | **Customer profitability** ranked, with revenue concentration (share held by the top customer) |
-| A8 | **Documentation accuracy** — share of documents rejected or re-issued |
-| A9 | Every KPI carries a target and shows variance against it; targets are configurable |
-
----
-
-### 6.7 Settings & audit `[P2]`
-
-| ID | Requirement |
-| --- | --- |
-| S1 | **FX rate table** — editable per currency, with the rate used for ledger translation |
-| S2 | **Tax configuration** — PPN and PPh 23 rates, effective dates |
-| S3 | **Numbering series** per document type with prefix, year segment and padding |
-| S4 | **Approval thresholds** — the value above which a charge or a bill needs a second approver |
-| S5 | **KPI targets** used by the analytics module |
-| S6 | **Audit trail** — every create, update, delete and import, with actor, entity, timestamp and detail; filterable and exportable |
-
----
-
-## 6A. Phase 3 requirements
-
-Phase 2 made the commercial and compliance sides of a job visible. Phase 3 closes three gaps that
-a real desk hits every week: nobody can get into the system, nothing sells the work that sits
-*around* the freight, and there is no record of what happens when a shipment goes wrong.
-
-### 6A.1 Access & accounts `[P0]`
-
-The suite has no backend, so authentication here is an interface exercise: it exists to prove the
-screens and the states, not to protect data. Passwords in the seeded user list are clear text and
-labelled as such in the source; a real deployment authenticates server-side and never lets a
-credential reach the browser.
-
-**Requirements**
-
-- Sign in, register and a two-step password reset (request a link, then set a new password).
-- Every route behind the shell requires a session; the attempted path is remembered on redirect.
-- Registration is restricted to company domains. Everyone else joins by invitation.
-- Password policy enforced live as the user types: 10 characters, upper, lower, digit, symbol, and
-  not a common password.
-- Reset links are single-use and expire after 30 minutes.
-- The audit trail records the signed-in user, not a placeholder.
-
-**Negative cases the screens must handle, each with a remedy rather than a dead end**
-
-| Case | Behaviour |
-| --- | --- |
-| Unknown email | Refused, with a route to registration |
-| Wrong password | Refused, with the remaining attempts counted down |
-| Five failed attempts | Account locked for 15 minutes; an administrator can release it |
-| Lock aged out | Clears itself on the next sign-in attempt |
-| Unverified email | Refused, with a verification action offered |
-| Invitation not accepted | Refused, with the same route |
-| Suspended account | Refused; only an administrator can restore it |
-| Reset for an unknown address | The same answer as a known one — the form must not confirm who is registered |
-| Expired reset link | Refused, with a route to request a new one |
-| Reused reset link | Refused |
-| Duplicate registration | Refused, with a route to sign in |
-| Non-company domain | Refused, with the invitation route explained |
-| Weak password | Refused, naming exactly which rules are unmet |
-
-### 6A.2 Additional services `[P0]`
-
-Freight is the smallest line on a job that needs treating, crating, surveying or insuring. The
-catalogue exists so the desk sells the right scope without having to remember the regulation.
-
-**Requirements**
-
-- A catalogue entry carries what we do, what the customer gets, the buy and sell rate on a named
-  basis, the lead time, the charge code it lands on, and the certificate it produces.
-- Each entry declares the conditions that make it **mandatory** and the conditions that make it
-  worth **suggesting**. Conditions are read off the job — commodity, HS chapter, packaging unit,
-  container type, declared value and destination — never typed in by hand.
-- A job's Services tab shows the triggers that fired, the services already bought with their status,
-  and everything still outstanding, mandatory first.
-- A completed service can be pushed onto the charge sheet in one action, so nothing is done for free.
-- A **mandatory service that is missing, declined or failed blocks the stage gate** from the cargo
-  plan onwards and raises a critical exception. The refusal stays on the record — that is the
-  evidence when a container is turned back at the border.
-- Deleting a catalogue entry that is attached to a job is refused; retiring it is offered instead.
-
-**Worked example.** Teak furniture crated on timber for Rotterdam fires *wooden packaging*, which
-makes ISPM-15 methyl bromide fumigation mandatory and puts a fumigation certificate on the document
-register. The same cargo to Sydney additionally fires *to Australia*, which pulls in seasonal BMSB
-treatment. If the shipper declines the treatment, the job cannot advance and the exception queue
-says so by name.
-
-### 6A.3 Incidents & claims `[P0]`
-
-Shipments go wrong in a small number of predictable ways. Each one should produce a claim and a
-preventive action, not an email thread.
-
-**Requirements**
-
-- Sixteen incident types across four groups — carrier, customs, cargo and commercial — each with a
-  default severity, a default liable party and a playbook shown when the type is chosen.
-- An incident records what it cost, what we expect to recover, what has actually been recovered,
-  the liable party and the managed partner behind it, the claim reference, and a dated action log.
-- An incident cannot be closed without a root cause. Closing without one is refused at the form.
-- High and critical open incidents raise exceptions on the control tower.
-- Recovery rate, net loss and cost by liable party are reported so the pattern is visible, not just
-  the individual case.
-
-### 6A.4 Document standards `[P1]`
-
-A document is not "done" because a file exists. It is done when it carries what the party checking
-it will look for.
-
-**Requirements**
-
-- Each governed document type declares its field standard — what a bank, carrier or customs office
-  checks — with a hint explaining why each field matters.
-- The document register shows completeness per document and sorts by actual risk: an issued
-  document short of its own standard first, then work in progress, then unstarted.
-- A document **cannot be marked approved, issued or surrendered while a mandatory field is empty**.
-- Settled documents that are short raise exceptions naming the missing fields.
-
-### 6A.5 The forwarder's own record `[P1]`
-
-Everything else in the suite describes the customer. This describes us.
-
-**Requirements**
-
-- Legal entity, tax and business registration, registered address and contact.
-- Licences and accreditations with issuer, number, scope and expiry — freight forwarding, customs
-  broker, NVOCC, AEO, IATA, bonded warehouse, tax, and association memberships.
-- **A licence within 60 days of expiry raises an exception; a lapsed one raises a critical.**
-- Freight liability cover and its expiry, with the standard trading conditions that cap our
-  exposure. Expired cover is a critical exception — it means we are trading uninsured.
-- Branches with the ports each serves, and bank accounts per invoicing currency.
-- User accounts with their role, branch, status and last sign-in; administrators can release a lock
-  or verify an address.
-
----
-
-## 6B. Phase 4 requirements
-
-Two things the legacy system tracked that this build did not: the stuffing event itself, and the
-three cost buckets a desk settles against. Both came out of a walkthrough of the old document menu.
-
-### 6B.1 Stuffing `[P0]`
-
-Stuffing is where a job stops being paperwork. It was previously implied by three fields on the
-container; it needs to be its own record, because a container can be re-stuffed after a rejection
-and because the yard works by date rather than by job.
-
-**Requirements**
-
-- A stuffing carries: stuffing date and shift; location type (shipper factory, our CFS, depot,
-  third-party warehouse, port yard), name and address; **port of loading** and terminal; empty
-  pick-up depot and release date; truck, driver and haulier; supervisor, tally clerk and labour
-  count; planned versus stuffed packages and CBM; seal number and time; photograph count and tally
-  sheet reference; gate-in cut-off and actual.
-- The **yard schedule** is the primary view — work still to do bucketed by day, with anything
-  scheduled for a date already past marked as still open.
-- Sealing writes the seal, date and location back onto the container so the two cannot drift.
-- Three checks, each with a stated consequence rather than a bare flag:
-
-| Check | Behaviour |
-| --- | --- |
-| Slot at or after the terminal gate-in cut-off | Blocks the stage gate from the stuffing stage onwards; critical exception |
-| Stuffed short of the packing list | Critical exception naming the amendments it forces to the invoice, packing list and B/L |
-| Sealed with no seal number | Blocks — the terminal refuses the unit at the gate |
-| No tally sheet or photographs | Warning — without them a shortage claim lands on the forwarder |
-| Booked with under two days' notice | Warning — the crew and equipment need confirming today |
-
-### 6B.2 Cost buckets and the job sheet `[P0]`
-
-Charges were classified by what they are for. A forwarding desk also needs them classified by **how
-they are funded and settled**, because the three behave differently at month end and must never be
-pooled.
-
-**Requirements**
-
-- Every charge carries a cost type, defaulted from its charge code and overridable on the line:
-  **Master** *(biaya master)*, **Field** *(biaya lapangan)*, **Reimbursement** *(reimbursemen)*.
-- A field cost carries a cash advance — amount, date, who holds it — and a settlement with the
-  receipt reference. Cash out with nothing back is exposure; unspent float returned is not.
-- The **job sheet** recaps billed, cost by bucket, gross margin and field cash still out, and lists
-  what finance would otherwise query: advances unsettled past seven days, reimbursements billed
-  above cost, and billable lines still in draft.
-- An unsettled advance past seven days raises an exception against the job.
-
-### 6B.3 Document set parity `[P1]`
-
-The legacy menu carried four documents this build did not: **ISPM-15 declaration** (distinct from
-the treatment certificate), **stuffing report and tally**, **sending doc** (the covering note for
-the original set, with the courier airway bill) and the **job sheet**. Each gets a field standard on
-the same footing as the rest, so the completeness check and the issuance guard apply to them too.
-
----
-
-## 7. Data model additions
+| Authentication: sign in, register, forgot and reset password | Server-side authentication, role enforcement, SSO, real 2FA |
+| Client master with commercial terms and contacts | Credit control, dunning |
+| Building master, one client to many buildings | Floor plans, post maps, patrol routes |
+| Projects: period, one building, manpower requirement lines | Contract document generation and e-signature |
+| Deployment register across all projects | Named personnel, certificates, attendance, payroll |
+| Position master with rates and standard issue | Recruitment pipeline, training records |
+| Inventory: warehouses, item master, warehouse stock | Purchase orders, goods receipt, issue notes, stock takes |
+| Fulfilment, contract value and margin as computed figures | Invoicing, tax documents, general ledger |
+
+## 4. Data model and the rules that matter
 
 ```
-Quotation ─┬─ QuoteLine[]
-           ├─ revisionOf → Quotation
-           └─ convertedProjectId → Project
+Client ──1:N──> Building
+   │               │
+   └──1:N──> Project ──1:1──> Building
+                │
+                └──1:N──> ManpowerRequirement ──N:1──> Position ──N:M──> InventoryItem (standard issue)
 
-Partner ───┬─ Contact[]
-           ├─ PartnerScore
-           └─ ← ProjectCharge.partnerId
-
-Milestone ──── projectId, containerId?, code, plannedAt, actualAt, location, source
-
-WarehouseReceipt ── customerId, projectId?, status, dwellDays (derived), storageCharge (derived)
-
-CustomsFiling ──── projectId, type, channel, supportingDocs[], filedBy, exporterOfRecord
-
-AppSettings ────── fxRates, taxRates, numberingSeries, approvalThresholds, kpiTargets
-AuditEntry ─────── at, actor, action, entity, entityId, detail
-
-── phase 3 ───────────────────────────────────────────────────────────────────
-
-UserAccount ────── email, role, status, failedAttempts, lockedUntil, twoFactorEnabled
-PasswordResetToken ── token, email, issuedAt, expiresAt, used
-
-AdditionalService ─┬─ mandatoryWhen: ServiceTrigger[]
-                   ├─ suggestedWhen: ServiceTrigger[]
-                   └─ producesDocument? → DocType
-
-JobService ────────┬─ projectId, serviceId, status, mandatory, reason
-                   └─ chargeId? → ProjectCharge
-
-Incident ──────────┬─ projectId?, containerId?, type, severity, status
-                   ├─ liableParty, partnerId?, costImpact, recoveryExpected/Received
-                   └─ IncidentAction[]
-
-ShipmentDocument ── + fields: DocFieldValue[]   (checked against DOC_FIELD_SPECS[type])
-
-CompanyProfile ────┬─ CompanyLicence[]  (kind, number, issuer, expiresAt)
-                   ├─ CompanyBranch[]   (code, servesPorts[], manager)
-                   └─ BankAccount[]     (currency, swift, isPrimary)
-
-── phase 4 ───────────────────────────────────────────────────────────────────
-
-StuffingJob ───────┬─ projectId, containerId?, stuffingDate, shift
-                   ├─ locationType/Name/address, polCode/polName, terminal
-                   ├─ depot, emptyReleaseDate, truckPlate, driver, haulierPartnerId?
-                   ├─ supervisor, tallyClerk, labourCount
-                   ├─ planned vs stuffed packages and CBM
-                   └─ sealNo, photosTaken, tallySheetRef, gateInCutoff, gateInAt
-
-ProjectCharge ───── + costType: MASTER | FIELD | REIMBURSEMENT
-                    + settlement?: FieldSettlement (advance, settled, receiptNo)
+Warehouse ──1:N──> WarehouseStock ──N:1──> InventoryItem
 ```
 
-**Derived, never stored**
+**R1 — One project serves exactly one building.** A client that wants a second building signs a second
+project. Enforced in the type (`Project.buildingId`, singular) and in the form: the building list is
+filtered to the selected client, and any building already carrying an active or pending project is
+disabled, naming the project that holds it.
 
-- A job's service triggers are computed from its commodity, HS codes, packaging units, container
-  types, declared value and destination — so changing the cargo changes what the job must buy.
-- Document completeness is computed from the field standard for the type, not flagged by hand.
-- Licence and liability alerts are computed from expiry dates against a 60-day window.
+**R2 — A manpower line is a position, a shift and a headcount.** Coverage of a 24-hour site is three
+lines, not one line with a note. This is what makes "where is the gap" answerable by shift.
 
-**Referential rules**
+**R3 — Deployed can never exceed contracted headcount.** Rejected on save; over-deployment is a
+billing conversation, not a data entry.
 
-- Deleting a Partner referenced by a charge is blocked; the UI offers to suspend instead.
-- Deleting a Project cascades to its containers, documents, charges, milestones and filings, and
-  the cascade is stated in the confirmation.
-- Converting a Quotation is idempotent: a quotation already linked to a job cannot convert twice.
-- A Milestone's `plannedAt` is regenerated when the job's schedule changes, unless it has an actual.
-- Deleting an AdditionalService attached to any job is blocked; the UI offers to retire it instead,
-  so the jobs that bought it keep their record.
-- A JobService that has raised a charge keeps that charge when the service is removed from the job,
-  and the confirmation says so.
-- An Incident cannot move to a closed status without a root cause.
-- Sealing a StuffingJob writes the seal, date and location onto its Container; the two are never
-  edited independently.
-- A stuffing slot at or after the job's gate-in cut-off is refused as a plan, not merely warned about.
+**R4 — Only a running contract can be short of people.** Draft, pending, completed and terminated
+projects are excluded from fulfilment figures and gap alerts. A suspended contract owes nobody a post;
+counting it as a shortfall would depress the company figure permanently and hide real gaps.
 
----
+**R5 — A warehouse stock line points at exactly one master item.** The master holds the definition and
+no quantities; the stock line holds quantities and no definition. Deleting a master item deletes its
+stock lines, because a quantity with no definition means nothing.
 
-## 8. Non-functional requirements
+**R6 — One stock line per warehouse, item and batch.** A second line for the same three would
+double-count the stock; the form blocks it and names the bin that already holds it.
 
-| Area | Requirement |
-| --- | --- |
-| **Performance** | Any list renders 1,000 rows without a visible stall; sorting and filtering are synchronous |
-| **Accessibility** | Every control is keyboard reachable; listboxes implement `role="listbox"` with arrow/Home/End/type-ahead; focus is visible; colour is never the only signal (status carries a dot and a label) |
-| **Theming** | Light and dark are equal citizens; every colour is a token, no hard-coded hex in a component |
-| **Data portability** | Every module exports CSV and JSON, and offers a re-importable file whose columns match its importer |
-| **Resilience** | The seeded workspace can be restored at any time; import never partially applies a bad row |
-| **Localisation readiness** | Dates render `dd MMM yyyy`; money renders with the currency's own minor units (IDR and JPY have none); numerals are tabular in tables |
-| **Browser support** | Evergreen Chromium, Firefox, Safari. Desktop-first: the operational screens assume ≥1280 px, and degrade to a horizontally scrolling table below that |
+**R7 — Availability is on hand less reserved; health is judged on hand.** Reserved stock is promised to
+a project but still physically present, so a reorder decision looks at the shelf.
 
----
+**R8 — Planning levels are company-wide on the master, per-warehouse on the line.** The central
+warehouse runs to the company floor; a regional or site store keeps its own, set as an override on the
+line.
 
-## 9. Release plan
+## 5. Module requirements
 
-| Release | Contents | State |
+### 5.1 Authentication
+- Sign in with email and password; five failed attempts lock the account for fifteen minutes.
+- Distinct, actionable outcomes for: unknown email, wrong password, unverified, invited, locked,
+  suspended. Each states what happened *and* what the person can do about it.
+- Registration restricted to the company domain; password policy of ten characters with upper, lower,
+  digit and symbol, shown as live feedback rather than as a rejection after the fact.
+- Reset links valid thirty minutes, single use, and the request form answers identically whether or
+  not the address exists.
+
+### 5.2 Clients
+- Identity (legal name, brand, NPWP, industry, tier), address, contacts with one primary.
+- Commercial terms — payment term, invoice day, PPN, PPh 23, credit limit — held once and inherited by
+  new projects.
+- Record view: buildings, projects, fulfilment, monthly value and margin.
+
+### 5.3 Buildings
+- Belongs to one client. Type, floors, area, operating hours, shift pattern, site contact, access rules.
+- The register shows the project currently serving each building, and flags buildings with none.
+
+### 5.4 Projects
+- Contract number, status, period, project manager, site supervisor, payment term, management fee,
+  renewal mode and notice days.
+- Manpower lines: position, shift, headcount, deployed, days per week, hours per shift, bill and cost
+  rate per person, note.
+- Status flow: `DRAFT → PENDING_APPROVAL → ACTIVE → {SUSPENDED ⇄ ACTIVE} → COMPLETED | TERMINATED`.
+- Derived and shown: fulfilment, gap by shift, monthly value, monthly cost, margin, contract value,
+  period progress, days remaining, inventory demand against availability.
+
+### 5.5 Positions
+- Service line, grade, certifications, minimum education and experience, salary, allowance, default
+  bill rate, standard issue (SKU × quantity per person), status.
+- The default bill rate must exceed the loaded monthly cost (salary + allowance + BPJS + THR
+  provision); rejected on save otherwise.
+
+### 5.6 Inventory
+- **Warehouses** — code, name, type, address, manager, capacity, status. Deleting one deletes its stock.
+- **Item master** — the standard content set: SKU, name, description, category, sub-category, UoM,
+  brand, variant, barcode, standard cost, min, max, reorder point, reorder quantity, batch and expiry
+  handling, hazard flag, supplier, lead time, service lines, status, and audit fields (created,
+  updated, updated by).
+- **Warehouse stock** — warehouse, item, bin, on hand, reserved, unit cost, condition, batch, expiry,
+  minimum override, last counted, last movement. Batch and expiry are required when the master says so.
+
+## 6. Interface standard
+
+Every register in the suite carries, without exception: sortable columns, free-text search, per-column
+filters, CSV import with mapping and validation, CSV/JSON export (including a re-importable file), a
+visible total row count, column show/hide, density control, bulk selection and delete with a cascade
+warning.
+
+Navigation and field labels are English. Operating vocabulary — shift names, position titles, item
+names — stays Indonesian.
+
+One theme: light, with a blue primary. Status colour is reserved: green a filled post, amber a
+shortfall, red a breach.
+
+## 7. How success is judged
+
+| Question | Where it is answered | Target |
 | --- | --- | --- |
-| **1.0** | Customers, offices, packages, projects + stepper, containers, documents, charges, finance, control tower | Shipped |
-| **2.0** | Quotations & pipeline, partners, milestone tracking, warehouse, customs filings, operations analytics, settings, audit trail | This document |
-| **3.0** | Sign-in, registration and password reset; additional-services catalogue with trigger rules; incidents and claims; per-document standards; the forwarder's own company record | This document |
-| **3.5** | Stuffing schedule with cut-off and tally checks; Master / Field / Reimbursement cost buckets with advance and settlement; job sheet; ISPM-15, stuffing report, sending doc and job sheet documents | This document |
-| **3.6** | Printable quotation / invoice / draft B/L, SOP per customer, approval routing | Next |
-| **4.0** | Backend, server-side auth and role enforcement, carrier EDI ingestion, CEISA 4.0 and Coretax connectors, customer portal | Planned |
+| Company-wide fulfilment right now | Dashboard, first tile | one screen, no filtering |
+| Which position to recruit for first | Deployments, sorted by gap | one click from the dashboard |
+| Which contracts end within 90 days | Dashboard and the project filter | before the notice period closes |
+| Whether a project's kit can be issued | Project record, inventory demand tab | before deployment day |
+| What needs reordering | Warehouse stock, level filter | before the lead time makes it late |
 
----
+## 8. Next phases
 
-## 10. Open questions
-
-1. **Rate procurement.** Should a rate request to multiple carriers be modelled as its own record
-   (a buy-side RFQ) or does the package rate card remain the single source of buying rates?
-2. **Multi-currency ledger.** Charges translate at a job-level FX rate today. A realised/unrealised
-   FX split needs a decision on whether the ledger is presented in IDR only.
-3. **Consignment revenue recognition.** The forwarder bills logistics immediately; whether the
-   goods' settlement belongs in this ledger at all is an accounting-policy question, not a product
-   one.
-4. **Milestone authority.** When a carrier EDI event contradicts a manually keyed actual, which
-   wins? Proposed: EDI wins, the manual value is retained as a superseded record.
-5. **Refused mandatory services.** Today a declined mandatory treatment blocks the gate outright.
-   Should a named director be able to release it against a signed customer indemnity, and if so does
-   that release belong on the job or on the customer?
-6. **Service triggers vs. destination rules.** Trigger rules and the destination document rules
-   overlap (Australia demands both a treatment and its certificate). Should the certificate be
-   derived from the service rather than declared twice?
-7. **Incident cost attribution.** Incident cost sits on the incident. Whether it should also post to
-   the job's margin — and therefore to job profitability — is an accounting-policy decision.
-8. **Field cash floats.** An advance is recorded per charge line. Whether the float should instead be
-   held per operator across jobs — which is how the cash actually moves — depends on whether finance
-   wants to reconcile by person or by job.
-9. **Stuffing and VGM.** The VGM weighing date sits on the container while the stuffing date sits on
-   the stuffing. They must agree, and today nothing enforces it. Should the VGM move onto the
-   stuffing record?
+1. **Personnel.** Named employees, certificates and their expiry dates, assignment to a manpower line.
+   Turns fulfilment from a typed number into an attested one.
+2. **Attendance.** Daily post confirmation per shift, which turns fulfilment from a monthly claim into
+   a daily fact and feeds the SLA deduction calculation.
+3. **Stock movements.** Purchase order, receipt, issue to project, transfer between warehouses,
+   stock take. Removes the last place where a quantity changes without a document behind it.
+4. **Billing.** Monthly invoice from the manpower lines, with PPN and PPh 23 as the client record
+   already describes them.

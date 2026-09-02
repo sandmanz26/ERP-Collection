@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { PasswordResetToken, UserAccount, UserRole } from '@/data/types'
 import { AUTH_POLICY, passwordProblems } from '@/data/reference'
-import { resetTokens as seedTokens, users as seedUsers } from '@/data/seed3'
+import { resetTokens as seedTokens, users as seedUsers } from '@/data/seed-org'
 
 /**
  * DEMO AUTHENTICATION.
@@ -21,13 +21,12 @@ export type AuthFailure =
   | 'SUSPENDED'
   | 'UNVERIFIED'
   | 'INVITED'
-  | 'RATE_LIMITED'
 
 export interface AuthResult {
   ok: boolean
   failure?: AuthFailure
   message?: string
-  /** what the user can actually do about it */
+  /** What the person can actually do about it. */
   remedy?: string
   attemptsLeft?: number
   unlocksAt?: string
@@ -76,14 +75,16 @@ export const useAuth = create<AuthState>()(
             ok: false,
             failure: 'UNKNOWN_EMAIL',
             message: 'No account uses that email address.',
-            remedy: 'Check the spelling, or register a new account if this is your first sign-in.',
+            remedy: 'Check the spelling, or register if this is your first sign-in.',
           }
         }
 
-        /* a lock that has aged out clears itself before anything else is checked */
+        /* A lock that has aged out clears itself before anything else is checked. */
         if (user.status === 'LOCKED' && user.lockedUntil && new Date(user.lockedUntil) <= new Date()) {
           set((s) => ({
-            users: s.users.map((u) => (u.id === user.id ? { ...u, status: 'ACTIVE', failedAttempts: 0, lockedUntil: undefined } : u)),
+            users: s.users.map((u) =>
+              u.id === user.id ? { ...u, status: 'ACTIVE', failedAttempts: 0, lockedUntil: undefined } : u,
+            ),
           }))
           user.status = 'ACTIVE'
           user.failedAttempts = 0
@@ -94,7 +95,7 @@ export const useAuth = create<AuthState>()(
             ok: false,
             failure: 'SUSPENDED',
             message: 'This account has been suspended.',
-            remedy: 'An administrator disabled it. Contact your workspace administrator to have it restored.',
+            remedy: 'An administrator disabled it. Contact the operations manager to have it restored.',
           }
         }
         if (user.status === 'LOCKED') {
@@ -102,7 +103,7 @@ export const useAuth = create<AuthState>()(
             ok: false,
             failure: 'LOCKED',
             message: `Locked after ${AUTH_POLICY.maxFailedAttempts} failed attempts.`,
-            remedy: `It unlocks automatically, or an administrator can release it now.`,
+            remedy: 'It unlocks automatically, or an administrator can release it now.',
             unlocksAt: user.lockedUntil,
           }
         }
@@ -126,14 +127,10 @@ export const useAuth = create<AuthState>()(
         if (user.password !== password) {
           const attempts = user.failedAttempts + 1
           const locked = attempts >= AUTH_POLICY.maxFailedAttempts
-          const lockedUntil = locked
-            ? new Date(Date.now() + AUTH_POLICY.lockMinutes * 60_000).toISOString()
-            : undefined
+          const lockedUntil = locked ? new Date(Date.now() + AUTH_POLICY.lockMinutes * 60_000).toISOString() : undefined
           set((s) => ({
             users: s.users.map((u) =>
-              u.id === user.id
-                ? { ...u, failedAttempts: attempts, status: locked ? 'LOCKED' : u.status, lockedUntil }
-                : u,
+              u.id === user.id ? { ...u, failedAttempts: attempts, status: locked ? 'LOCKED' : u.status, lockedUntil } : u,
             ),
           }))
           if (locked) {
@@ -168,9 +165,7 @@ export const useAuth = create<AuthState>()(
       register: ({ fullName, email, jobTitle, role, password, confirm }) => {
         const key = norm(email)
         if (!fullName.trim()) return { ok: false, message: 'Enter your full name.' }
-        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(key)) {
-          return { ok: false, message: 'That does not look like an email address.' }
-        }
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(key)) return { ok: false, message: 'That does not look like an email address.' }
         if (get().users.some((u) => norm(u.email) === key)) {
           return {
             ok: false,
@@ -182,14 +177,12 @@ export const useAuth = create<AuthState>()(
         if (!AUTH_POLICY.allowedRegistrationDomains.includes(domain)) {
           return {
             ok: false,
-            message: `Registration is limited to ${AUTH_POLICY.allowedRegistrationDomains.join(' and ')}.`,
+            message: `Registration is limited to @${AUTH_POLICY.allowedRegistrationDomains.join(' and @')}.`,
             remedy: 'Ask an administrator to invite you if you work from another domain.',
           }
         }
         const problems = passwordProblems(password)
-        if (problems.length) {
-          return { ok: false, message: `Password needs: ${problems.join(', ').toLowerCase()}.` }
-        }
+        if (problems.length) return { ok: false, message: `Password needs: ${problems.join(', ').toLowerCase()}.` }
         if (password !== confirm) return { ok: false, message: 'The two passwords do not match.' }
 
         const user: UserAccount = {
@@ -206,10 +199,7 @@ export const useAuth = create<AuthState>()(
           createdAt: now(),
         }
         set((s) => ({ users: [user, ...s.users], lastEmail: key }))
-        return {
-          ok: true,
-          message: 'Account created. Verify the email address to sign in.',
-        }
+        return { ok: true, message: 'Account created. Verify the email address to sign in.' }
       },
 
       verifyEmail: (email) => {
@@ -226,13 +216,10 @@ export const useAuth = create<AuthState>()(
       requestReset: (email) => {
         const key = norm(email)
         const user = get().users.find((u) => norm(u.email) === key)
-        /* Deliberately the same answer either way — a reset form must not
-           reveal which addresses have accounts. The demo token is only
-           returned when the account is real. */
-        const generic = {
-          ok: true,
-          message: 'If that address has an account, a reset link is on its way.',
-        }
+        /* Deliberately the same answer either way — a reset form must not reveal
+           which addresses have accounts. The demo token comes back only when the
+           account is real, because there is no inbox to send it to. */
+        const generic = { ok: true, message: 'If that address has an account, a reset link is on its way.' }
         if (!user) return generic
         if (user.status === 'SUSPENDED') {
           return {
@@ -242,7 +229,7 @@ export const useAuth = create<AuthState>()(
             remedy: 'An administrator has to restore it first.',
           }
         }
-        const token = `MF-RESET-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
+        const token = `TG-RESET-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
         const record: PasswordResetToken = {
           token,
           email: key,
@@ -256,12 +243,8 @@ export const useAuth = create<AuthState>()(
 
       resetPassword: (token, password, confirm) => {
         const record = get().tokens.find((t) => t.token.trim().toUpperCase() === token.trim().toUpperCase())
-        if (!record) {
-          return { ok: false, message: 'That reset link is not valid.', remedy: 'Request a new one from “Forgot password”.' }
-        }
-        if (record.used) {
-          return { ok: false, message: 'That reset link has already been used.', remedy: 'Request a fresh link.' }
-        }
+        if (!record) return { ok: false, message: 'That reset link is not valid.', remedy: 'Request a new one from “Forgot password”.' }
+        if (record.used) return { ok: false, message: 'That reset link has already been used.', remedy: 'Request a fresh link.' }
         if (new Date(record.expiresAt) <= new Date()) {
           return {
             ok: false,
@@ -300,7 +283,7 @@ export const useAuth = create<AuthState>()(
 
       resetAuthDemo: () => set({ ...seedState() }),
     }),
-    { name: 'meridian-freight-auth', version: 1 },
+    { name: 'tata-gemilang-auth', version: 1 },
   ),
 )
 

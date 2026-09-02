@@ -2,122 +2,73 @@
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/jetbrains-mono";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 /* ------------------------------------------------------------------
-   Meridian Freight — design tokens
-   A maritime navy system. Light = "harbour paper", Dark = "night deck".
+   PT Tata Gemilang — design tokens.
+
+   One theme only: light, with a corporate blue as the primary. Every
+   colour in the suite comes from this list; no page invents its own.
+   Amber marks a shortfall, red a breach, green a post that is filled.
    ------------------------------------------------------------------ */
 :root {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
 
   /* surfaces */
-  --bg: 210 44% 97%;
-  --bg-muted: 213 38% 94%;
+  --bg: 210 40% 97%;
+  --bg-muted: 213 34% 94%;
   --surface: 0 0% 100%;
   --surface-raised: 0 0% 100%;
-  --surface-sunken: 213 40% 96%;
-  --overlay: 214 60% 8%;
+  --surface-sunken: 212 38% 96%;
+  --overlay: 214 55% 10%;
 
   /* ink */
-  --fg: 215 52% 12%;
-  --fg-muted: 215 18% 42%;
-  --fg-subtle: 214 15% 56%;
+  --fg: 215 45% 14%;
+  --fg-muted: 215 16% 42%;
+  --fg-subtle: 214 14% 56%;
   --fg-inverse: 210 40% 98%;
 
   /* lines */
-  --border: 214 32% 88%;
-  --border-strong: 214 28% 78%;
-  --ring: 216 88% 52%;
+  --border: 214 30% 89%;
+  --border-strong: 214 26% 79%;
+  --ring: 217 88% 52%;
 
-  /* brand — harbour blue */
-  --primary: 217 89% 46%;
-  --primary-hover: 217 89% 40%;
+  /* brand — Tata Gemilang blue */
+  --primary: 217 88% 45%;
+  --primary-hover: 217 88% 38%;
   --primary-fg: 0 0% 100%;
-  --primary-soft: 217 92% 95%;
-  --primary-soft-fg: 217 76% 34%;
+  --primary-soft: 215 95% 95%;
+  --primary-soft-fg: 217 76% 33%;
 
-  /* accent — container teal */
-  --accent: 184 78% 36%;
-  --accent-soft: 183 70% 94%;
-  --accent-soft-fg: 185 82% 24%;
+  /* accent — used for headcount and deployment figures */
+  --accent: 199 89% 38%;
+  --accent-soft: 199 82% 94%;
+  --accent-soft-fg: 200 88% 26%;
 
   /* status */
-  --success: 152 62% 34%;
-  --success-soft: 150 62% 94%;
-  --success-soft-fg: 154 70% 22%;
-  --warning: 33 92% 46%;
+  --success: 152 60% 33%;
+  --success-soft: 150 60% 94%;
+  --success-soft-fg: 154 68% 22%;
+  --warning: 32 92% 44%;
   --warning-soft: 40 96% 92%;
   --warning-soft-fg: 26 84% 30%;
-  --danger: 356 72% 48%;
+  --danger: 356 72% 47%;
   --danger-soft: 355 92% 96%;
   --danger-soft-fg: 356 72% 36%;
-  --info: 221 83% 53%;
+  --info: 221 83% 52%;
   --info-soft: 214 95% 95%;
   --info-soft-fg: 224 76% 38%;
-  --neutral-soft: 214 30% 94%;
-  --neutral-soft-fg: 215 22% 34%;
-  --purple: 264 62% 52%;
+  --neutral-soft: 214 28% 94%;
+  --neutral-soft-fg: 215 20% 34%;
+  --purple: 264 60% 51%;
   --purple-soft: 268 84% 96%;
-  --purple-soft-fg: 265 60% 40%;
+  --purple-soft-fg: 265 58% 40%;
 
-  /* the sign-in brand panel — deep enough to sit beside the form in both themes */
-  --auth-panel: 217 89% 46%;
+  /* the sign-in brand panel */
+  --auth-panel: 217 88% 42%;
   --auth-panel-fg: 0 0% 100%;
 
-  --shadow-color: 215 45% 22%;
+  --shadow-color: 215 42% 22%;
   --radius: 0.625rem;
-}
-
-.dark {
-  --bg: 216 52% 7%;
-  --bg-muted: 216 46% 10%;
-  --surface: 215 44% 11%;
-  --surface-raised: 214 40% 14%;
-  --surface-sunken: 216 50% 9%;
-  --overlay: 216 60% 3%;
-
-  --fg: 210 40% 96%;
-  --fg-muted: 213 20% 68%;
-  --fg-subtle: 214 16% 54%;
-  --fg-inverse: 215 52% 10%;
-
-  --border: 214 33% 20%;
-  --border-strong: 214 30% 28%;
-  --ring: 210 100% 62%;
-
-  --primary: 213 94% 60%;
-  --primary-hover: 213 94% 68%;
-  --primary-fg: 216 60% 8%;
-  --primary-soft: 214 60% 18%;
-  --primary-soft-fg: 211 96% 78%;
-  --auth-panel: 216 58% 12%;
-  --auth-panel-fg: 210 40% 96%;
-
-  --accent: 183 72% 48%;
-  --accent-soft: 187 60% 15%;
-  --accent-soft-fg: 184 78% 66%;
-
-  --success: 151 62% 46%;
-  --success-soft: 155 50% 14%;
-  --success-soft-fg: 150 68% 66%;
-  --warning: 38 94% 56%;
-  --warning-soft: 33 60% 15%;
-  --warning-soft-fg: 40 94% 66%;
-  --danger: 356 84% 62%;
-  --danger-soft: 356 52% 17%;
-  --danger-soft-fg: 356 92% 78%;
-  --info: 214 94% 64%;
-  --info-soft: 216 60% 18%;
-  --info-soft-fg: 213 94% 78%;
-  --neutral-soft: 215 32% 18%;
-  --neutral-soft-fg: 213 22% 72%;
-  --purple: 264 82% 68%;
-  --purple-soft: 265 44% 20%;
-  --purple-soft-fg: 267 88% 80%;
-
-  --shadow-color: 216 80% 2%;
 }
 
 @theme inline {
@@ -183,6 +134,7 @@
   }
   html {
     -webkit-text-size-adjust: 100%;
+    color-scheme: light;
   }
   body {
     background-color: hsl(var(--bg));
@@ -193,13 +145,13 @@
     text-rendering: optimizeLegibility;
   }
   ::selection {
-    background-color: hsl(var(--primary) / 0.24);
+    background-color: hsl(var(--primary) / 0.22);
   }
   :focus-visible {
     outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
   }
-  /* numerals align in tables */
+  /* Figures in a table line up under each other. */
   .tnum {
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
@@ -224,12 +176,6 @@
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
   }
-  .surface-grid {
-    background-image:
-      linear-gradient(hsl(var(--border) / 0.5) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(var(--border) / 0.5) 1px, transparent 1px);
-    background-size: 28px 28px;
-  }
   .shadow-card {
     box-shadow:
       0 1px 2px hsl(var(--shadow-color) / 0.06),
@@ -242,10 +188,10 @@
       0 18px 48px -12px hsl(var(--shadow-color) / 0.16);
   }
   .shadow-sticky-l {
-    box-shadow: -14px 0 18px -10px hsl(var(--shadow-color) / 0.6);
+    box-shadow: -14px 0 18px -10px hsl(var(--shadow-color) / 0.45);
   }
   .shadow-sticky-r {
-    box-shadow: 12px 0 16px -12px hsl(var(--shadow-color) / 0.45);
+    box-shadow: 12px 0 16px -12px hsl(var(--shadow-color) / 0.35);
   }
 }
 
@@ -256,3 +202,13 @@
 .animate-fade-in { animation: fade-in .16s ease-out }
 .animate-pop-in { animation: pop-in .14s cubic-bezier(.16,1,.3,1) }
 .animate-slide-up { animation: slide-up .22s cubic-bezier(.16,1,.3,1) }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

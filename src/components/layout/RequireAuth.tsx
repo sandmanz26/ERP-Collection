@@ -1,8 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { useAuth, useCurrentUser } from '@/store/useAuth'
-
-/** Where a role starts its day. An operator works the four-phase view. */
-export const homeFor = (role?: string) => (role === 'OPERATOR' ? '/my' : '/')
+import { useAuth } from '@/store/useAuth'
 
 /** Everything behind the shell needs a signed-in user; the attempted path is remembered. */
 export function RequireAuth() {
@@ -12,10 +9,9 @@ export function RequireAuth() {
   return <Outlet />
 }
 
-/** A signed-in user landing on /login goes straight through to their own home. */
+/** A signed-in user landing on /login goes straight to the dashboard. */
 export function RedirectIfSignedIn() {
   const signedIn = useAuth((s) => s.currentUserId !== null)
-  const user = useCurrentUser()
-  if (signedIn) return <Navigate to={homeFor(user?.role)} replace />
+  if (signedIn) return <Navigate to="/" replace />
   return <Outlet />
 }
