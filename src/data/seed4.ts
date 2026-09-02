@@ -11,7 +11,9 @@
 import type { Container, Project, ShipmentDocument } from './types'
 import { docFieldSpecs } from './reference'
 import { containers, customers, documents, projects } from './seed'
-import { stuffingJobs } from './seed3'
+import { stuffingJobs, users } from './seed3'
+import { charges } from './seed'
+import { jobSheet } from '@/lib/stuffing'
 import { buyers, buyerForCountry } from './buyers'
 import { CONTAINER_SPECS } from '@/lib/shipping'
 
@@ -189,6 +191,74 @@ function factsFor(p: Project): Facts {
   }
 }
 
+
+/* the calculators the rest of the app uses, so a document cannot disagree with
+   the screen that shows the same number */
+/* a job with three containers has three stuffings; the report covers the lot,
+   the same way the packing list and the B/L do */
+const stuffAll = (f: Facts) =>
+  stuffingJobs
+    .filter((x) => x.projectId === f.p.id)
+    .sort((a, b) => a.stuffingDate.localeCompare(b.stuffingDate))
+/* a loading only has a countable tally once the box is closed */
+const STUFF_DONE = ['SEALED', 'GATE_IN', 'COMPLETED']
+
+const sheetCache = new Map<string, ReturnType<typeof jobSheet>>()
+const sheet = (f: Facts) => {
+  if (!sheetCache.has(f.p.id)) sheetCache.set(f.p.id, jobSheet(charges.filter((c) => c.projectId === f.p.id)))
+  return sheetCache.get(f.p.id)!
+}
+
+const BUCKET_NOTE: Record<string, (j: ReturnType<typeof jobSheet>) => string> = {
+  MASTER: () => 'vendor-invoiced, settled by finance on terms',
+  FIELD: (j) => (j.unsettledField > 0 ? `${money(j.unsettledField, 'IDR')} advanced and not yet settled` : 'all advances settled against receipts'),
+  REIMBURSEMENT: (j) =>
+    j.markedUpReimbursements.length
+      ? `${j.markedUpReimbursements.length} line${j.markedUpReimbursements.length === 1 ? '' : 's'} re-billed above cost — a disbursement is passed through at cost`
+      : 're-billed at cost, no mark-up',
+}
+
+const bucketLine = (f: Facts, type: 'MASTER' | 'FIELD' | 'REIMBURSEMENT') => {
+  const j = sheet(f)
+  const b = j.buckets.find((x) => x.type === type)
+  if (!b || !b.lines) return 'nil on this job'
+  return `${money(b.cost, 'IDR')} over ${b.lines} line${b.lines === 1 ? '' : 's'} — ${BUCKET_NOTE[type](j)}`
+}
+
+const operatorName = (f: Facts) =>
+  users.find((u) => u.id === f.p.assignedOperatorId)?.fullName ?? 'Rizky Pratama'
+
+/* what actually left the office with the originals, taken from the job's own
+   register rather than a fixed list — a job with no COO cannot have sent one */
+const enclosures = (f: Facts) => {
+  const sent: Record<string, string> = {
+    COMMERCIAL_INVOICE: 'Signed commercial invoice ×3',
+    PACKING_LIST: 'Packing list ×3',
+    HOUSE_BL: 'House B/L, 3/3 originals',
+    DRAFT_BL: 'Ocean B/L, 3/3 originals',
+    CERTIFICATE_OF_ORIGIN: 'Certificate of origin (SKA), original',
+    INSURANCE_CERTIFICATE: 'Marine insurance certificate, original',
+    PHYTOSANITARY: 'Phytosanitary certificate, original',
+    FUMIGATION: 'Fumigation certificate, original',
+    ISPM_15: 'ISPM-15 declaration, copy',
+  }
+  const held = documents.filter(
+    (d) => d.projectId === f.p.id && sent[d.type] && ['APPROVED', 'ISSUED', 'SURRENDERED'].includes(d.status),
+  )
+  const seen = new Set<string>()
+  const list = held
+    .map((d) => sent[d.type])
+    .filter((l) => !seen.has(l) && seen.add(l))
+  return list.length ? list.join('\n') : 'Nothing despatched yet — the original set is still being assembled'
+}
+
+/* a courier reference has to stay the same every time the page is opened */
+const awb = (f: Facts) => {
+  let h = 7
+  for (const ch of f.p.id + f.p.jobNo) h = (h * 31 + ch.charCodeAt(0)) % 1000000000
+  return String(1000000000 + h)
+}
+
 /* ---------------------------------------------------------------- */
 /* One entry per field key that appears in any document standard.     */
 
@@ -248,7 +318,12 @@ const FIELD: Record<string, (f: Facts, d: ShipmentDocument) => string> = {
   packagesWeight: (f) => `${n0(f.packages)} ${f.packageUnits} · ${n0(f.grossKg)} KGS · ${n2(f.cbm)} CBM`,
   freightClause: (f) => (f.p.freightTerm === 'PREPAID' ? 'FREIGHT PREPAID AS ARRANGED' : 'FREIGHT COLLECT'),
   shipperApproval: (f) => `Approved by ${f.shipper.replace(/^PT /, '')} — corrections closed`,
-  originals: () => '3/3 originals issued, none surrendered at origin',
+  /* "originals" is the count issued on a B/L, but the split between what left
+     the office and what we hold on a despatch note */
+  originals: (f, d) =>
+    d.type === 'SENDING_DOC'
+      ? `3/3 originals and 2 non-negotiable copies despatched; 1 signed copy retained on the ${f.p.code} file`
+      : '3/3 originals issued, none surrendered at origin',
   onBoardDate: (f) => (f.p.atd ? `SHIPPED ON BOARD ${dtLong(f.p.atd)}` : 'pending loading confirmation'),
   placeOfIssue: (f) => `Jakarta, Indonesia — ${dtLong(f.p.atd ?? f.p.etd)}`,
   terms: () => 'Subject to ALFI Standard Trading Conditions; liability limited to SDR 2/kg or SDR 666.67/package',
@@ -372,34 +447,96 @@ const FIELD: Record<string, (f: Facts, d: ShipmentDocument) => string> = {
   blSurrender: () => 'Telex release received from origin; originals retained by the shipper',
   releaseTo: (f) => `${f.consignee}'s nominated haulier, vehicle plate recorded at the gate`,
   chargesSettled: () => 'All destination charges settled prior to release',
-  receivedBy: (f) => `${f.consignee} — warehouse supervisor, signed and stamped`,
+  receivedBy: (f, d) =>
+    d.type === 'SENDING_DOC'
+      ? `Courier delivery confirmed at ${f.consignee}, signature on the DHL tracking record`
+      : `${f.consignee} — warehouse supervisor, signed and stamped`,
   deliveryDate: (f) => `${dtLong(f.p.ata ?? f.p.eta)}, 14:20 local time`,
-  condition: () => 'Received in apparent good order and condition; seal intact on arrival',
+  /* on a POD this is the state of the cargo on arrival; on a stuffing report it
+     is the state of the empty box before anything went into it */
+  condition: (_f, d) =>
+    d.type === 'STUFFING_REPORT'
+      ? 'Inspected before loading: floor dry, no holes on the light test, doors and gaskets sound'
+      : 'Received in apparent good order and condition; seal intact on arrival',
   packagesReceived: (f) => `${n0(f.packages)} ${f.packageUnits} received against ${n0(f.packages)} on the packing list`,
 
-  /* stuffing */
+  /* stuffing report — the tally is counted, not copied. Where the yard came up
+     short of the packing list the report says so: that discrepancy is the whole
+     reason the document exists, and hiding it would make the demo teach a lie. */
   stuffingDate: (f) => {
-    const s = stuffingJobs.find((x) => x.projectId === f.p.id)
-    return s ? `${dtLong(s.stuffingDate)} at ${s.locationName}` : dtLong(f.firstContainer?.stuffingDate)
+    const all = stuffAll(f)
+    if (!all.length) return dtLong(f.firstContainer?.stuffingDate)
+    const days = [...new Set(all.map((s) => dtLong(s.stuffingDate)))]
+    const where = [...new Set(all.map((s) => `${s.locationName} (${s.locationType.replace(/_/g, ' ').toLowerCase()})`))]
+    const first = all[0]
+    const shift = all.length === 1 && first.startTime && first.endTime ? `, ${first.startTime}–${first.endTime}` : ''
+    const when = days.length === 1 ? `${days[0]}${shift}` : `${days[0]} – ${days[days.length - 1]} over ${all.length} loadings`
+    return `${when} at ${where.join('; ')}`
   },
-  tally: (f) => `${n0(f.packages)} ${f.packageUnits} counted in, matching the packing list`,
-  supervisor: (f) => stuffingJobs.find((x) => x.projectId === f.p.id)?.supervisor ?? 'Tomas Weber',
-  photos: () => 'Empty, part-loaded, full, doors closed and seal fitted — 12 photographs on file',
+  tally: (f) => {
+    const all = stuffAll(f)
+    if (!all.length) return `${n0(f.packages)} ${f.packageUnits} counted in`
+    const planned = all.reduce((a, s) => a + s.plannedPackages, 0)
+    const loaded = all.reduce((a, s) => a + s.stuffedPackages, 0)
+    const pCbm = all.reduce((a, s) => a + s.plannedCbm, 0)
+    const lCbm = all.reduce((a, s) => a + s.stuffedCbm, 0)
+    /* a surplus in one container does not cover a shortfall in another — the
+       consignee opens them one at a time, so the shortages are added, not netted */
+    const short = all
+      .filter((s) => STUFF_DONE.includes(s.status))
+      .reduce((a, s) => a + Math.max(0, s.plannedPackages - s.stuffedPackages), 0)
+    const head = `${n0(loaded)} of ${n0(planned)} ${f.packageUnits} counted in · ${n2(lCbm)} of ${n2(pCbm)} CBM`
+    const notes = [...new Set(all.map((s) => s.remarks).filter(Boolean))] as string[]
+    const tail = notes.length ? `\n${notes.join(' ')}` : ''
+    return short > 0
+      ? `${head}\nSHORT ${n0(short)} ${short === 1 ? f.unitSingular : f.packageUnits} against the packing list — invoice, packing list and B/L to be amended to what actually shipped${tail}`
+      : `${head}\nTally agrees with the packing list${tail}`
+  },
+  supervisor: (f) => {
+    const all = stuffAll(f)
+    if (!all.length) return 'Tomas Weber, Warehouse Supervisor'
+    const names = [...new Set(all.map((s) => s.supervisor))].join(', ')
+    const clerks = [...new Set(all.map((s) => s.tallyClerk).filter(Boolean))]
+    const crew = all.reduce((a, s) => a + s.labourCount, 0)
+    return `${names}${clerks.length ? `, tally clerk ${clerks.join(', ')}` : ''} · ${crew} crew across ${all.length} loading${all.length === 1 ? '' : 's'}`
+  },
+  photos: (f) => {
+    const all = stuffAll(f)
+    const shots = all.reduce((a, s) => a + s.photosTaken, 0)
+    if (!shots) return 'No stow photographs on file — a shortage claim would land on us'
+    const refs = all.map((s) => s.tallySheetRef).filter(Boolean)
+    const missing = all.length - refs.length
+    const note = refs.length
+      ? `, tally sheet ${refs.join(', ')}${missing ? ` (${missing} loading${missing === 1 ? '' : 's'} with no sheet filed)` : ''}`
+      : ', no tally sheet filed'
+    return `Empty, part-loaded, full, doors closed and seal fitted — ${shots} photographs${note}`
+  },
 
-  /* sending doc */
-  sentTo: (f) => `${f.consignee}\n${f.consigneeAddr}`,
-  contents: () => 'Signed commercial invoice ×3, packing list ×3, 3/3 original B/L, COO, insurance certificate',
-  courierAwb: () => `DHL AWB ${int(1000000000, 9999999999)}`,
-  sentAt: (f) => dtLong(f.p.atd ?? f.p.etd),
+  /* sending doc — the covering note lists what actually left the office, so it
+     is built from the documents on this job rather than a fixed sentence */
+  sentTo: (f) =>
+    f.p.paymentTerm === 'LC_AT_SIGHT'
+      ? `Negotiating bank for the account of ${f.consignee}\n${f.consigneeAddr}\nL/C ${f.lcNo} — presentation within 21 days of the on-board date`
+      : `${f.consignee}\n${f.consigneeAddr}`,
+  contents: (f, d) => (d.type === 'SENDING_DOC' ? enclosures(f) : 'Signed commercial invoice ×3, packing list ×3, 3/3 original B/L, COO, insurance certificate'),
+  courierAwb: (f) => `DHL Express AWB ${awb(f)} — ${f.p.podName} in 3–4 working days`,
+  sentAt: (f) => `${dtLong(f.p.atd ?? f.p.etd)} — starts the presentation clock`,
 
-  /* job sheet */
-  jobNo: (f) => f.p.jobNo,
-  revenue: (f) => money(f.p.quotedRevenue, 'IDR'),
-  masterCost: (f) => money(f.p.quotedRevenue * 0.74, 'IDR'),
-  fieldCost: (f) => money(f.p.quotedRevenue * 0.03, 'IDR'),
-  reimbursement: (f) => money(f.p.quotedRevenue * 0.04, 'IDR'),
-  margin: (f) => `${money(f.p.quotedRevenue * 0.19, 'IDR')} (19.0%)`,
-  preparedBy: () => 'Rizky Pratama, Export Operator — checked by Marcus Bell',
+  /* job sheet — the same figures the Job sheet tab shows, computed from the
+     charge lines themselves. A recap that disagrees with the ledger it recaps
+     is worse than no recap. */
+  jobNo: (f) => `${f.p.jobNo} · ${f.p.code} · ${f.p.commodity.split(',')[0]}`,
+  revenue: (f) => `${money(sheet(f).revenue, 'IDR')} over ${sheet(f).buckets.reduce((a, b) => a + b.lines, 0)} charge lines`,
+  masterCost: (f) => bucketLine(f, 'MASTER'),
+  fieldCost: (f) => bucketLine(f, 'FIELD'),
+  reimbursement: (f) => bucketLine(f, 'REIMBURSEMENT'),
+  margin: (f) => {
+    const j = sheet(f)
+    const open = j.unsettledField > 0 ? `\n${money(j.unsettledField, 'IDR')} of field cash still unsettled` : ''
+    const unbilled = j.unbilled.length ? `\n${j.unbilled.length} billable line${j.unbilled.length === 1 ? '' : 's'} still in draft` : ''
+    return `${money(j.margin, 'IDR')} (${j.marginPct.toFixed(1)}%)${open}${unbilled}`
+  },
+  preparedBy: (f) => `${operatorName(f)}, Export Operator — checked by ${f.p.ownerName}`,
 }
 
 /* ---------------------------------------------------------------- */
@@ -464,10 +601,18 @@ const ISSUER: Partial<Record<ShipmentDocument['type'], string>> = {
    a gap on an issued document is what a bank or a customs office rejects, and the
    completeness check needs something real to catch. */
 const SETTLED = ['APPROVED', 'ISSUED', 'SURRENDERED']
+/* Chosen by hashing the document id, not by position. A stride over the list
+   lands on the same document type in every project — every job sheet short of
+   the same two fields is a pattern, and a pattern reads as a bug rather than
+   the scattered gaps real paperwork has. */
 const shortlist = new Set(
   documents
     .filter((d) => SETTLED.includes(d.status) && docFieldSpecs(d.type).length > 0)
-    .filter((_, i) => i % 19 === 3)
+    .filter((d) => {
+      let h = 17
+      for (const ch of d.id + d.type) h = (h * 31 + ch.charCodeAt(0)) % 100000
+      return h % 23 === 5
+    })
     .map((d) => d.id),
 )
 

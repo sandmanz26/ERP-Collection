@@ -391,6 +391,6 @@ number with a bad ISO 6346 check digit, a PEB blocked on a missing CEISA 4.0 upl
 *jalur kuning* and one that drew *jalur merah*, a quotation lost on credit terms, a suspended
 trucker with three claims, two agency contracts weeks from expiry, consignment stock at day 96 of a
 120-day return window, a shipper who refused mandatory fumigation on a furniture job, a failed BMSB
-treatment blocking an Australian sailing, four issued documents short of their own field standard, a
+treatment blocking an Australian sailing, a scatter of issued documents short of their own field standard, a
 lapsed IATA accreditation, a PPJK registration three weeks from expiry, two stuffings that came up
 short against the packing list, and slots booked past the terminal's own gate-in cut-off.
