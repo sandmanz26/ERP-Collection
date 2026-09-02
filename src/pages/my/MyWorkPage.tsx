@@ -36,7 +36,7 @@ export function MyWorkPage() {
 
       {/* -------- the one thing that matters most -------- */}
       {blocking.length > 0 ? (
-        <Card className="mb-5 border-danger/35">
+        <Card className="mb-5 border-danger/35" data-tour="my-blocking">
           <CardBody>
             <div className="flex flex-wrap items-start gap-3">
               <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-danger-soft text-danger-soft-fg">
@@ -73,7 +73,7 @@ export function MyWorkPage() {
           </CardBody>
         </Card>
       ) : (
-        <Card className="mb-5 border-success/30">
+        <Card className="mb-5 border-success/30" data-tour="my-blocking">
           <CardBody className="flex flex-wrap items-center gap-3">
             <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-success-soft text-success-soft-fg">
               <CircleCheck className="size-[18px]" />
@@ -89,7 +89,7 @@ export function MyWorkPage() {
       )}
 
       {/* -------- the four phases -------- */}
-      <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-tour="my-phases">
         {board.byPhase.map(({ phase, count, blocking: blocked }, i) => {
           const tone = PHASE_TONE[phase.key]
           return (
@@ -132,7 +132,7 @@ export function MyWorkPage() {
       {/* -------- jobs, in phase order -------- */}
       {board.byPhase.map(({ phase, jobs }) =>
         jobs.length === 0 ? null : (
-          <section key={phase.key} className="mb-6">
+          <section key={phase.key} className="mb-6" data-tour="my-jobs">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 className="flex items-center gap-2 text-[14px] font-semibold text-fg">
                 {phase.label}

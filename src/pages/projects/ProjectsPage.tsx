@@ -116,7 +116,7 @@ export function ProjectsPage() {
       ),
     },
     {
-      key: 'stage', header: 'Stage', width: 'w-[168px]', sortable: true,
+      key: 'stage', header: 'Stage', width: 'w-[168px]', sortable: true, tour: 'projects-stage',
       sortValue: (r) => stageIndex(r.stage), exportValue: (r) => r.stage,
       cell: (r) => <StageChip stage={r.stage} />,
     },
@@ -166,7 +166,7 @@ export function ProjectsPage() {
       },
     },
     {
-      key: 'cutoff', header: 'Next cut-off', width: 'w-[150px]', sortable: true,
+      key: 'cutoff', header: 'Next cut-off', width: 'w-[150px]', sortable: true, tour: 'projects-cutoff',
       sortValue: (r) => nextCutoff(r)?.iso ?? '9999',
       exportValue: (r) => nextCutoff(r)?.iso ?? '',
       cell: (r) => {
@@ -194,7 +194,7 @@ export function ProjectsPage() {
       ),
     },
     {
-      key: 'margin', header: 'Margin', width: 'w-[104px]', align: 'right', sortable: true,
+      key: 'margin', header: 'Margin', width: 'w-[104px]', align: 'right', sortable: true, tour: 'projects-margin',
       sortValue: (r) => jobFinancials(charges.filter((c) => c.projectId === r.id)).marginPct,
       exportValue: (r) => jobFinancials(charges.filter((c) => c.projectId === r.id)).marginPct.toFixed(1),
       cell: (r) => {

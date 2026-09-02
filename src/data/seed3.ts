@@ -2,8 +2,8 @@ import type {
   CompanyProfile, Incident, IncidentAction, JobService, PasswordResetToken, StuffingJob,
   StuffingLocationType, StuffingStatus, UserAccount,
 } from './types'
-import { ADDITIONAL_SERVICES, docFieldSpecs, stageIndex } from './reference'
-import { charges, containers, customers, documents, projects } from './seed'
+import { ADDITIONAL_SERVICES, stageIndex } from './reference'
+import { charges, containers, customers, projects } from './seed'
 import { recommendServices } from '@/lib/services'
 
 let seed = 31415926
@@ -472,58 +472,6 @@ export const incidents: Incident[] = [
     ],
   },
 ]
-
-/* ================================================================
-   DOCUMENT STANDARD VALUES
-   ----------------------------------------------------------------
-   Fill the governed fields on every document that has progressed past
-   draft, leaving deliberate gaps on a few so the completeness check
-   has something real to report.
-   ================================================================ */
-
-const SAMPLE: Record<string, (docNo: string) => string> = {
-  invoiceNo: (d) => `${d || 'INV/26/0000'} · 2026-08-14`,
-  incoterm: () => 'FOB Tanjung Priok (Incoterms 2020)',
-  currency: () => 'USD',
-  paymentTerms: () => 'Irrevocable L/C at sight',
-  originCountry: () => 'Indonesia',
-  signature: () => 'Signed — Elena Marchetti, Managing Director',
-  freightTerm: () => 'Freight prepaid',
-  freightClause: () => 'Freight prepaid as arranged',
-  blType: () => 'Original 3/3, shipper approval on file',
-  originals: () => '3/3 originals issued',
-  method: () => 'Method 2 — calculated',
-  terms: () => 'Subject to ALFI Standard Trading Conditions',
-}
-
-const genericValue = (key: string, docNo: string) =>
-  SAMPLE[key] ? SAMPLE[key](docNo) : `Captured from the job file (${docNo || 'draft'})`
-
-/* Some documents are deliberately left short of their own standard — and they
-   are chosen from among the ones already marked approved or issued, because a
-   gap on a draft is just work in progress, while a gap on an issued document
-   is what a bank or a customs office rejects. */
-const SETTLED = ['APPROVED', 'ISSUED', 'SURRENDERED']
-const shortlist = new Set(
-  documents
-    .filter((d) => SETTLED.includes(d.status) && docFieldSpecs(d.type).length > 0)
-    .filter((_, i) => i % 19 === 3)
-    .map((d) => d.id),
-)
-
-for (const doc of documents) {
-  const specs = docFieldSpecs(doc.type)
-  if (!specs.length) continue
-  if (doc.status === 'REQUIRED') continue
-  const short = shortlist.has(doc.id)
-  const required = specs.filter((s) => s.required)
-  /* on a shorted document, drop the last two mandatory fields */
-  const skip = short ? new Set(required.slice(-2).map((s) => s.key)) : new Set<string>()
-  doc.fields = specs
-    .filter((s) => !skip.has(s.key))
-    .filter((s) => s.required || doc.status !== 'DRAFT')
-    .map((s) => ({ key: s.key, value: genericValue(s.key, doc.docNo ?? '') }))
-}
 
 export const SERVICE_CATALOGUE = ADDITIONAL_SERVICES
 

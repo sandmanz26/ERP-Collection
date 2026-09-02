@@ -171,7 +171,9 @@ export function ProjectDetailPage() {
         }
       />
 
-      <Stepper project={project} selected={selectedStage} onSelect={setSelectedStage} className="mb-4" />
+      <div data-tour="job-stepper">
+        <Stepper project={project} selected={selectedStage} onSelect={setSelectedStage} className="mb-4" />
+      </div>
 
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <MiniStat label="Containers" value={`${containers.length}`} sub={`${fmtNumber(totalCbm, 1)} m³ · ${fmtNumber(totalKg / 1000, 1)} t`} icon={<ContainerIcon />} />
@@ -206,6 +208,7 @@ export function ProjectDetailPage() {
         />
       </div>
 
+      <div data-tour="job-tabs">
       <Tabs
         value={tab}
         onChange={setTab}
@@ -223,12 +226,13 @@ export function ProjectDetailPage() {
           { value: 'timeline', label: 'Timeline', icon: <CalendarClock />, count: project.timeline.length },
         ]}
       />
+      </div>
 
       {tab === 'overview' && (
         <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
           <div className="space-y-4">
             {(gate.blockers.length > 0 || gate.warnings.length > 0) && (
-              <Card className={gate.blockers.length ? 'border-danger/30' : 'border-warning/30'}>
+              <Card data-tour="job-blockers" className={gate.blockers.length ? 'border-danger/30' : 'border-warning/30'}>
                 <CardHeader
                   icon={<AlertTriangle />}
                   title={gate.blockers.length ? `${gate.blockers.length} items block this stage` : `${gate.warnings.length} warnings`}

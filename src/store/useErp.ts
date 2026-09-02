@@ -15,6 +15,8 @@ import {
   stuffingJobs as seedStuffing,
 } from '@/data/seed3'
 import { ADDITIONAL_SERVICES } from '@/data/reference'
+/* fills every document's fields with values computed from its own job */
+import '@/data/seed4'
 import { uid } from '@/lib/utils'
 import { useAuth } from './useAuth'
 
@@ -791,6 +793,6 @@ export const useErp = create<ErpState>()(
         set({ ...seedState() })
       },
     }),
-    { name: 'meridian-freight-erp', version: 7 },
+    { name: 'meridian-freight-erp', version: 9 },
   ),
 )

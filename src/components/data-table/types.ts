@@ -15,6 +15,8 @@ export interface Column<T> {
   headerHint?: string
   /** pin this column to the left, after the checkbox */
   pinned?: boolean
+  /** anchor for the onboarding tour, stamped on the column header */
+  tour?: string
 }
 
 export interface TableFilter<T = unknown> {

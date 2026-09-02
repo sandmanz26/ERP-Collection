@@ -547,22 +547,40 @@ function DocumentForm({
               )}
 
               <div className="grid gap-3 p-3.5 sm:grid-cols-2">
-                {check.specs.map((spec) => (
-                  <Field
-                    key={spec.key}
-                    label={spec.label}
-                    required={spec.required}
-                    help={spec.hint || undefined}
-                    className={spec.hint.length > 60 ? 'sm:col-span-2' : undefined}
-                  >
-                    <Input
-                      value={fieldValue(spec.key)}
-                      invalid={spec.required && claimsSettled && !fieldValue(spec.key)}
-                      onChange={(e) => setFieldValue(spec.key, e.target.value)}
-                      placeholder={spec.required ? 'Required' : 'Optional'}
-                    />
-                  </Field>
-                ))}
+                {check.specs.map((spec) => {
+                  const value = fieldValue(spec.key)
+                  /* Addresses, marks and descriptions arrive with line breaks in
+                     them; an input would silently run them together. */
+                  const multiline = value.includes('\n') || value.length > 90
+                  const invalid = spec.required && claimsSettled && !value
+                  return (
+                    <Field
+                      key={spec.key}
+                      label={spec.label}
+                      required={spec.required}
+                      help={spec.hint || undefined}
+                      className={multiline || spec.hint.length > 60 ? 'sm:col-span-2' : undefined}
+                    >
+                      {multiline ? (
+                        <Textarea
+                          value={value}
+                          invalid={invalid}
+                          rows={Math.min(5, value.split('\n').length + 1)}
+                          onChange={(e) => setFieldValue(spec.key, e.target.value)}
+                          placeholder={spec.required ? 'Required' : 'Optional'}
+                          className="font-[inherit] text-[12.5px] leading-relaxed"
+                        />
+                      ) : (
+                        <Input
+                          value={value}
+                          invalid={invalid}
+                          onChange={(e) => setFieldValue(spec.key, e.target.value)}
+                          placeholder={spec.required ? 'Required' : 'Optional'}
+                        />
+                      )}
+                    </Field>
+                  )
+                })}
               </div>
             </div>
           </div>

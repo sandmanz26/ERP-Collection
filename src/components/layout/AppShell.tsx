@@ -1,12 +1,14 @@
 import * as React from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Anchor, Bell, ChevronsLeft, Clock3, Command, Gauge, LayoutList, LogOut, Monitor, Moon,
-  PanelLeftClose, PanelLeftOpen, RotateCcw, Search, ShieldCheck, Sun, TriangleAlert, UserRound,
+  Anchor, Bell, ChevronsLeft, Clock3, Command, Gauge, LayoutList, Lightbulb, LogOut, Monitor, Moon,
+  PanelLeftClose, PanelLeftOpen, RotateCcw, Search, ShieldCheck, Sun, TriangleAlert,
+  UserRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAV, OPERATOR_NAV } from './nav'
 import { CommandPalette } from './CommandPalette'
+import { TourGuide, startTour, useTourState } from '@/components/onboarding/Tour'
 import { Button } from '@/components/ui/button'
 import { Kbd, Separator } from '@/components/ui/misc'
 import { Tooltip } from '@/components/ui/tooltip'
@@ -34,6 +36,7 @@ export function AppShell() {
   const toast = useToast()
   const navigate = useNavigate()
   const signOut = useAuth((s) => s.signOut)
+  const resetTours = useTourState((s) => s.reset)
   const user = useCurrentUser()
   const initials = (user?.fullName ?? 'Meridian User')
     .split(' ')
@@ -354,6 +357,23 @@ export function AppShell() {
                 </div>
               </div>
               <MenuSeparator />
+              <MenuItem icon={<Lightbulb />} onSelect={() => startTour()}>
+                Show me around this page
+              </MenuItem>
+              <MenuItem
+                icon={<RotateCcw />}
+                onSelect={() => {
+                  resetTours()
+                  toast.push({
+                    tone: 'success',
+                    title: 'Tours reset',
+                    description: 'Each page will introduce itself again the next time you open it.',
+                  })
+                }}
+              >
+                Replay every tour
+              </MenuItem>
+              <MenuSeparator />
               <MenuLabel>Workspace view</MenuLabel>
               <div className="px-1.5 py-1">
                 <Segmented
@@ -401,6 +421,7 @@ export function AppShell() {
       </div>
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <TourGuide />
     </div>
   )
 }

@@ -329,6 +329,14 @@ Esc); `MultiSelect` and a hand-built `DatePicker` follow the same conventions.
 - **confirmation on every delete**, escalating with the blast radius: a plain confirm for one record, an itemised list for a few, cascade warnings ("12 projects reference these customers"), and a typed `DELETE` keyword for large or cascading deletions
 - column visibility, density toggle, faceted filters, search, pagination and per-table footer totals
 
+**A guided tour on first arrival.** Landing on Projects, a project, or the operator workspace for
+the first time dims the page and walks a spotlight over the parts that carry meaning — what a job
+row is, what the stage badge counts, why the next cut-off is the most expensive number on screen.
+Each card says what the thing is *and why it matters*, not where to click. It runs once per tour,
+remembers that it has been seen, leaves on Esc or Skip, and can be replayed from the profile menu
+("Show me around this page", "Replay every tour"). Steps whose target is not on screen are dropped
+rather than pointing at nothing.
+
 Other pieces: a ⌘K command palette indexing every job, container, customer and package; a live
 exception feed in the top bar; and a collapsible sidebar (⌘\).
 
@@ -364,6 +372,16 @@ schedule and the job sheet, plus the KPI set.
 They are pure functions and are the first place to look when wiring this to a real backend.
 
 ## Demo data
+
+**The paperwork carries real contents.** Every governed document's fields are computed from the job
+itself, so the set reconciles the way a real one does: the packing list's gross weight is the sum of
+what is actually in the containers, the B/L quotes the same figure, the VGM adds the tare to it, the
+invoice value matches the FOB value on the PEB, and the packing list quotes the invoice number the
+invoice actually carries. Documents are numbered in the series their issuer would really use — the
+shipper's own `JMF/INV/26/0841`, the carrier's B/L number, the customs registration number — because
+a system-generated id on the face of a commercial invoice fools nobody. Each job is consigned to a
+real buyer in its destination country, with that buyer's address and EORI/ABN/TRN number, so an
+invoice has a seller and a buyer rather than the same company twice.
 
 The workspace is seeded on first load and persisted. **Appearance → Reset demo data** in the top bar
 restores it. Deliberate faults are baked in so the guards have something to catch: a rejected

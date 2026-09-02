@@ -261,6 +261,14 @@ button to close it.
 **Reference.** Three items sit outside the phases because they are looked up rather than worked
 through: shipment tracking, the yard's loading schedule, and the incident log.
 
+**The first time you arrive.** A new operator does not get a manual. The first time the workspace
+opens, the page dims and a short guide walks through it a piece at a time — what the board is
+showing, why a job sits in one phase and not another, what the deadline countdown means, and where
+the papers live. Four cards, about a minute, and it says *why each thing matters* rather than where
+to click: "miss a cut-off and the container waits for the next vessel — this is the single most
+expensive mistake in the job." It appears once, disappears on Esc, and anyone can replay it later
+from their profile menu. The same guide exists on the projects list and inside a job.
+
 ---
 
 ## 9. Scope

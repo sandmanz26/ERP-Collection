@@ -175,7 +175,7 @@ export function DataTable<T>({
     <div className="flex min-h-0 flex-1 flex-col">
       {/* ------------ toolbar ------------ */}
       <div className="flex flex-wrap items-center gap-2 pb-3">
-        <div className="relative min-w-[200px] flex-1 md:max-w-xs">
+        <div className="relative min-w-[200px] flex-1 md:max-w-xs" data-tour="table-search">
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -213,7 +213,7 @@ export function DataTable<T>({
 
         <Menu>
           <MenuTrigger asChild>
-            <Button variant="secondary" size="md">
+            <Button variant="secondary" size="md" data-tour="table-export">
               <Download />
               Export
             </Button>
@@ -388,6 +388,7 @@ export function DataTable<T>({
                         c.pinned && 'left-10 z-30 shadow-sticky-r',
                         i === 0 && !c.pinned && '',
                       )}
+                      data-tour={c.tour}
                     >
                       {c.sortable === false ? (
                         <span className="text-[11.5px] uppercase tracking-[0.055em]">{c.header}</span>
@@ -417,6 +418,7 @@ export function DataTable<T>({
                 })}
                 {rowActions && (
                   <th
+                    data-tour="table-actions"
                     className={cn(
                       'sticky top-0 z-30 w-[92px] border-b border-border bg-surface-sunken text-right text-[11.5px] font-semibold uppercase tracking-[0.055em] text-fg-muted',
                       dense ? 'px-3 py-1.5' : 'px-3 py-2',
