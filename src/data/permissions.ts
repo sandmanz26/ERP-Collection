@@ -22,6 +22,10 @@ export const MODULES: { key: PermissionModule; label: string; description: strin
   { key: 'warehouses', label: 'Warehouses', description: 'Where stock is held', group: 'Inventory' },
   { key: 'items', label: 'Item Master', description: 'The definition of everything the company buys', group: 'Inventory' },
   { key: 'stock', label: 'Warehouse Stock', description: 'Quantities per item, per warehouse, per bin', group: 'Inventory' },
+  { key: 'divisions', label: 'Divisions', description: 'The company units that raise material requests', group: 'Procurement' },
+  { key: 'suppliers', label: 'Suppliers', description: 'Approved vendors and what they have charged', group: 'Procurement' },
+  { key: 'mr', label: 'Material Requests', description: 'The monthly request session and what each division asked for', group: 'Procurement' },
+  { key: 'pr', label: 'Purchase Requests', description: 'The recap of a locked session, priced and assigned', group: 'Procurement' },
   { key: 'users', label: 'Users', description: 'Accounts that can sign in', group: 'Administration' },
   { key: 'roles', label: 'Roles', description: 'Bundles of privileges assigned to accounts', group: 'Administration' },
   { key: 'settings', label: 'Settings', description: 'Company profile and system preferences', group: 'Administration' },
@@ -32,14 +36,15 @@ export const moduleLabel = (key: PermissionModule) => MODULES.find((m) => m.key 
 
 /** How much damage the privilege can do if it is handed out carelessly. */
 const RISK: Record<string, PermissionRisk> = {
-  view: 'LOW', export: 'LOW', create: 'MEDIUM', edit: 'MEDIUM', import: 'MEDIUM',
-  delete: 'HIGH', approve: 'HIGH', manage: 'HIGH',
+  view: 'LOW', export: 'LOW', create: 'MEDIUM', edit: 'MEDIUM', import: 'MEDIUM', submit: 'MEDIUM',
+  delete: 'HIGH', approve: 'HIGH', manage: 'HIGH', review: 'MEDIUM', lock: 'HIGH', assign: 'MEDIUM',
 }
 
 /** Wording that says what the privilege lets a person do, not what it is called. */
 const VERB: Record<string, string> = {
   view: 'View', create: 'Create', edit: 'Edit', delete: 'Delete', import: 'Import',
-  export: 'Export', approve: 'Approve', manage: 'Manage',
+  export: 'Export', approve: 'Approve', manage: 'Manage', submit: 'Submit', review: 'Review',
+  lock: 'Lock', assign: 'Assign supplier on',
 }
 
 function perm(module: PermissionModule, action: string, description: string): PermissionDef {
@@ -110,6 +115,30 @@ export const PERMISSIONS: PermissionDef[] = [
   perm('stock', 'import', 'Load stock counts from a CSV file.'),
   perm('stock', 'export', 'Download stock with its valuation.'),
 
+  perm('divisions', 'view', 'See the division register and who heads each one.'),
+  perm('divisions', 'create', 'Add a division.'),
+  perm('divisions', 'edit', 'Change a division, its head and its cost centre.'),
+  perm('divisions', 'delete', 'Remove a division. Its past requests keep pointing at a name that no longer exists.'),
+
+  perm('suppliers', 'view', 'See suppliers and the prices they have charged.'),
+  perm('suppliers', 'create', 'Register a supplier.'),
+  perm('suppliers', 'edit', 'Change supplier details, terms and approved categories.'),
+  perm('suppliers', 'delete', 'Remove a supplier. Its price history goes with it.'),
+  perm('suppliers', 'import', 'Load suppliers from a CSV file.'),
+  perm('suppliers', 'export', 'Download the supplier list with its terms.'),
+
+  perm('mr', 'view', 'Open material request sessions and see your own division request.'),
+  perm('mr', 'create', 'Open a monthly session and set the window it accepts requests in.'),
+  perm('mr', 'submit', 'File and submit the request for your own division.'),
+  perm('mr', 'review', 'See every division request in a session, not just your own, and send one back.'),
+  perm('mr', 'lock', 'Close a session and lock it into a purchase request. One way — the requests are frozen at that point.'),
+
+  perm('pr', 'view', 'Open purchase requests and their merged lines.'),
+  perm('pr', 'edit', 'Change quantities, notes and the agreed price on a purchase request.'),
+  perm('pr', 'assign', 'Assign a supplier to a line, which brings its last purchase price with it.'),
+  perm('pr', 'approve', 'Approve a purchase request, or mark it ordered.'),
+  perm('pr', 'export', 'Download a purchase request with its prices and suppliers.'),
+
   perm('users', 'view', 'See the account register and what each account can do.'),
   perm('users', 'create', 'Invite a new account.'),
   perm('users', 'edit', 'Change an account, its roles and its individual privilege overrides.'),
@@ -132,7 +161,9 @@ export const permissionByKey = new Map(PERMISSIONS.map((p) => [p.key, p]))
 export const permissionsOf = (module: PermissionModule) => PERMISSIONS.filter((p) => p.module === module)
 
 /** Every action used anywhere, in the order a permission matrix should show them. */
-export const ACTION_ORDER = ['view', 'create', 'edit', 'delete', 'import', 'export', 'approve', 'manage']
+export const ACTION_ORDER = [
+  'view', 'create', 'edit', 'delete', 'import', 'export', 'submit', 'review', 'assign', 'approve', 'lock', 'manage',
+]
 
 /**
  * Privileges that can hand out further privileges. An account holding any of

@@ -1,6 +1,6 @@
 import {
-  Boxes, Building2, ClipboardList, KeyRound, LayoutDashboard, MapPinned, Package, Settings,
-  ShieldCheck, Users, UsersRound, Warehouse,
+  Boxes, Building2, CalendarRange, ClipboardList, KeyRound, LayoutDashboard, MapPinned, Network,
+  Package, Settings, ShieldCheck, ShoppingCart, Store, Users, UsersRound, Warehouse,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -47,6 +47,16 @@ export const NAV: NavGroup[] = [
       { to: '/inventory/warehouses', label: 'Warehouses', icon: Warehouse, permission: 'warehouses.view', description: 'Where stock is held' },
       { to: '/inventory/items', label: 'Item Master', icon: Package, permission: 'items.view', description: 'The definition of everything we buy' },
       { to: '/inventory/stock', label: 'Warehouse Stock', icon: Boxes, permission: 'stock.view', badgeKey: 'lowStock', description: 'Item by item, warehouse by warehouse' },
+    ],
+  },
+  {
+    label: 'Procurement',
+    items: [
+      { to: '/mr', label: 'Material Requests', icon: CalendarRange, permission: 'mr.view', description: 'The monthly session every division files into' },
+      { to: '/mr/my', label: 'My Division Request', icon: ClipboardList, permission: 'mr.submit', description: 'What this division is asking for this month' },
+      { to: '/purchase-requests', label: 'Purchase Requests', icon: ShoppingCart, permission: 'pr.view', description: 'The locked recap, split across suppliers' },
+      { to: '/suppliers', label: 'Suppliers', icon: Store, permission: 'suppliers.view', description: 'Who we buy from, and at what price last time' },
+      { to: '/divisions', label: 'Divisions', icon: Network, permission: 'divisions.view', description: 'The cost centres that can raise a request' },
     ],
   },
   {

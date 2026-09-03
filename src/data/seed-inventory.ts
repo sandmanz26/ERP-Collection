@@ -72,6 +72,7 @@ function item(
   }
 }
 
+const OFS: ServiceType[] = ['OFFICE_SUPPORT']
 const SEC: ServiceType[] = ['SECURITY']
 const CLN: ServiceType[] = ['CLEANING']
 const ALL: ServiceType[] = ['SECURITY', 'CLEANING', 'OFFICE_SUPPORT', 'DRIVER', 'PARKING', 'GARDENING', 'RECEPTIONIST', 'TECHNICIAN', 'PEST_CONTROL']
@@ -277,6 +278,45 @@ export const items: InventoryItem[] = [
     subCategory: 'Administrasi', defaultSupplier: 'PT Sinar Alat Teknik', leadTimeDays: 7,
   }),
 
+  item('ITM-OFS-0003', 'Bolpoint Standar Hitam (isi 12)', 'OFFICE_SUPPLY', 'PACK', 42_000, [60, 480, 120, 240], OFS, {
+    subCategory: 'Alat Tulis', brand: 'Nusa Kantor', defaultSupplier: 'PT Nusa Kantor Sejahtera', leadTimeDays: 5,
+    description: 'Dipakai seluruh divisi; permintaan paling sering muncul di sesi MR bulanan.',
+  }),
+  item('ITM-OFS-0004', 'Kertas HVS A4 80gr (rim)', 'OFFICE_SUPPLY', 'PACK', 62_000, [80, 700, 160, 320], OFS, {
+    subCategory: 'Kertas', brand: 'Nusa Kantor', defaultSupplier: 'PT Nusa Kantor Sejahtera', leadTimeDays: 5,
+  }),
+  item('ITM-OFS-0005', 'Map Ordner Folio', 'OFFICE_SUPPLY', 'PCS', 32_000, [40, 320, 80, 160], OFS, {
+    subCategory: 'Arsip', defaultSupplier: 'PT Nusa Kantor Sejahtera', leadTimeDays: 7,
+  }),
+  item('ITM-OFS-0006', 'Tinta Printer Refill Hitam', 'OFFICE_SUPPLY', 'BOTTLE', 95_000, [30, 220, 60, 120], OFS, {
+    subCategory: 'Printer', defaultSupplier: 'PT Nusa Kantor Sejahtera', leadTimeDays: 7,
+  }),
+  item('ITM-OFS-0007', 'Stapler Besar & Isi Staples', 'OFFICE_SUPPLY', 'SET', 78_000, [20, 160, 40, 80], OFS, {
+    subCategory: 'Alat Tulis', defaultSupplier: 'PT Nusa Kantor Sejahtera', leadTimeDays: 7,
+  }),
+  item('ITM-OFS-0008', 'Amplop Kop Perusahaan (isi 100)', 'OFFICE_SUPPLY', 'PACK', 65_000, [25, 200, 50, 100], OFS, {
+    subCategory: 'Cetakan', defaultSupplier: 'PT Nusa Kantor Sejahtera', leadTimeDays: 14,
+  }),
+  item('ITM-OFS-0009', 'Spidol Whiteboard (isi 12)', 'OFFICE_SUPPLY', 'PACK', 96_000, [20, 180, 45, 90], OFS, {
+    subCategory: 'Alat Tulis', defaultSupplier: 'PT Nusa Kantor Sejahtera', leadTimeDays: 5,
+  }),
+  item('ITM-OFS-0010', 'Buku Nota Serah Terima', 'OFFICE_SUPPLY', 'PCS', 24_000, [40, 320, 80, 160], ['OFFICE_SUPPORT', 'SECURITY'], {
+    subCategory: 'Administrasi', defaultSupplier: 'PT Nusa Kantor Sejahtera', leadTimeDays: 7,
+  }),
+  item('ITM-OFS-0011', 'Toner Cartridge Printer Laser', 'OFFICE_SUPPLY', 'UNIT', 785_000, [10, 80, 20, 30], OFS, {
+    subCategory: 'Printer', defaultSupplier: 'PT Nusa Kantor Sejahtera', leadTimeDays: 14,
+    description: 'Harga per unit tinggi; selalu dinegosiasi ulang saat perakapan PR.',
+  }),
+  item('ITM-OFS-0012', 'Label Barcode Aset (isi 100)', 'OFFICE_SUPPLY', 'PACK', 58_000, [15, 120, 30, 60], OFS, {
+    subCategory: 'Administrasi', defaultSupplier: 'PT Nusa Kantor Sejahtera', leadTimeDays: 14,
+  }),
+  item('ITM-CNS-0006', 'Air Minum Galon 19L', 'CONSUMABLE', 'UNIT', 22_000, [80, 600, 150, 300], ['OFFICE_SUPPORT', 'CLEANING'], {
+    subCategory: 'Pantry', defaultSupplier: 'PT Mitra Higienis Indonesia', leadTimeDays: 3,
+  }),
+  item('ITM-CNS-0007', 'Paket Kopi & Teh Pantry', 'CONSUMABLE', 'PACK', 185_000, [30, 240, 60, 120], ['OFFICE_SUPPORT'], {
+    subCategory: 'Pantry', defaultSupplier: 'PT Mitra Higienis Indonesia', leadTimeDays: 5,
+  }),
+
   /* ---------- spare parts ---------- */
   item('ITM-SPR-0001', 'Pad Mesin Poles 17"', 'SPAREPART', 'PCS', 165_000, [20, 160, 40, 80], CLN, {
     subCategory: 'Suku Cadang Mesin', defaultSupplier: 'PT Adijaya Machinery', leadTimeDays: 21,
@@ -391,6 +431,18 @@ export const warehouseStock: WarehouseStock[] = [
   stock('wh_jkt', 'ITM-CNS-0005', 'RAK-F-03-1', 184, 30, { batchNo: 'BT-2509', expiryDate: iso(720) }),
   stock('wh_jkt', 'ITM-OFS-0001', 'RAK-G-01-1', 148, 20),
   stock('wh_jkt', 'ITM-OFS-0002', 'RAK-G-01-2', 96, 14),
+  stock('wh_jkt', 'ITM-OFS-0003', 'RAK-G-02-1', 184, 36),
+  stock('wh_jkt', 'ITM-OFS-0004', 'RAK-G-02-2', 246, 60),
+  stock('wh_jkt', 'ITM-OFS-0005', 'RAK-G-02-3', 132, 18),
+  stock('wh_jkt', 'ITM-OFS-0006', 'RAK-G-03-1', 74, 16),
+  stock('wh_jkt', 'ITM-OFS-0007', 'RAK-G-03-2', 46, 8),
+  stock('wh_jkt', 'ITM-OFS-0008', 'RAK-G-03-3', 58, 10),
+  stock('wh_jkt', 'ITM-OFS-0009', 'RAK-G-04-1', 62, 12),
+  stock('wh_jkt', 'ITM-OFS-0010', 'RAK-G-04-2', 118, 24),
+  stock('wh_jkt', 'ITM-OFS-0011', 'RAK-G-04-3', 14, 4),
+  stock('wh_jkt', 'ITM-OFS-0012', 'RAK-G-05-1', 34, 6),
+  stock('wh_jkt', 'ITM-CNS-0006', 'AREA-PANTRY-1', 210, 48),
+  stock('wh_jkt', 'ITM-CNS-0007', 'AREA-PANTRY-2', 76, 18),
   stock('wh_jkt', 'ITM-SPR-0001', 'RAK-H-01-1', 74, 12),
   stock('wh_jkt', 'ITM-SPR-0002', 'RAK-H-01-2', 28, 6),
   stock('wh_jkt', 'ITM-SPR-0003', 'RAK-H-01-3', 46, 8),
@@ -435,6 +487,8 @@ export const warehouseStock: WarehouseStock[] = [
   stock('wh_bdg', 'ITM-TOL-0002', 'RAK-D-01-2', 38, 12),
   stock('wh_bdg', 'ITM-CNS-0001', 'RAK-F-01-1', 180, 70),
   stock('wh_bdg', 'ITM-CNS-0002', 'RAK-F-01-2', 96, 40),
+  stock('wh_bdg', 'ITM-OFS-0003', 'RAK-G-01-1', 26, 8),
+  stock('wh_bdg', 'ITM-OFS-0004', 'RAK-G-01-2', 34, 12),
   stock('wh_bdg', 'ITM-MCH-0002', 'AREA-MESIN-1', 3, 1),
 
   /* ---------------- Gudang Regional Surabaya ---------------- */
@@ -465,6 +519,10 @@ export const warehouseStock: WarehouseStock[] = [
   stock('wh_sby', 'ITM-MCH-0001', 'AREA-MESIN-1', 4, 2),
   stock('wh_sby', 'ITM-MCH-0002', 'AREA-MESIN-2', 5, 2),
   stock('wh_sby', 'ITM-SPR-0001', 'RAK-H-01-1', 18, 6),
+  stock('wh_sby', 'ITM-OFS-0003', 'RAK-G-01-1', 48, 14),
+  stock('wh_sby', 'ITM-OFS-0004', 'RAK-G-01-2', 62, 20),
+  stock('wh_sby', 'ITM-OFS-0011', 'RAK-G-02-1', 6, 2),
+  stock('wh_sby', 'ITM-CNS-0006', 'AREA-PANTRY-1', 88, 24),
 
   /* ---------------- Site Store Menara Cakrawala ---------------- */
   stock('wh_site_cpi', 'ITM-CHM-0001', 'BIN-01', 14, 6, { batchNo: 'FC-2604', expiryDate: iso(430), lastMovementAt: iso(-1) }),

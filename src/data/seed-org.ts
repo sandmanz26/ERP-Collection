@@ -31,8 +31,49 @@ const PASSWORD = 'Gemilang#2026'
 
 export const users: UserAccount[] = [
   {
+    id: 'usr_rizal', email: 'rizal.maulana@tatagemilang.co.id', password: PASSWORD,
+    fullName: 'Rizal Maulana', jobTitle: 'Kepala Pengadaan', status: 'ACTIVE',
+    divisionId: 'div_prc',
+    roleIds: ['rol_purchasing'], grantedPermissions: [], revokedPermissions: [], branchScope: [],
+    branchCode: 'JKT', phone: '+62 811 2299 3344', failedAttempts: 0, mustChangePassword: false,
+    twoFactorEnabled: true, lastLoginAt: iso(0, 7), createdAt: iso(-980),
+  },
+  {
+    id: 'usr_yanti', email: 'yanti.kurniasih@tatagemilang.co.id', password: PASSWORD,
+    fullName: 'Yanti Kurniasih', jobTitle: 'Kepala General Affairs', status: 'ACTIVE',
+    divisionId: 'div_ga',
+    roleIds: ['rol_division_head'], grantedPermissions: [], revokedPermissions: [], branchScope: ['JKT'],
+    branchCode: 'JKT', phone: '+62 813 4455 6677', failedAttempts: 0, mustChangePassword: false,
+    twoFactorEnabled: false, lastLoginAt: iso(-1, 9), createdAt: iso(-1290),
+  },
+  {
+    id: 'usr_fitri', email: 'fitri.handayani@tatagemilang.co.id', password: PASSWORD,
+    fullName: 'Fitri Handayani', jobTitle: 'Kepala QHSE', status: 'ACTIVE',
+    divisionId: 'div_qhse',
+    roleIds: ['rol_division_head'], grantedPermissions: ['stock.view'], revokedPermissions: [], branchScope: [],
+    branchCode: 'JKT', phone: '+62 812 7788 9900', failedAttempts: 0, mustChangePassword: false,
+    twoFactorEnabled: false, lastLoginAt: iso(-2, 8), createdAt: iso(-890),
+  },
+  {
+    id: 'usr_dimas', email: 'dimas.anggara@tatagemilang.co.id', password: PASSWORD,
+    fullName: 'Dimas Anggara', jobTitle: 'Kepala Teknologi Informasi', status: 'ACTIVE',
+    divisionId: 'div_it',
+    roleIds: ['rol_division_head'], grantedPermissions: [], revokedPermissions: [], branchScope: [],
+    branchCode: 'JKT', phone: '+62 878 3344 5566', failedAttempts: 0, mustChangePassword: false,
+    twoFactorEnabled: true, lastLoginAt: iso(-1, 10), createdAt: iso(-690),
+  },
+  {
+    id: 'usr_nur', email: 'nurhayati.dewi@tatagemilang.co.id', password: PASSWORD,
+    fullName: 'Nurhayati Dewi', jobTitle: 'Kepala Training Center', status: 'ACTIVE',
+    divisionId: 'div_trn',
+    roleIds: ['rol_division_head'], grantedPermissions: [], revokedPermissions: [], branchScope: ['BDG'],
+    branchCode: 'BDG', phone: '+62 857 6677 8899', failedAttempts: 0, mustChangePassword: false,
+    twoFactorEnabled: false, lastLoginAt: iso(-4, 8), createdAt: iso(-610),
+  },
+  {
     id: 'usr_hendra', email: 'hendra.wijayanto@tatagemilang.co.id', password: PASSWORD,
     fullName: 'Hendra Wijayanto', jobTitle: 'Direktur Operasional', status: 'ACTIVE',
+    divisionId: 'div_mgt',
     roleIds: ['rol_super'], grantedPermissions: [], revokedPermissions: [], branchScope: [],
     branchCode: 'JKT', phone: '+62 811 1900 221', failedAttempts: 0, mustChangePassword: false,
     twoFactorEnabled: true, lastLoginAt: iso(-1, 7), createdAt: iso(-1460),
@@ -40,7 +81,8 @@ export const users: UserAccount[] = [
   {
     id: 'usr_siti', email: 'siti.rahmawati@tatagemilang.co.id', password: PASSWORD,
     fullName: 'Siti Rahmawati', jobTitle: 'Operation Manager', status: 'ACTIVE',
-    roleIds: ['rol_ops_manager'],
+    divisionId: 'div_ops',
+    roleIds: ['rol_ops_manager', 'rol_division_head'],
     /* Allowed to invite her own coordinators without holding the whole account module. */
     grantedPermissions: ['users.create'],
     revokedPermissions: [], branchScope: [],
@@ -51,6 +93,7 @@ export const users: UserAccount[] = [
     id: 'usr_agus', email: 'agus.pratama@tatagemilang.co.id', password: PASSWORD,
     fullName: 'Agus Pratama', jobTitle: 'Koordinator Area Jakarta', status: 'ACTIVE',
     /* Two roles: he coordinates the area and keeps the site store at Menara Cakrawala. */
+    divisionId: 'div_ops',
     roleIds: ['rol_area_coord', 'rol_site_spv'],
     grantedPermissions: [], revokedPermissions: [], branchScope: ['JKT'],
     branchCode: 'JKT', phone: '+62 813 1122 9080', failedAttempts: 0, mustChangePassword: false,
@@ -59,21 +102,24 @@ export const users: UserAccount[] = [
   {
     id: 'usr_dewi', email: 'dewi.anggraini@tatagemilang.co.id', password: PASSWORD,
     fullName: 'Dewi Anggraini', jobTitle: 'HR & Recruitment Lead', status: 'ACTIVE',
-    roleIds: ['rol_hr'], grantedPermissions: [], revokedPermissions: [], branchScope: [],
+    divisionId: 'div_hrd',
+    roleIds: ['rol_hr', 'rol_division_head'], grantedPermissions: [], revokedPermissions: [], branchScope: [],
     branchCode: 'JKT', phone: '+62 815 6600 1274', failedAttempts: 0, mustChangePassword: false,
     twoFactorEnabled: false, lastLoginAt: iso(-2, 9), createdAt: iso(-760),
   },
   {
     id: 'usr_bayu', email: 'bayu.setiawan@tatagemilang.co.id', password: PASSWORD,
     fullName: 'Bayu Setiawan', jobTitle: 'Kepala Gudang Pusat', status: 'ACTIVE',
-    roleIds: ['rol_warehouse'], grantedPermissions: [], revokedPermissions: [], branchScope: [],
+    divisionId: 'div_wh',
+    roleIds: ['rol_warehouse', 'rol_division_head'], grantedPermissions: [], revokedPermissions: [], branchScope: [],
     branchCode: 'JKT', phone: '+62 812 9034 5511', failedAttempts: 0, mustChangePassword: false,
     twoFactorEnabled: false, lastLoginAt: iso(-1, 8), createdAt: iso(-620),
   },
   {
     id: 'usr_maya', email: 'maya.puspita@tatagemilang.co.id', password: PASSWORD,
     fullName: 'Maya Puspita', jobTitle: 'Finance & Billing', status: 'ACTIVE',
-    roleIds: ['rol_finance'], grantedPermissions: [],
+    divisionId: 'div_fin',
+    roleIds: ['rol_finance', 'rol_division_head'], grantedPermissions: [],
     /* Her role allows editing client terms; the director took that back after a
        payment term was changed without an approved addendum. */
     revokedPermissions: ['clients.edit'],
@@ -84,7 +130,8 @@ export const users: UserAccount[] = [
   {
     id: 'usr_lina', email: 'lina.marlina@tatagemilang.co.id', password: PASSWORD,
     fullName: 'Lina Marlina', jobTitle: 'Admin Gudang Surabaya', status: 'ACTIVE',
-    roleIds: ['rol_warehouse'], grantedPermissions: [], revokedPermissions: ['items.delete', 'warehouses.delete'],
+    divisionId: 'div_sby',
+    roleIds: ['rol_warehouse', 'rol_division_head'], grantedPermissions: [], revokedPermissions: ['items.delete', 'warehouses.delete'],
     branchScope: ['SBY'],
     branchCode: 'SBY', phone: '+62 812 3355 7788', failedAttempts: 0, mustChangePassword: false,
     twoFactorEnabled: false, lastLoginAt: iso(-1, 9), createdAt: iso(-410),
@@ -92,6 +139,7 @@ export const users: UserAccount[] = [
   {
     id: 'usr_ratna', email: 'ratna.wulandari@tatagemilang.co.id', password: PASSWORD,
     fullName: 'Ratna Wulandari', jobTitle: 'Site Supervisor Menara Cakrawala', status: 'ACTIVE',
+    divisionId: 'div_ops',
     roleIds: ['rol_site_spv'], grantedPermissions: [], revokedPermissions: [], branchScope: ['JKT'],
     branchCode: 'JKT', phone: '+62 878 9911 2244', failedAttempts: 0, mustChangePassword: true,
     twoFactorEnabled: false, lastLoginAt: iso(-6, 8), createdAt: iso(-115),
@@ -99,6 +147,7 @@ export const users: UserAccount[] = [
   {
     id: 'usr_budi', email: 'budi.santoso@tatagemilang.co.id', password: PASSWORD,
     fullName: 'Budi Santoso', jobTitle: 'Koordinator Area Bandung', status: 'PENDING_VERIFICATION',
+    divisionId: 'div_ops',
     roleIds: ['rol_area_coord'], grantedPermissions: [], revokedPermissions: [], branchScope: ['BDG'],
     branchCode: 'BDG', phone: '+62 878 2200 3311', failedAttempts: 0,
     mustChangePassword: false, twoFactorEnabled: false, createdAt: iso(-9),
@@ -106,6 +155,7 @@ export const users: UserAccount[] = [
   {
     id: 'usr_rina', email: 'rina.kusuma@tatagemilang.co.id', password: PASSWORD,
     fullName: 'Rina Kusuma', jobTitle: 'Admin Proyek', status: 'LOCKED',
+    divisionId: 'div_sby',
     roleIds: ['rol_viewer'], grantedPermissions: [], revokedPermissions: [], branchScope: ['SBY'],
     branchCode: 'SBY', phone: '+62 857 1200 6644', failedAttempts: 5, lockedUntil: iso(0, 23),
     mustChangePassword: false, twoFactorEnabled: false, createdAt: iso(-310),
@@ -115,6 +165,7 @@ export const users: UserAccount[] = [
     fullName: 'Kantor Akuntan Prasetya', jobTitle: 'External Auditor', status: 'INVITED',
     /* Holds a role that is switched off between engagements, so the invitation
        grants nothing until the role is activated again. */
+    divisionId: 'div_fin',
     roleIds: ['rol_auditor'], grantedPermissions: [], revokedPermissions: [], branchScope: [],
     phone: '+62 21 3900 4455', failedAttempts: 0, mustChangePassword: true,
     twoFactorEnabled: false, createdAt: iso(-24),
@@ -122,6 +173,7 @@ export const users: UserAccount[] = [
   {
     id: 'usr_yusuf', email: 'yusuf.ramdani@tatagemilang.co.id', password: PASSWORD,
     fullName: 'Yusuf Ramdani', jobTitle: 'Koordinator Area (nonaktif)', status: 'SUSPENDED',
+    divisionId: 'div_ops',
     roleIds: ['rol_area_coord'], grantedPermissions: [], revokedPermissions: [], branchScope: ['BDG'],
     branchCode: 'BDG', failedAttempts: 0, mustChangePassword: false,
     twoFactorEnabled: false, lastLoginAt: iso(-120), createdAt: iso(-880),

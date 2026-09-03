@@ -6,8 +6,9 @@ month that the posts it is being paid for actually had someone standing in them.
 
 This is a **front-end only** build. There is no backend and no API layer. All data lives in the
 browser (Zustand + `localStorage`), seeded with a realistic operating book: 12 clients, 18 buildings,
-18 projects carrying 136 manpower lines, 17 positions, 6 warehouses, 58 master items, 137 warehouse
-stock lines, and 12 accounts across 10 roles built from a catalogue of 58 privileges.
+18 projects carrying 136 manpower lines, 17 positions, 6 warehouses, 70 master items, 155 warehouse
+stock lines, 12 divisions, 10 suppliers with 107 purchase prices behind them, four monthly material
+request sessions, and 17 accounts across 12 roles built from a catalogue of 78 privileges.
 
 ```bash
 npm install
@@ -20,8 +21,9 @@ Sign in with any seeded account — `siti.rahmawati@tatagemilang.co.id` and the 
 `Gemilang#2026`. Three accounts fail on purpose (unverified, locked, suspended) so those paths can be
 walked without breaking anything, and **each account opens a different suite**, because the role
 decides which pages exist: sign in as `hendra.wijayanto@` for everything, `lina.marlina@` for
-inventory without deletes, or `ratna.wulandari@` for a custom site-supervisor role with no commercial
-access at all.
+inventory without deletes, `rizal.maulana@` for procurement, `yanti.kurniasih@` for a division head
+who can only file their own request, or `ratna.wulandari@` for a custom site-supervisor role with no
+commercial access at all.
 
 ---
 
@@ -105,7 +107,72 @@ the central warehouse runs to the company-wide floor, a regional store to its ow
 Availability is on hand **less** what a project has already reserved. Stock health is judged on what
 is physically in the bin, because a reorder decision is about the shelf, not about the paperwork.
 
-### 6. User management — users, roles, privileges
+### 6. Procurement — divisions, suppliers, MR sessions, purchase requests
+
+The month has a shape, and the module is that shape:
+
+```
+MR session (one per month)
+  └── one request per division            filed and submitted by the division head
+        └── lines: item + qty + purpose + optional estimated price
+              │
+              │  LOCK  — purchasing, once every request is submitted or returned
+              ▼
+      purchase request (draft)            one line per ITEM, not per division
+        └── line.sources[]                each division's quantity kept, never lost
+              └── supplier assignment  →  that supplier's last purchase price appears
+```
+
+**Divisions** are the cost centres that may ask for something: a code, a head, a cost centre, a
+branch. A division that has ever filed a request cannot be deleted, because deleting it would
+orphan the history the recap is built from.
+
+**Suppliers** carry the categories they are approved for, payment terms, lead time, minimum order,
+rating, on-time rate and a status — and, behind them, **107 rows of purchase history**. That history
+is the point: a supplier is not a name, it is what it charged and when.
+
+**MR session.** One per period; the form refuses a second session for the same month, because a
+division that could file into two of them would split its own demand. A session runs
+`DRAFT → OPEN → CLOSED → LOCKED`, and the register shows how many divisions have filed against how
+many could, what the lines add up to, and how many items the merge will produce.
+
+**The division head's page** (`/mr/my`) shows one thing: this division's request in the session that
+is open right now. **Only items the warehouse already holds can be requested** — 69 of the 70 master
+items qualify — with the available quantity shown against each. The estimated unit price is optional;
+where it is left out the item's standard cost stands in, marked as such so nobody mistakes it for a
+quote. Once submitted, the form is read-only until purchasing sends it back with a reason.
+
+**Locking** is the one irreversible step, and the dialog says exactly what it will do before it does
+it: how many requests merge into how many lines, how many of those lines combine more than one
+division, which drafts and returned requests are being left out. It refuses while any request is
+still in draft — locking would silently drop it — so purchasing must either wait for the division to
+submit or return the request, which makes the exclusion deliberate and recorded.
+
+**The purchase request** is the recap. Division A asking for 50 pens and division B for 30 becomes one
+line of 80 that can still be read back to both: every line keeps `sources[]`, so the register shows
+the merged quantity and the detail page shows `GA · 50` and `HRD · 30` beside it. Assign a supplier and
+**its last purchase price for that item appears immediately**, dated, with the purchase order it came
+from; the history dialog shows every purchase of the item from anyone. What a line is worth is stated
+along with *on what authority*, in descending order of trust:
+
+| Basis | Meaning |
+| --- | --- |
+| `Agreed` | A price negotiated on this request |
+| `Last buy` | The most recent purchase of this item **from the assigned supplier** |
+| `Last buy (other supplier)` | No history with this supplier; the most recent purchase from anyone |
+| `Division estimate` | Nobody has bought it; the highest estimate a division gave |
+| `Standard cost` | Nothing but the item master to go on |
+
+Draft and assigned are derived, not chosen: a request becomes `ASSIGNED` when every line has a
+supplier and falls back to `DRAFT` the moment one loses it. Approval is refused while any line is
+unassigned, and freezes suppliers and prices. Three views of the same recap — by line, **by supplier**
+(how the order is actually placed, with a warning when a bucket sits below that supplier's minimum
+order), and **by division** (who is carrying what share of the value, and which request it came from).
+
+Both the seeded purchase requests and the Lock button build their lines with the same
+`buildPrLines()`, so the mock data and the running application cannot drift apart.
+
+### 7. User management — users, roles, privileges
 
 Access is enforced, not decorated. The role an account holds decides which menu entries exist, which
 routes open, and which buttons render; a page that is not permitted refuses with the name of the
@@ -119,8 +186,8 @@ Three layers, each with one job:
 
 | Layer | Where it lives | Rule |
 | --- | --- | --- |
-| **Privilege** | In code (`data/permissions.ts`) — 58 of them, `<module>.<action>` | Never created by a user. Adding one is a code change, because each corresponds to a control the interface shows or hides. |
-| **Role** | Data — 8 system roles, 2 custom | Only ever *grants*. An inactive role grants nothing, so an engagement can be switched off without unpicking who held it. |
+| **Privilege** | In code (`data/permissions.ts`) — 78 of them, `<module>.<action>` | Never created by a user. Adding one is a code change, because each corresponds to a control the interface shows or hides. |
+| **Role** | Data — 10 system roles, 2 custom | Only ever *grants*. An inactive role grants nothing, so an engagement can be switched off without unpicking who held it. |
 | **Override** | On the account | Grants an exception, or revokes something a role gives. **Revoked always wins**, and the user record shows which layer every privilege came from. |
 
 - **Users** — accounts, their roles, their overrides, effective privilege count, branch data scope,
@@ -176,17 +243,22 @@ them:
 | Manpower lines | 136, for 769 contracted posts — 685 of them on active contracts, 642 filled |
 | Positions | 17 across 9 service lines |
 | Warehouses | 6 — one central, four regional, one site store |
-| Master items | 58 across 9 categories, one deliberately discontinued |
-| Stock lines | 137, including expired, expiring, quarantined and empty bins |
-| Accounts | 12 — active, invited, unverified, locked and suspended; two carry privilege overrides |
-| Roles | 10 — 8 system, 2 custom, one of them deliberately switched off |
-| Privileges | 58 across 13 modules, 11 of them high risk |
+| Master items | 70 across 9 categories, one deliberately discontinued |
+| Stock lines | 155, including expired, expiring, quarantined and empty bins |
+| Divisions | 12 cost centres, one of them inactive |
+| Suppliers | 10 — active, on hold, one blacklisted — with 107 rows of purchase history |
+| MR sessions | 4 — September open now, August/July/June locked |
+| Division requests | 32 carrying 116 lines — submitted, draft, returned, approved |
+| Purchase requests | 3 — a draft mid-negotiation, one approved, one ordered — 72 merged lines |
+| Accounts | 17 — active, invited, unverified, locked and suspended; several carry privilege overrides |
+| Roles | 12 — 10 system, 2 custom, one of them deliberately switched off |
+| Privileges | 78 across 17 modules, 15 of them high risk |
 
 The gaps are deliberate: an unfilled night shift at the hospital, a gondola cleaner whose certificate
 lapsed, a contract 38 days from its end with no auto-renewal, one fall-protection harness short of what the
 façade crew is contracted to need, a batch of masks past its date, a bin of raincoats emptied just
-before the rainy season. A demo where everything is green demonstrates
-nothing.
+before the rainy season, two divisions that never filed this month and one whose request was sent
+back. A demo where everything is green demonstrates nothing.
 
 All companies, people, addresses and figures are fictional.
 
@@ -221,6 +293,7 @@ src/
   lib/
     access.ts       Effective privileges, their sources, and the lock-out guard rails
     domain.ts       Everything the modules compute rather than store
+    procurement.ts  The MR → PR arithmetic: the merge, the lock guard, the price basis
     csv.ts          CSV parse/serialise for import and export
     format.ts       Money, dates, numbers, Indonesian casing rules
   pages/            One folder per module
@@ -238,6 +311,9 @@ are not here — are:
 - **Billing.** Contract values and margins are computed, but no invoice is raised.
 - **Stock movements.** Quantities can be edited, but there is no receipt, issue, transfer or
   stock-take document behind the change — only an activity log.
+- **Purchase orders and goods receipt.** A purchase request can be approved and marked as ordered,
+  but no order document is issued to a supplier and nothing books the delivery back into a warehouse.
+  Approving a request does not move stock; the two modules meet at the item master and stop there.
 - **Server-side enforcement.** Privileges are enforced throughout this front end — menus, routes and
   controls all obey them — but a front end can only ever hide a control. Real enforcement belongs on
   the server, where the same privilege keys would gate the API. Treat this module as the interface

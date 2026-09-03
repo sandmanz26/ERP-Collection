@@ -19,13 +19,21 @@ const TONES: Record<string, BadgeTone> = {
   DISCONTINUED: 'neutral',
   /* accounts */
   PENDING_VERIFICATION: 'warning', LOCKED: 'danger', INVITED: 'info',
+  /* procurement */
+  OPEN: 'success', CLOSED: 'info', SUBMITTED: 'info', RETURNED: 'warning', APPROVED: 'success',
+  ASSIGNED: 'info', ORDERED: 'purple', CANCELLED: 'danger', BLACKLISTED: 'danger',
   /* shifts */
   PAGI: 'info', SIANG: 'warning', MALAM: 'purple', NON_SHIFT: 'neutral',
 }
 
-export function StatusBadge({ value, size = 'md' }: { value: string; size?: 'sm' | 'md' | 'lg' }) {
+/**
+ * `tone` overrides the shared map for the few values that mean different things
+ * in different registers — a locked MR session is a finished one, while a locked
+ * account is a problem.
+ */
+export function StatusBadge({ value, size = 'md', tone }: { value: string; size?: 'sm' | 'md' | 'lg'; tone?: BadgeTone }) {
   return (
-    <Badge tone={TONES[value] ?? 'neutral'} size={size} dot>
+    <Badge tone={tone ?? TONES[value] ?? 'neutral'} size={size} dot>
       {titleCase(value)}
     </Badge>
   )

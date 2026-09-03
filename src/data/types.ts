@@ -38,6 +38,10 @@ export type PermissionModule =
   | 'warehouses'
   | 'items'
   | 'stock'
+  | 'divisions'
+  | 'suppliers'
+  | 'mr'
+  | 'pr'
   | 'users'
   | 'roles'
   | 'settings'
@@ -98,6 +102,8 @@ export interface UserAccount {
   /** Branches whose data this account may see. Empty means every branch. */
   branchScope: string[]
 
+  /** The division this account belongs to — the request page shows only theirs. */
+  divisionId?: string
   /** Branch the person works out of, e.g. JKT, BDG, SBY. */
   branchCode?: string
   phone?: string
@@ -413,6 +419,187 @@ export interface WarehouseStock {
   condition: StockCondition
   lastCountedAt?: ISODate
   lastMovementAt?: ISODate
+}
+
+/* ================================================================
+   Organisation — the divisions that request things
+   ================================================================ */
+
+/**
+ * A division of the company. It is the unit that raises a material request:
+ * one request per division per monthly session, signed off by its head.
+ */
+export interface Division {
+  id: string
+  /** DIV-OPS */
+  code: string
+  name: string
+  /** The account the budget answers to; the head's page shows only this division. */
+  headUserId?: string
+  headName: string
+  /** Cost centre the request is booked against. */
+  costCenter: string
+  branchCode: string
+  email?: string
+  status: 'ACTIVE' | 'INACTIVE'
+  notes?: string
+  createdAt: ISODate
+}
+
+/* ================================================================
+   Suppliers and what they have charged before
+   ================================================================ */
+
+export type SupplierStatus = 'ACTIVE' | 'ON_HOLD' | 'BLACKLISTED'
+
+export interface Supplier {
+  id: string
+  /** SUP-0001 */
+  code: string
+  legalName: string
+  brandName?: string
+  /** The item categories this supplier is approved for. */
+  categories: ItemCategory[]
+
+  picName: string
+  picPhone: string
+  picEmail?: string
+  address: string
+  city: string
+  province: string
+  npwp?: string
+
+  paymentTermDays: number
+  leadTimeDays: number
+  minOrderValue?: number
+  bankName?: string
+  bankAccount?: string
+
+  /** 1–5, set by purchasing after each delivery. */
+  rating: number
+  /** Deliveries that arrived on or before the promised date, as a percentage. */
+  onTimeRate: number
+  status: SupplierStatus
+  supplierSince: ISODate
+  notes?: string
+}
+
+/**
+ * What was actually paid, per supplier, per item, per purchase order. This is the
+ * only source of "last purchase price" — a price on a purchase request is a
+ * decision, but a price here is a fact that already happened.
+ */
+export interface PurchasePrice {
+  id: string
+  supplierId: string
+  itemId: string
+  unitPrice: number
+  qty: number
+  poNumber: string
+  purchasedAt: ISODate
+  note?: string
+}
+
+/* ================================================================
+   Material request → purchase request
+   ================================================================ */
+
+export type MrSessionStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'LOCKED' | 'CANCELLED'
+
+/**
+ * The monthly window in which divisions may ask for things. Opened by an
+ * administrator, filled by the divisions, closed and then locked by purchasing.
+ * Locking is one-way: it produces the purchase request and freezes the source.
+ */
+export interface MrSession {
+  id: string
+  /** MR-2026-09 */
+  code: string
+  title: string
+  periodMonth: number
+  periodYear: number
+  opensAt: ISODate
+  closesAt: ISODate
+  status: MrSessionStatus
+  createdBy: string
+  createdAt: ISODate
+  lockedAt?: ISODate
+  lockedBy?: string
+  /** Set when the session was locked into a purchase request. */
+  purchaseRequestId?: string
+  note?: string
+}
+
+export type MrRequestStatus = 'DRAFT' | 'SUBMITTED' | 'RETURNED' | 'APPROVED'
+
+export interface MrRequestLine {
+  id: string
+  /** Only items that already exist in the item master and are held in a warehouse. */
+  itemId: string
+  qty: number
+  /** The division's own estimate. Optional — purchasing prices it properly later. */
+  estimatedUnitPrice?: number
+  purpose: string
+  note?: string
+}
+
+/** One division's request within one session. A division files at most one. */
+export interface MrRequest {
+  id: string
+  /** MR-2026-09/DIV-GA */
+  code: string
+  sessionId: string
+  divisionId: string
+  status: MrRequestStatus
+  lines: MrRequestLine[]
+  submittedBy?: string
+  submittedAt?: ISODate
+  reviewedBy?: string
+  reviewedAt?: ISODate
+  /** Why purchasing sent it back, so the division knows what to change. */
+  returnReason?: string
+  note?: string
+  createdAt: ISODate
+  updatedAt: ISODate
+}
+
+export type PurchaseRequestStatus = 'DRAFT' | 'ASSIGNED' | 'APPROVED' | 'ORDERED' | 'CANCELLED'
+
+/** Which division asked for how much of a merged line — the audit trail back to the requester. */
+export interface PrLineSource {
+  requestId: string
+  divisionId: string
+  qty: number
+  estimatedUnitPrice?: number
+}
+
+export interface PurchaseRequestLine {
+  id: string
+  itemId: string
+  /** The sum of every source quantity: this is what makes the recap a recap. */
+  qty: number
+  sources: PrLineSource[]
+  /** Assigned by purchasing; the last purchase price follows from this. */
+  supplierId?: string
+  /** What purchasing settled on. Defaults to the last price paid to that supplier. */
+  agreedUnitPrice?: number
+  note?: string
+}
+
+/** The recap of one locked session: one line per item, whoever asked for it. */
+export interface PurchaseRequest {
+  id: string
+  /** PR-2026-09-001 */
+  code: string
+  sessionId: string
+  status: PurchaseRequestStatus
+  lines: PurchaseRequestLine[]
+  createdBy: string
+  createdAt: ISODate
+  updatedAt: ISODate
+  approvedBy?: string
+  approvedAt?: ISODate
+  note?: string
 }
 
 /* ================================================================

@@ -1,13 +1,18 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type {
-  Building, Client, CompanyProfile, InventoryItem, Position, Project, Role, Warehouse, WarehouseStock,
+  Building, Client, CompanyProfile, Division, InventoryItem, MrRequest, MrSession, Position, Project,
+  PurchasePrice, PurchaseRequest, Role, Supplier, Warehouse, WarehouseStock,
 } from '@/data/types'
 import { company as seedCompany, positions as seedPositions } from '@/data/seed-org'
 import { buildings as seedBuildings, clients as seedClients } from '@/data/seed-clients'
 import { projects as seedProjects } from '@/data/seed-projects'
 import { items as seedItems, warehouseStock as seedStock, warehouses as seedWarehouses } from '@/data/seed-inventory'
 import { roles as seedRoles } from '@/data/seed-roles'
+import { divisions as seedDivisions } from '@/data/seed-divisions'
+import { purchasePrices as seedPrices, suppliers as seedSuppliers } from '@/data/seed-suppliers'
+import { mrRequests as seedRequests, mrSessions as seedSessions, purchaseRequests as seedPurchaseRequests } from '@/data/seed-procurement'
+import { buildPrLines, canLockSession } from '@/lib/procurement'
 import { useAuth } from './useAuth'
 
 /**
@@ -41,6 +46,12 @@ interface ErpState {
   items: InventoryItem[]
   stock: WarehouseStock[]
   roles: Role[]
+  divisions: Division[]
+  suppliers: Supplier[]
+  purchasePrices: PurchasePrice[]
+  mrSessions: MrSession[]
+  mrRequests: MrRequest[]
+  purchaseRequests: PurchaseRequest[]
   company: CompanyProfile
   activity: ActivityLog[]
 
@@ -78,6 +89,29 @@ interface ErpState {
   upsertRole: (row: Role) => void
   removeRoles: (ids: string[]) => void
 
+  upsertDivision: (row: Division) => void
+  removeDivisions: (ids: string[]) => void
+  importDivisions: (rows: Division[]) => void
+
+  upsertSupplier: (row: Supplier) => void
+  removeSuppliers: (ids: string[]) => void
+  importSuppliers: (rows: Supplier[]) => void
+
+  upsertMrSession: (row: MrSession) => void
+  setSessionStatus: (id: string, status: MrSession['status']) => void
+  /** One way: builds the purchase request and freezes the session. Returns its id, or an error. */
+  lockMrSession: (id: string) => { ok: boolean; purchaseRequestId?: string; error?: string }
+
+  upsertMrRequest: (row: MrRequest) => void
+  removeMrRequests: (ids: string[]) => void
+  submitMrRequest: (id: string) => void
+  reviewMrRequest: (id: string, outcome: 'APPROVED' | 'RETURNED', reason?: string) => void
+
+  upsertPurchaseRequest: (row: PurchaseRequest) => void
+  assignPrSupplier: (prId: string, lineId: string, supplierId: string | undefined) => void
+  setPrAgreedPrice: (prId: string, lineId: string, price: number | undefined) => void
+  setPrStatus: (prId: string, status: PurchaseRequest['status']) => void
+
   updateCompany: (patch: Partial<CompanyProfile>) => void
   resetDemoData: () => void
 }
@@ -91,6 +125,12 @@ const seedState = () => ({
   items: structuredClone(seedItems),
   stock: structuredClone(seedStock),
   roles: structuredClone(seedRoles),
+  divisions: structuredClone(seedDivisions),
+  suppliers: structuredClone(seedSuppliers),
+  purchasePrices: structuredClone(seedPrices),
+  mrSessions: structuredClone(seedSessions),
+  mrRequests: structuredClone(seedRequests),
+  purchaseRequests: structuredClone(seedPurchaseRequests),
   company: structuredClone(seedCompany),
   activity: [] as ActivityLog[],
 })
@@ -280,6 +320,197 @@ export const useErp = create<ErpState>()(
         get().log('Deleted', 'Role', names.join(', '))
       },
 
+      /* ---------------- divisions ---------------- */
+      upsertDivision: (row) => {
+        const exists = get().divisions.some((d) => d.id === row.id)
+        set((s) => ({ divisions: upsert(s.divisions, row) }))
+        get().log(exists ? 'Updated' : 'Created', 'Division', `${row.code} — ${row.name}`)
+      },
+      removeDivisions: (ids) => {
+        const names = get().divisions.filter((d) => ids.includes(d.id)).map((d) => d.code)
+        set((s) => ({ divisions: s.divisions.filter((d) => !ids.includes(d.id)) }))
+        get().log('Deleted', 'Division', names.join(', '))
+      },
+      importDivisions: (rows) => {
+        set((s) => ({ divisions: merge(s.divisions, rows) }))
+        get().log('Imported', 'Division', `${rows.length} rows`)
+      },
+
+      /* ---------------- suppliers ---------------- */
+      upsertSupplier: (row) => {
+        const exists = get().suppliers.some((x) => x.id === row.id)
+        set((s) => ({ suppliers: upsert(s.suppliers, row) }))
+        get().log(exists ? 'Updated' : 'Created', 'Supplier', `${row.code} — ${row.legalName}`)
+      },
+      removeSuppliers: (ids) => {
+        const names = get().suppliers.filter((x) => ids.includes(x.id)).map((x) => x.code)
+        set((s) => ({
+          suppliers: s.suppliers.filter((x) => !ids.includes(x.id)),
+          /* A price with no supplier is not evidence of anything. */
+          purchasePrices: s.purchasePrices.filter((p) => !ids.includes(p.supplierId)),
+          purchaseRequests: s.purchaseRequests.map((pr) => ({
+            ...pr,
+            lines: pr.lines.map((l) => (l.supplierId && ids.includes(l.supplierId) ? { ...l, supplierId: undefined } : l)),
+          })),
+        }))
+        get().log('Deleted', 'Supplier', names.join(', '))
+      },
+      importSuppliers: (rows) => {
+        set((s) => ({ suppliers: merge(s.suppliers, rows) }))
+        get().log('Imported', 'Supplier', `${rows.length} rows`)
+      },
+
+      /* ---------------- material request sessions ---------------- */
+      upsertMrSession: (row) => {
+        const exists = get().mrSessions.some((x) => x.id === row.id)
+        set((s) => ({ mrSessions: upsert(s.mrSessions, row) }))
+        get().log(exists ? 'Updated' : 'Created', 'MR session', `${row.code} — ${row.title}`)
+      },
+      setSessionStatus: (id, status) => {
+        const session = get().mrSessions.find((x) => x.id === id)
+        set((s) => ({ mrSessions: s.mrSessions.map((x) => (x.id === id ? { ...x, status } : x)) }))
+        if (session) get().log('Status changed', 'MR session', `${session.code} → ${status.toLowerCase()}`)
+      },
+
+      /**
+       * Lock: the one irreversible step in the flow. Every submitted division
+       * request is merged into one line per item, a purchase request is created
+       * in draft, and the session is frozen so the source can still be audited.
+       */
+      lockMrSession: (id) => {
+        const state = get()
+        const session = state.mrSessions.find((x) => x.id === id)
+        if (!session) return { ok: false, error: 'That session no longer exists.' }
+
+        const check = canLockSession(session, state.mrRequests)
+        if (!check.ok) return { ok: false, error: check.reason }
+
+        const sessionRows = state.mrRequests.filter((r) => r.sessionId === id)
+        const lines = buildPrLines(sessionRows, state.items)
+        const period = `${session.periodYear}-${String(session.periodMonth).padStart(2, '0')}`
+        const sequence = state.purchaseRequests.filter((p) => p.code.startsWith(`PR-${period}`)).length + 1
+        const prId = `pr_${period.replace('-', '_')}_${sequence}`
+        const now = new Date().toISOString()
+
+        const pr: PurchaseRequest = {
+          id: prId,
+          code: `PR-${period}-${String(sequence).padStart(3, '0')}`,
+          sessionId: id,
+          status: 'DRAFT',
+          lines: lines.map((l) => ({ ...l, id: `${prId}_${l.itemId}` })),
+          createdBy: actor(),
+          createdAt: now,
+          updatedAt: now,
+        }
+
+        set((s) => ({
+          purchaseRequests: [pr, ...s.purchaseRequests],
+          mrSessions: s.mrSessions.map((x) =>
+            x.id === id ? { ...x, status: 'LOCKED', lockedAt: now, lockedBy: actor(), purchaseRequestId: prId } : x,
+          ),
+          /* Submitted requests become approved at the lock: they are now part of a
+             purchase request and can no longer be edited by their division. */
+          mrRequests: s.mrRequests.map((r) =>
+            r.sessionId === id && r.status === 'SUBMITTED'
+              ? { ...r, status: 'APPROVED', reviewedBy: actor(), reviewedAt: now, updatedAt: now }
+              : r,
+          ),
+        }))
+        get().log(
+          'Locked',
+          'MR session',
+          `${session.code} → ${pr.code} · ${lines.length} merged lines from ${sessionRows.filter((r) => r.status !== 'DRAFT' && r.status !== 'RETURNED').length} divisions`,
+        )
+        return { ok: true, purchaseRequestId: prId }
+      },
+
+      /* ---------------- division requests ---------------- */
+      upsertMrRequest: (row) => {
+        const exists = get().mrRequests.some((x) => x.id === row.id)
+        set((s) => ({ mrRequests: upsert(s.mrRequests, { ...row, updatedAt: new Date().toISOString() }) }))
+        get().log(exists ? 'Updated' : 'Created', 'MR request', `${row.code} · ${row.lines.length} lines`)
+      },
+      removeMrRequests: (ids) => {
+        const codes = get().mrRequests.filter((x) => ids.includes(x.id)).map((x) => x.code)
+        set((s) => ({ mrRequests: s.mrRequests.filter((x) => !ids.includes(x.id)) }))
+        get().log('Deleted', 'MR request', codes.join(', '))
+      },
+      submitMrRequest: (id) => {
+        const request = get().mrRequests.find((x) => x.id === id)
+        const now = new Date().toISOString()
+        set((s) => ({
+          mrRequests: s.mrRequests.map((x) =>
+            x.id === id ? { ...x, status: 'SUBMITTED', submittedBy: actor(), submittedAt: now, updatedAt: now, returnReason: undefined } : x,
+          ),
+        }))
+        if (request) get().log('Submitted', 'MR request', `${request.code} · ${request.lines.length} lines`)
+      },
+      reviewMrRequest: (id, outcome, reason) => {
+        const request = get().mrRequests.find((x) => x.id === id)
+        const now = new Date().toISOString()
+        set((s) => ({
+          mrRequests: s.mrRequests.map((x) =>
+            x.id === id
+              ? { ...x, status: outcome, reviewedBy: actor(), reviewedAt: now, updatedAt: now, returnReason: outcome === 'RETURNED' ? reason : undefined }
+              : x,
+          ),
+        }))
+        if (request) get().log(outcome === 'APPROVED' ? 'Approved' : 'Returned', 'MR request', `${request.code}${reason ? ` · ${reason.slice(0, 60)}` : ''}`)
+      },
+
+      /* ---------------- purchase requests ---------------- */
+      upsertPurchaseRequest: (row) => {
+        const exists = get().purchaseRequests.some((x) => x.id === row.id)
+        set((s) => ({ purchaseRequests: upsert(s.purchaseRequests, { ...row, updatedAt: new Date().toISOString() }) }))
+        get().log(exists ? 'Updated' : 'Created', 'Purchase request', `${row.code} · ${row.lines.length} lines`)
+      },
+      assignPrSupplier: (prId, lineId, supplierId) => {
+        const supplier = get().suppliers.find((x) => x.id === supplierId)
+        const pr = get().purchaseRequests.find((x) => x.id === prId)
+        const item = get().items.find((i) => i.id === pr?.lines.find((l) => l.id === lineId)?.itemId)
+        set((s) => ({
+          purchaseRequests: s.purchaseRequests.map((x) => {
+            if (x.id !== prId) return x
+            /* Changing supplier drops the agreed price: it belonged to the old one. */
+            const lines = x.lines.map((l) => (l.id === lineId ? { ...l, supplierId, agreedUnitPrice: undefined } : l))
+            /* Draft and assigned are derived, not chosen: a request is assigned
+               once every line has a supplier, and falls back the moment one loses it. */
+            const complete = lines.every((l) => l.supplierId)
+            const status =
+              x.status === 'DRAFT' && complete ? 'ASSIGNED' : x.status === 'ASSIGNED' && !complete ? 'DRAFT' : x.status
+            return { ...x, status, lines, updatedAt: new Date().toISOString() }
+          }),
+        }))
+        if (pr) get().log('Assigned supplier', 'Purchase request', `${pr.code} · ${item?.sku ?? lineId} → ${supplier?.legalName ?? 'unassigned'}`)
+      },
+      setPrAgreedPrice: (prId, lineId, price) => {
+        set((s) => ({
+          purchaseRequests: s.purchaseRequests.map((x) =>
+            x.id === prId
+              ? { ...x, updatedAt: new Date().toISOString(), lines: x.lines.map((l) => (l.id === lineId ? { ...l, agreedUnitPrice: price } : l)) }
+              : x,
+          ),
+        }))
+      },
+      setPrStatus: (prId, status) => {
+        const pr = get().purchaseRequests.find((x) => x.id === prId)
+        const now = new Date().toISOString()
+        set((s) => ({
+          purchaseRequests: s.purchaseRequests.map((x) =>
+            x.id === prId
+              ? {
+                  ...x,
+                  status,
+                  updatedAt: now,
+                  approvedBy: status === 'APPROVED' ? actor() : x.approvedBy,
+                  approvedAt: status === 'APPROVED' ? now : x.approvedAt,
+                }
+              : x,
+          ),
+        }))
+        if (pr) get().log('Status changed', 'Purchase request', `${pr.code} → ${status.toLowerCase()}`)
+      },
+
       updateCompany: (patch) => {
         set((s) => ({ company: { ...s.company, ...patch } }))
         get().log('Updated', 'Company profile', Object.keys(patch).join(', '))
@@ -287,6 +518,6 @@ export const useErp = create<ErpState>()(
 
       resetDemoData: () => set({ ...seedState() }),
     }),
-    { name: 'tata-gemilang-erp', version: 2 },
+    { name: 'tata-gemilang-erp', version: 3 },
   ),
 )

@@ -147,10 +147,18 @@ export const STOCK_CONDITIONS: { value: StockCondition; label: string }[] = [
   { value: 'QUARANTINE', label: 'Quarantine' },
 ]
 
+/** Names only — the supplier records themselves live in seed-suppliers.ts. */
 export const SUPPLIERS = [
   'CV Sandang Mandiri', 'PT Kimia Bersih Nusantara', 'PT Sinar Alat Teknik', 'CV Garda Perkasa Equipment',
-  'PT Mitra Higienis Indonesia', 'CV Bumi Safety Utama', 'PT Adijaya Machinery',
+  'PT Mitra Higienis Indonesia', 'CV Bumi Safety Utama', 'PT Adijaya Machinery', 'PT Nusa Kantor Sejahtera',
+  'CV Trisula Konveksi', 'PT Higienis Prima Sentosa',
 ]
+
+export const MONTHS = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+]
+export const monthLabel = (m: number) => MONTHS[m - 1] ?? String(m)
 
 /* ---------------- authentication policy ---------------- */
 

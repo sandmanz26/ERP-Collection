@@ -39,7 +39,8 @@ three cost money:
 | Projects: period, one building, manpower requirement lines | Contract document generation and e-signature |
 | Deployment register across all projects | Named personnel, certificates, attendance, payroll |
 | Position master with rates and standard issue | Recruitment pipeline, training records |
-| Inventory: warehouses, item master, warehouse stock | Purchase orders, goods receipt, issue notes, stock takes |
+| Inventory: warehouses, item master, warehouse stock | Goods receipt, issue notes, stock takes |
+| Procurement: divisions, suppliers, monthly material request sessions, purchase requests | Purchase orders sent to a supplier, delivery, three-way match, supplier invoices |
 | Fulfilment, contract value and margin as computed figures | Invoicing, tax documents, general ledger |
 | User management: accounts, roles and privilege control, enforced across the interface | Server-side enforcement, SSO, real second-factor challenge |
 
@@ -56,6 +57,16 @@ Client ──1:N──> Building
                 └──1:N──> ManpowerRequirement ──N:1──> Position ──N:M──> InventoryItem (standard issue)
 
 Warehouse ──1:N──> WarehouseStock ──N:1──> InventoryItem
+
+Division ──1:N──> MrRequest ──N:1──> MrSession (one per month)
+                     └── MrRequestLine ──N:1──> InventoryItem
+
+MrSession ──1:1──> PurchaseRequest        created by the lock, never by hand
+                      └── PurchaseRequestLine ──N:1──> InventoryItem
+                            ├── sources[] ──N:1──> Division   (who asked, how many)
+                            └── supplierId ──N:1──> Supplier
+
+Supplier ──1:N──> PurchasePrice ──N:1──> InventoryItem       what was paid, and when
 ```
 
 **R1 — One project serves exactly one building.** A client that wants a second building signs a second
@@ -102,6 +113,50 @@ or delete itself; system roles cannot be deleted; Super Administrator cannot be 
 **R12 — A role in use cannot be deleted.** Reassign its holders first, so no account is left with no
 role and therefore no way to work.
 
+**R13 — One material request session per period.** Two open sessions for the same month would split a
+division's demand across both, and the recap would understate it. The form refuses the duplicate and
+names the session that already holds the period.
+
+**R14 — A division files exactly one request per session.** The page a division head opens loads that
+request or creates it; there is no second one to reconcile. A line is one item — the same item twice
+in one request is refused, since the quantities belong on one line.
+
+**R15 — Only an item the warehouse already holds can be requested.** An active master item with at
+least one stock line. Anything genuinely new is an item-master decision made by the warehouse team,
+not something a request can conjure into existence.
+
+**R16 — The estimated unit price is optional; the fallback is stated.** Where a division gives none,
+the item's standard cost stands in and is labelled as such. A reference figure that reads like a quote
+is worse than no figure.
+
+**R17 — Locking is refused while any request is still in draft.** Locking would silently drop it.
+Purchasing waits for the division to submit, or returns the request — which makes the exclusion
+deliberate, attributed and visible in the recap dialog before the button is pressed.
+
+**R18 — The lock is one-way, and it freezes its source.** Submitted requests become approved and can
+no longer be edited by their division, the session becomes `LOCKED` and keeps the id of the purchase
+request it produced, so the recap can always be read back to the requests it came from.
+
+**R19 — The recap merges by item and keeps every source.** One purchase request line per item,
+`qty = Σ sources.qty`, with each contributing division, its quantity and its estimate retained on the
+line. The merge is never a sum that loses its parts.
+
+**R20 — A line's price states its basis.** In descending order of authority: agreed on this request →
+last purchase from the assigned supplier → last purchase from anyone → the highest division estimate →
+the item's standard cost. The basis is shown next to the figure, with the date of the purchase it came
+from.
+
+**R21 — A supplier may only be assigned for a category it is approved for, and not while
+blacklisted.** Changing the supplier on a line clears the agreed price, because that price belonged to
+the previous one.
+
+**R22 — Draft and assigned are derived, not chosen.** A purchase request becomes `ASSIGNED` when every
+line carries a supplier and returns to `DRAFT` the moment one loses it. Approval is refused while any
+line is unassigned, and freezes suppliers and prices.
+
+**R23 — A division with request history cannot be deleted.** Deleting it would orphan the sources the
+recap is built from and make an approved purchase request unreadable.
+
 ## 5. Module requirements
 
 ### 5.1 Authentication
@@ -147,11 +202,36 @@ role and therefore no way to work.
 - **Warehouse stock** — warehouse, item, bin, on hand, reserved, unit cost, condition, batch, expiry,
   minimum override, last counted, last movement. Batch and expiry are required when the master says so.
 
-### 5.7 User management
+### 5.7 Procurement
+
+- **Divisions** — code, name, head, cost centre, branch, email, status. The CMS behind everything
+  else in the module: only a division can raise a material request. One with request history is
+  protected from deletion.
+- **Suppliers** — legal and brand name, approved categories, PIC and contact, address, NPWP, payment
+  term, lead time, minimum order value, bank details, rating, on-time rate, status and supplier-since
+  date, plus the purchase history behind them: item, unit price, quantity, purchase order and date.
+- **MR sessions** — code, title, period (month and year, unique), filing window, status
+  (`DRAFT → OPEN → CLOSED → LOCKED`, or `CANCELLED`), and, once locked, who locked it, when, and the
+  purchase request it produced. The register shows filed against eligible divisions, total lines, the
+  number of items the merge will produce, and the estimated value.
+- **The division head's page** — this division's request in the open session: add a line (item from
+  the requestable catalogue, quantity, purpose, optional estimated unit price), save as draft, submit.
+  Read-only once submitted; a returned request shows the reason and can be revised and resubmitted.
+- **Purchasing's session view** — every division's request side by side with approve and return, the
+  divisions that have not filed, a preview of the recap exactly as the lock would build it, and the
+  lock itself: a dialog that states how many requests merge into how many lines, how many combine more
+  than one division, and what is being left out.
+- **Purchase requests** — the register (period, status, lines, units, divisions, supplier assignment
+  progress, agreed prices, value) and the detail: lines with their division sources, per-line supplier
+  assignment surfacing that supplier's last purchase price and its date, the full purchase history for
+  the item, an agreed price that overrides it, and the same recap grouped by supplier (with a minimum
+  order warning) and by division (with each one's share of the value).
+
+### 5.8 User management
 
 - **Privileges** are defined in code as `<module>.<action>` with a risk level, because each one
-  corresponds to a control the interface shows or hides. 58 of them across 13 modules.
-- **Roles** bundle privileges. Eight ship with the system and cannot be deleted; custom roles are
+  corresponds to a control the interface shows or hides. 78 of them across 17 modules.
+- **Roles** bundle privileges. Ten ship with the system and cannot be deleted; custom roles are
   created by administrators, and any role can be duplicated as a starting point. The editor is a
   module × action matrix that states how many accounts a change will affect before it is saved.
 - **Accounts** hold one or more roles plus two override lists, and carry a branch data scope.
@@ -185,6 +265,10 @@ shortfall, red a breach.
 | Whether a project's kit can be issued | Project record, inventory demand tab | before deployment day |
 | What needs reordering | Warehouse stock, level filter | before the lead time makes it late |
 | Why a person can do something | Privileges matrix, and the effective-access tab on their account | without reading any code |
+| What the company is asking to buy this month | MR session, recap preview | before the session is locked |
+| Which divisions have not filed yet | MR session, divisions submitted tile | while the window is still open |
+| What a line should cost | Purchase request, unit price and its basis | at the moment the supplier is chosen |
+| What one supplier is being asked for | Purchase request, by-supplier view | as a single order, not line by line |
 
 ## 8. Next phases
 
@@ -192,8 +276,10 @@ shortfall, red a breach.
    Turns fulfilment from a typed number into an attested one.
 2. **Attendance.** Daily post confirmation per shift, which turns fulfilment from a monthly claim into
    a daily fact and feeds the SLA deduction calculation.
-3. **Stock movements.** Purchase order, receipt, issue to project, transfer between warehouses,
-   stock take. Removes the last place where a quantity changes without a document behind it.
+3. **Stock movements.** Purchase order issued to the supplier from an approved purchase request,
+   receipt, issue to project, transfer between warehouses, stock take. Removes the last place where a
+   quantity changes without a document behind it, and closes the loop the procurement module opens:
+   today an approved request is where the trail stops.
 4. **Billing.** Monthly invoice from the manpower lines, with PPN and PPh 23 as the client record
    already describes them.
 5. **Server-side enforcement.** The same privilege keys gating the API, so the front end's checks
