@@ -41,10 +41,14 @@ three cost money:
 | Position master with rates and standard issue | Recruitment pipeline, training records |
 | Inventory: warehouses, item master, warehouse stock | Purchase orders, goods receipt, issue notes, stock takes |
 | Fulfilment, contract value and margin as computed figures | Invoicing, tax documents, general ledger |
+| User management: accounts, roles and privilege control, enforced across the interface | Server-side enforcement, SSO, real second-factor challenge |
 
 ## 4. Data model and the rules that matter
 
 ```
+UserAccount ──N:M──> Role ──N:M──> Permission (code-defined)
+     └── grantedPermissions / revokedPermissions (the exception layer)
+
 Client ──1:N──> Building
    │               │
    └──1:N──> Project ──1:1──> Building
@@ -82,6 +86,21 @@ a project but still physically present, so a reorder decision looks at the shelf
 **R8 — Planning levels are company-wide on the master, per-warehouse on the line.** The central
 warehouse runs to the company floor; a regional or site store keeps its own, set as an override on the
 line.
+
+**R9 — Effective privileges are `union(active roles) + granted − revoked`.** A role only grants; denial
+lives on the account, so a role can be read as a policy without holding every exception in mind.
+Revoked wins over any grant, because an exception a role change can silently undo is not an exception.
+
+**R10 — An inactive role grants nothing.** An engagement (the external auditor) can be switched off
+without unpicking who held the role, and switched back on without rebuilding it.
+
+**R11 — The system can never be locked against everyone.** No account edit, account deletion or role
+edit may leave zero active accounts holding `users.edit`, `users.create`, `roles.edit` or
+`roles.create`. The check runs before the write and refuses with the reason. An account cannot suspend
+or delete itself; system roles cannot be deleted; Super Administrator cannot be edited.
+
+**R12 — A role in use cannot be deleted.** Reassign its holders first, so no account is left with no
+role and therefore no way to work.
 
 ## 5. Module requirements
 
@@ -128,6 +147,21 @@ line.
 - **Warehouse stock** — warehouse, item, bin, on hand, reserved, unit cost, condition, batch, expiry,
   minimum override, last counted, last movement. Batch and expiry are required when the master says so.
 
+### 5.7 User management
+
+- **Privileges** are defined in code as `<module>.<action>` with a risk level, because each one
+  corresponds to a control the interface shows or hides. 58 of them across 13 modules.
+- **Roles** bundle privileges. Eight ship with the system and cannot be deleted; custom roles are
+  created by administrators, and any role can be duplicated as a starting point. The editor is a
+  module × action matrix that states how many accounts a change will affect before it is saved.
+- **Accounts** hold one or more roles plus two override lists, and carry a branch data scope.
+  Administrative actions: invite, edit, release a lock, suspend, restore, issue a temporary password,
+  delete.
+- **Enforcement** is three-deep: the navigation hides what cannot be opened, the route guard refuses
+  it and names the missing privilege, and every create, edit, delete, import and export control is
+  rendered only for an account that holds the matching privilege.
+- **Audit**: a role's privilege change is logged as what was added and removed, not as "updated".
+
 ## 6. Interface standard
 
 Every register in the suite carries, without exception: sortable columns, free-text search, per-column
@@ -150,6 +184,7 @@ shortfall, red a breach.
 | Which contracts end within 90 days | Dashboard and the project filter | before the notice period closes |
 | Whether a project's kit can be issued | Project record, inventory demand tab | before deployment day |
 | What needs reordering | Warehouse stock, level filter | before the lead time makes it late |
+| Why a person can do something | Privileges matrix, and the effective-access tab on their account | without reading any code |
 
 ## 8. Next phases
 
@@ -161,3 +196,6 @@ shortfall, red a breach.
    stock take. Removes the last place where a quantity changes without a document behind it.
 4. **Billing.** Monthly invoice from the manpower lines, with PPN and PPh 23 as the client record
    already describes them.
+5. **Server-side enforcement.** The same privilege keys gating the API, so the front end's checks
+   become a convenience rather than the control. Plus branch data scope applied to the queries
+   themselves — it is recorded on the account today but not yet used to filter what is fetched.

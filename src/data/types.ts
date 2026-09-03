@@ -26,14 +26,52 @@ export type ISODate = string
    People and access
    ================================================================ */
 
-export type UserRole =
-  | 'DIRECTOR'
-  | 'OPERATION_MANAGER'
-  | 'AREA_COORDINATOR'
-  | 'HR_RECRUITMENT'
-  | 'WAREHOUSE_ADMIN'
-  | 'FINANCE'
-  | 'VIEWER'
+/* ---------------- privileges ---------------- */
+
+export type PermissionModule =
+  | 'dashboard'
+  | 'clients'
+  | 'buildings'
+  | 'projects'
+  | 'deployments'
+  | 'positions'
+  | 'warehouses'
+  | 'items'
+  | 'stock'
+  | 'users'
+  | 'roles'
+  | 'settings'
+  | 'audit'
+
+export type PermissionRisk = 'LOW' | 'MEDIUM' | 'HIGH'
+
+/** One privilege. Defined in code — see data/permissions.ts — never created by a user. */
+export interface PermissionDef {
+  /** `<module>.<action>`, e.g. `projects.approve` */
+  key: string
+  module: PermissionModule
+  action: string
+  label: string
+  description: string
+  risk: PermissionRisk
+}
+
+/** A named bundle of privileges. Roles are data; the privileges inside them are not. */
+export interface Role {
+  id: string
+  /** OPERATION_MANAGER */
+  code: string
+  name: string
+  description: string
+  /** Permission keys. A role grants; it never denies. */
+  permissions: string[]
+  /** Shipped with the system: cannot be deleted, and the super administrator cannot be edited. */
+  isSystem: boolean
+  status: 'ACTIVE' | 'INACTIVE'
+  createdAt: ISODate
+  updatedAt: ISODate
+  updatedBy: string
+}
 
 export type UserStatus = 'ACTIVE' | 'PENDING_VERIFICATION' | 'INVITED' | 'LOCKED' | 'SUSPENDED'
 
@@ -44,8 +82,22 @@ export interface UserAccount {
   password: string
   fullName: string
   jobTitle: string
-  role: UserRole
   status: UserStatus
+
+  /**
+   * What the account can do, in three layers:
+   *   effective = union(roles) + granted − revoked
+   * Roles carry the policy; the two override lists carry the exception, and the
+   * user record shows which layer every privilege came from.
+   */
+  roleIds: string[]
+  /** Granted to this person on top of their roles. */
+  grantedPermissions: string[]
+  /** Taken away from this person even though a role grants it. */
+  revokedPermissions: string[]
+  /** Branches whose data this account may see. Empty means every branch. */
+  branchScope: string[]
+
   /** Branch the person works out of, e.g. JKT, BDG, SBY. */
   branchCode?: string
   phone?: string

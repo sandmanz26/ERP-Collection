@@ -1,9 +1,12 @@
 import * as React from 'react'
-import { Building2, KeyRound, RotateCcw, ScrollText, ShieldCheck, Users } from 'lucide-react'
+import { ArrowRight, Building2, RotateCcw, ScrollText, ShieldCheck, UsersRound } from 'lucide-react'
 import { useErp } from '@/store/useErp'
 import { useAuth, useCurrentUser } from '@/store/useAuth'
+import { effectivePermissions, rolesOf, useCan } from '@/lib/access'
+import { PERMISSIONS } from '@/data/permissions'
+import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/shared/PageHeader'
-import { MetaRow, StatusBadge } from '@/components/shared/status'
+import { MetaRow } from '@/components/shared/status'
 import { Card, CardBody, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -12,15 +15,19 @@ import { Input } from '@/components/ui/input'
 import { Tabs } from '@/components/ui/tabs'
 import { EmptyState } from '@/components/ui/misc'
 import { useToast } from '@/components/ui/toast'
-import { AUTH_POLICY, roleLabel } from '@/data/reference'
+import { AUTH_POLICY } from '@/data/reference'
 import { fmtDateTime } from '@/lib/format'
 
 export function SettingsPage() {
   const toast = useToast()
   const { company, updateCompany, activity, resetDemoData } = useErp()
-  const { users, unlock, resetAuthDemo } = useAuth()
+  const { users, resetAuthDemo } = useAuth()
   const me = useCurrentUser()
-  const [tab, setTab] = React.useState<'company' | 'accounts' | 'activity'>('company')
+  const can = useCan()
+  const { roles } = useErp()
+  const myRoles = rolesOf(me, roles)
+  const myPermissions = effectivePermissions(me, roles)
+  const [tab, setTab] = React.useState<'company' | 'activity'>('company')
   const [draft, setDraft] = React.useState(company)
 
   React.useEffect(() => setDraft(company), [company])
@@ -32,16 +39,18 @@ export function SettingsPage() {
         title="Settings"
         description="The company record printed on every contract, the accounts that can sign in, and what has been changed in this browser."
         actions={
-          <Button
-            variant="secondary"
-            onClick={() => {
-              resetDemoData()
-              resetAuthDemo()
-              toast.push({ tone: 'success', title: 'Demo data restored', description: 'Every module and every account is back to the seeded dataset.' })
-            }}
-          >
-            <RotateCcw /> Reset demo data
-          </Button>
+          can('settings.edit') ? (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                resetDemoData()
+                resetAuthDemo()
+                toast.push({ tone: 'success', title: 'Demo data restored', description: 'Every module and every account is back to the seeded dataset.' })
+              }}
+            >
+              <RotateCcw /> Reset demo data
+            </Button>
+          ) : undefined
         }
       />
 
@@ -51,8 +60,7 @@ export function SettingsPage() {
         className="mb-5"
         items={[
           { value: 'company', label: 'Company profile', icon: <Building2 /> },
-          { value: 'accounts', label: 'Accounts', icon: <Users />, count: users.length },
-          { value: 'activity', label: 'Activity', icon: <ScrollText />, count: activity.length },
+          ...(can('audit.view') ? [{ value: 'activity' as const, label: 'Activity', icon: <ScrollText />, count: activity.length }] : []),
         ]}
       />
 
@@ -107,7 +115,7 @@ export function SettingsPage() {
                 <Button
                   variant="primary"
                   size="sm"
-                  disabled={!dirty}
+                  disabled={!dirty || !can('settings.edit')}
                   onClick={() => {
                     updateCompany(draft)
                     toast.push({ tone: 'success', title: 'Company profile saved' })
@@ -125,84 +133,47 @@ export function SettingsPage() {
               <MetaRow label="Name">{me?.fullName ?? '—'}</MetaRow>
               <MetaRow label="Email">{me?.email ?? '—'}</MetaRow>
               <MetaRow label="Job title">{me?.jobTitle ?? '—'}</MetaRow>
-              <MetaRow label="Role">{me ? roleLabel(me.role) : '—'}</MetaRow>
+              <MetaRow label="Roles">
+                <span className="flex flex-wrap justify-end gap-1">
+                  {myRoles.length === 0 && <Badge tone="warning" size="sm">No role</Badge>}
+                  {myRoles.map((r) => (
+                    <Badge key={r.id} tone={r.status === 'ACTIVE' ? 'primary' : 'neutral'} size="sm">{r.name}</Badge>
+                  ))}
+                </span>
+              </MetaRow>
+              <MetaRow label="Privileges">
+                <span className="tnum">
+                  {myPermissions.size} of {PERMISSIONS.length}
+                </span>
+              </MetaRow>
               <MetaRow label="Branch">{me?.branchCode ?? '—'}</MetaRow>
               <MetaRow label="Two-factor">{me?.twoFactorEnabled ? 'Enabled' : 'Not enabled'}</MetaRow>
               <MetaRow label="Last sign-in">{me?.lastLoginAt ? fmtDateTime(me.lastLoginAt) : '—'}</MetaRow>
             </CardBody>
-            <CardFooter className="justify-start">
+            <CardFooter className="flex-col items-start gap-3">
               <p className="text-[11.5px] leading-relaxed text-fg-muted">
                 Sign-in policy: at least {AUTH_POLICY.minPasswordLength} characters, locked for {AUTH_POLICY.lockMinutes} minutes
                 after {AUTH_POLICY.maxFailedAttempts} failed attempts, reset links valid {AUTH_POLICY.resetTokenMinutes} minutes.
               </p>
+              {can('users.view') && (
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="secondary" size="sm" asChild>
+                    <Link to="/admin/users">
+                      <UsersRound /> {users.length} accounts <ArrowRight />
+                    </Link>
+                  </Button>
+                  {can('roles.view') && (
+                    <Button variant="secondary" size="sm" asChild>
+                      <Link to="/admin/roles">
+                        <ShieldCheck /> {roles.length} roles <ArrowRight />
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              )}
             </CardFooter>
           </Card>
         </div>
-      )}
-
-      {tab === 'accounts' && (
-        <Card>
-          <CardHeader
-            title="Accounts"
-            icon={<Users />}
-            description="Sign-in is demonstrated against this list; there is no server behind it."
-            actions={<Badge tone="outline" size="md">{users.filter((u) => u.status === 'ACTIVE').length} active</Badge>}
-          />
-          <div className="scrollbar-thin overflow-x-auto">
-            <table className="w-full border-separate border-spacing-0 text-[13px]">
-              <thead>
-                <tr>
-                  {['Name', 'Email', 'Role', 'Branch', 'Status', 'Last sign-in', ''].map((h) => (
-                    <th key={h} className="whitespace-nowrap border-b border-border bg-surface-sunken px-3 py-2 text-left text-[11.5px] font-semibold uppercase tracking-[0.055em] text-fg-muted">
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.id} className={u.id === me?.id ? 'bg-primary-soft/40' : undefined}>
-                    <td className="border-b border-border px-3 py-2.5">
-                      <p className="font-medium text-fg">{u.fullName}</p>
-                      <p className="text-[11.5px] text-fg-muted">{u.jobTitle}</p>
-                    </td>
-                    <td className="border-b border-border px-3 py-2.5 text-[12.5px] text-fg-muted">{u.email}</td>
-                    <td className="border-b border-border px-3 py-2.5">
-                      <Badge tone="outline" size="sm">{roleLabel(u.role)}</Badge>
-                    </td>
-                    <td className="border-b border-border px-3 py-2.5 text-[12.5px] text-fg-muted">{u.branchCode ?? '—'}</td>
-                    <td className="border-b border-border px-3 py-2.5">
-                      <StatusBadge value={u.status} size="sm" />
-                    </td>
-                    <td className="tnum whitespace-nowrap border-b border-border px-3 py-2.5 text-[12px] text-fg-muted">
-                      {u.lastLoginAt ? fmtDateTime(u.lastLoginAt) : 'never'}
-                    </td>
-                    <td className="border-b border-border px-3 py-2.5 text-right">
-                      {u.status === 'LOCKED' && (
-                        <Button
-                          variant="secondary"
-                          size="xs"
-                          onClick={() => {
-                            unlock(u.id)
-                            toast.push({ tone: 'success', title: 'Account released', description: u.email })
-                          }}
-                        >
-                          <KeyRound /> Release
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <CardFooter className="justify-start">
-            <p className="text-[11.5px] leading-relaxed text-fg-muted">
-              Every seeded account uses the password <span className="font-mono text-fg">Gemilang#2026</span>. Three of them fail
-              on purpose — unverified, locked and suspended — so those paths can be walked from the sign-in screen.
-            </p>
-          </CardFooter>
-        </Card>
       )}
 
       {tab === 'activity' && (

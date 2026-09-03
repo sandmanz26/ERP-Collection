@@ -18,6 +18,7 @@ import { EmptyState, Progress, Separator } from '@/components/ui/misc'
 import { Tooltip } from '@/components/ui/tooltip'
 import { useToast } from '@/components/ui/toast'
 import { ProjectForm } from './ProjectForm'
+import { useCan } from '@/lib/access'
 import { fmtCurrency, fmtDate, fmtNumber } from '@/lib/format'
 import {
   contractMonths, contractValue, daysUntil, fulfilment, isLiveProject, isStaffedProject, itemTotals,
@@ -54,6 +55,7 @@ export function ProjectDetailPage() {
   const { id } = useParams()
   const nav = useNavigate()
   const toast = useToast()
+  const can = useCan()
   const { projects, clients, buildings, positions, items, stock, setProjectStatus } = useErp()
   const [tab, setTab] = React.useState<'overview' | 'manpower' | 'inventory'>('overview')
   const [editOpen, setEditOpen] = React.useState(false)
@@ -134,7 +136,8 @@ export function ProjectDetailPage() {
         }
         actions={
           <>
-            {nextStatuses(project.status).map((action) => (
+            {can('projects.approve') &&
+              nextStatuses(project.status).map((action) => (
               <Button
                 key={action.to}
                 variant={action.to === 'ACTIVE' ? 'primary' : 'secondary'}
@@ -144,11 +147,13 @@ export function ProjectDetailPage() {
                 }}
               >
                 {action.icon} {action.label}
+                </Button>
+              ))}
+            {can('projects.edit') && (
+              <Button variant="secondary" onClick={() => setEditOpen(true)}>
+                <Pencil /> Edit
               </Button>
-            ))}
-            <Button variant="secondary" onClick={() => setEditOpen(true)}>
-              <Pencil /> Edit
-            </Button>
+            )}
           </>
         }
       />
@@ -293,9 +298,11 @@ export function ProjectDetailPage() {
             icon={<Users />}
             description="What the contract calls for, and how many of those posts are filled today."
             actions={
-              <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
-                <Pencil /> Edit lines
-              </Button>
+              can('projects.edit') ? (
+                <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>
+                  <Pencil /> Edit lines
+                </Button>
+              ) : undefined
             }
           />
           <div className="scrollbar-thin overflow-x-auto">

@@ -17,11 +17,13 @@ import { fmtCurrency, fmtDate, fmtNumber } from '@/lib/format'
 import { contractValue, fulfilment, isLiveProject, isStaffedProject, monthlyMargin, monthlyValue, periodState } from '@/lib/domain'
 import { ClientForm } from './ClientForm'
 import { BuildingForm } from './BuildingForm'
+import { useCan } from '@/lib/access'
 
 export function ClientDetailPage() {
   const { id } = useParams()
   const nav = useNavigate()
   const { clients, buildings, projects } = useErp()
+  const can = useCan()
   const [tab, setTab] = React.useState<'overview' | 'buildings' | 'projects'>('overview')
   const [editOpen, setEditOpen] = React.useState(false)
   const [buildingOpen, setBuildingOpen] = React.useState(false)
@@ -78,12 +80,16 @@ export function ClientDetailPage() {
         }
         actions={
           <>
-            <Button variant="secondary" onClick={() => setBuildingOpen(true)}>
-              <Plus /> Add building
-            </Button>
-            <Button variant="primary" onClick={() => setEditOpen(true)}>
-              <Pencil /> Edit client
-            </Button>
+            {can('buildings.create') && (
+              <Button variant="secondary" onClick={() => setBuildingOpen(true)}>
+                <Plus /> Add building
+              </Button>
+            )}
+            {can('clients.edit') && (
+              <Button variant="primary" onClick={() => setEditOpen(true)}>
+                <Pencil /> Edit client
+              </Button>
+            )}
           </>
         }
       />
@@ -203,9 +209,11 @@ export function ClientDetailPage() {
                 title="No buildings yet"
                 description="A project needs a building. Add the first site this client operates."
                 action={
-                  <Button variant="primary" size="sm" onClick={() => setBuildingOpen(true)}>
-                    <Plus /> Add building
-                  </Button>
+                  can('buildings.create') ? (
+                    <Button variant="primary" size="sm" onClick={() => setBuildingOpen(true)}>
+                      <Plus /> Add building
+                    </Button>
+                  ) : undefined
                 }
               />
             </Card>

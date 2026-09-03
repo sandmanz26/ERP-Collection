@@ -1,12 +1,13 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type {
-  Building, Client, CompanyProfile, InventoryItem, Position, Project, Warehouse, WarehouseStock,
+  Building, Client, CompanyProfile, InventoryItem, Position, Project, Role, Warehouse, WarehouseStock,
 } from '@/data/types'
 import { company as seedCompany, positions as seedPositions } from '@/data/seed-org'
 import { buildings as seedBuildings, clients as seedClients } from '@/data/seed-clients'
 import { projects as seedProjects } from '@/data/seed-projects'
 import { items as seedItems, warehouseStock as seedStock, warehouses as seedWarehouses } from '@/data/seed-inventory'
+import { roles as seedRoles } from '@/data/seed-roles'
 import { useAuth } from './useAuth'
 
 /**
@@ -39,6 +40,7 @@ interface ErpState {
   warehouses: Warehouse[]
   items: InventoryItem[]
   stock: WarehouseStock[]
+  roles: Role[]
   company: CompanyProfile
   activity: ActivityLog[]
 
@@ -73,6 +75,9 @@ interface ErpState {
   removeStock: (ids: string[]) => void
   importStock: (rows: WarehouseStock[]) => void
 
+  upsertRole: (row: Role) => void
+  removeRoles: (ids: string[]) => void
+
   updateCompany: (patch: Partial<CompanyProfile>) => void
   resetDemoData: () => void
 }
@@ -85,6 +90,7 @@ const seedState = () => ({
   warehouses: structuredClone(seedWarehouses),
   items: structuredClone(seedItems),
   stock: structuredClone(seedStock),
+  roles: structuredClone(seedRoles),
   company: structuredClone(seedCompany),
   activity: [] as ActivityLog[],
 })
@@ -248,6 +254,32 @@ export const useErp = create<ErpState>()(
         get().log('Imported', 'Warehouse stock', `${rows.length} rows`)
       },
 
+      /* ---------------- roles ---------------- */
+      upsertRole: (row) => {
+        const before = get().roles.find((r) => r.id === row.id)
+        set((s) => ({
+          roles: upsert(s.roles, { ...row, updatedAt: new Date().toISOString(), updatedBy: actor() }),
+        }))
+        if (!before) {
+          get().log('Created', 'Role', `${row.code} — ${row.permissions.length} privileges`)
+        } else {
+          /* A privilege change is the thing an auditor comes looking for, so it is
+             logged as what changed rather than as "role updated". */
+          const added = row.permissions.filter((k) => !before.permissions.includes(k))
+          const removed = before.permissions.filter((k) => !row.permissions.includes(k))
+          const parts = [
+            added.length ? `+${added.length} (${added.slice(0, 3).join(', ')}${added.length > 3 ? '…' : ''})` : '',
+            removed.length ? `−${removed.length} (${removed.slice(0, 3).join(', ')}${removed.length > 3 ? '…' : ''})` : '',
+          ].filter(Boolean)
+          get().log('Updated', 'Role', `${row.code}${parts.length ? ` · ${parts.join(' ')}` : ' · details only'}`)
+        }
+      },
+      removeRoles: (ids) => {
+        const names = get().roles.filter((r) => ids.includes(r.id)).map((r) => r.code)
+        set((s) => ({ roles: s.roles.filter((r) => !ids.includes(r.id)) }))
+        get().log('Deleted', 'Role', names.join(', '))
+      },
+
       updateCompany: (patch) => {
         set((s) => ({ company: { ...s.company, ...patch } }))
         get().log('Updated', 'Company profile', Object.keys(patch).join(', '))
@@ -255,6 +287,6 @@ export const useErp = create<ErpState>()(
 
       resetDemoData: () => set({ ...seedState() }),
     }),
-    { name: 'tata-gemilang-erp', version: 1 },
+    { name: 'tata-gemilang-erp', version: 2 },
   ),
 )

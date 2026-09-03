@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import { RequireAuth, RedirectIfSignedIn } from '@/components/layout/RequireAuth'
+import { RequirePermission } from '@/components/layout/RequirePermission'
 import { ToastProvider } from '@/components/ui/toast'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { LoginPage } from '@/pages/auth/LoginPage'
@@ -18,8 +19,12 @@ import { PositionsPage } from '@/pages/masters/PositionsPage'
 import { WarehousesPage } from '@/pages/inventory/WarehousesPage'
 import { ItemsPage } from '@/pages/inventory/ItemsPage'
 import { StockPage } from '@/pages/inventory/StockPage'
+import { UsersPage } from '@/pages/admin/UsersPage'
+import { RolesPage } from '@/pages/admin/RolesPage'
+import { PrivilegesPage } from '@/pages/admin/PrivilegesPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 
+/** Every page sits behind the privilege that opens it — the guard, not the menu, is the control. */
 export default function App() {
   return (
     <TooltipProvider>
@@ -35,18 +40,50 @@ export default function App() {
 
             <Route element={<RequireAuth />}>
               <Route element={<AppShell />}>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/clients" element={<ClientsPage />} />
-                <Route path="/clients/:id" element={<ClientDetailPage />} />
-                <Route path="/buildings" element={<BuildingsPage />} />
-                <Route path="/projects" element={<ProjectsPage />} />
-                <Route path="/projects/:id" element={<ProjectDetailPage />} />
-                <Route path="/deployments" element={<DeploymentsPage />} />
-                <Route path="/positions" element={<PositionsPage />} />
-                <Route path="/inventory/warehouses" element={<WarehousesPage />} />
-                <Route path="/inventory/items" element={<ItemsPage />} />
-                <Route path="/inventory/stock" element={<StockPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
+                <Route element={<RequirePermission permission="dashboard.view" />}>
+                  <Route path="/" element={<DashboardPage />} />
+                </Route>
+
+                <Route element={<RequirePermission permission="clients.view" />}>
+                  <Route path="/clients" element={<ClientsPage />} />
+                  <Route path="/clients/:id" element={<ClientDetailPage />} />
+                </Route>
+                <Route element={<RequirePermission permission="buildings.view" />}>
+                  <Route path="/buildings" element={<BuildingsPage />} />
+                </Route>
+
+                <Route element={<RequirePermission permission="projects.view" />}>
+                  <Route path="/projects" element={<ProjectsPage />} />
+                  <Route path="/projects/:id" element={<ProjectDetailPage />} />
+                </Route>
+                <Route element={<RequirePermission permission="deployments.view" />}>
+                  <Route path="/deployments" element={<DeploymentsPage />} />
+                </Route>
+                <Route element={<RequirePermission permission="positions.view" />}>
+                  <Route path="/positions" element={<PositionsPage />} />
+                </Route>
+
+                <Route element={<RequirePermission permission="warehouses.view" />}>
+                  <Route path="/inventory/warehouses" element={<WarehousesPage />} />
+                </Route>
+                <Route element={<RequirePermission permission="items.view" />}>
+                  <Route path="/inventory/items" element={<ItemsPage />} />
+                </Route>
+                <Route element={<RequirePermission permission="stock.view" />}>
+                  <Route path="/inventory/stock" element={<StockPage />} />
+                </Route>
+
+                <Route element={<RequirePermission permission="users.view" />}>
+                  <Route path="/admin/users" element={<UsersPage />} />
+                </Route>
+                <Route element={<RequirePermission permission="roles.view" />}>
+                  <Route path="/admin/roles" element={<RolesPage />} />
+                  <Route path="/admin/privileges" element={<PrivilegesPage />} />
+                </Route>
+                <Route element={<RequirePermission permission="settings.view" />}>
+                  <Route path="/settings" element={<SettingsPage />} />
+                </Route>
+
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
             </Route>

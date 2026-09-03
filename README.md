@@ -6,8 +6,8 @@ month that the posts it is being paid for actually had someone standing in them.
 
 This is a **front-end only** build. There is no backend and no API layer. All data lives in the
 browser (Zustand + `localStorage`), seeded with a realistic operating book: 12 clients, 18 buildings,
-18 projects carrying 136 manpower lines, 17 positions, 6 warehouses, 58 master items and 137
-warehouse stock lines.
+18 projects carrying 136 manpower lines, 17 positions, 6 warehouses, 58 master items, 137 warehouse
+stock lines, and 12 accounts across 10 roles built from a catalogue of 58 privileges.
 
 ```bash
 npm install
@@ -18,7 +18,10 @@ npm run lint
 
 Sign in with any seeded account — `siti.rahmawati@tatagemilang.co.id` and the rest — using
 `Gemilang#2026`. Three accounts fail on purpose (unverified, locked, suspended) so those paths can be
-walked without breaking anything.
+walked without breaking anything, and **each account opens a different suite**, because the role
+decides which pages exist: sign in as `hendra.wijayanto@` for everything, `lina.marlina@` for
+inventory without deletes, or `ratna.wulandari@` for a custom site-supervisor role with no commercial
+access at all.
 
 ---
 
@@ -102,6 +105,45 @@ the central warehouse runs to the company-wide floor, a regional store to its ow
 Availability is on hand **less** what a project has already reserved. Stock health is judged on what
 is physically in the bin, because a reorder decision is about the shelf, not about the paperwork.
 
+### 6. User management — users, roles, privileges
+
+Access is enforced, not decorated. The role an account holds decides which menu entries exist, which
+routes open, and which buttons render; a page that is not permitted refuses with the name of the
+privilege it wanted rather than a blank screen.
+
+```
+effective privileges = union(active roles) + granted − revoked
+```
+
+Three layers, each with one job:
+
+| Layer | Where it lives | Rule |
+| --- | --- | --- |
+| **Privilege** | In code (`data/permissions.ts`) — 58 of them, `<module>.<action>` | Never created by a user. Adding one is a code change, because each corresponds to a control the interface shows or hides. |
+| **Role** | Data — 8 system roles, 2 custom | Only ever *grants*. An inactive role grants nothing, so an engagement can be switched off without unpicking who held it. |
+| **Override** | On the account | Grants an exception, or revokes something a role gives. **Revoked always wins**, and the user record shows which layer every privilege came from. |
+
+- **Users** — accounts, their roles, their overrides, effective privilege count, branch data scope,
+  and the account actions: invite, edit, release a lock, suspend, restore, issue a temporary
+  password, delete.
+- **Roles** — a privilege matrix of module × action. Column headers toggle an action everywhere,
+  high-risk boxes are red, and the editor states how many accounts the change will affect before it is
+  saved.
+- **Privileges** — the catalogue as a read-only matrix: every privilege, its risk, which roles grant
+  it and how many active accounts end up holding it. This is where "why can that person do this"
+  gets answered.
+
+The guard rails exist because the alternative is a system nobody can get back into:
+
+- An account cannot delete or suspend itself.
+- No edit may leave the company with **no active account able to administer users and roles** — the
+  check runs on user edits, on account deletion and on role edits, and refuses with the reason.
+- System roles cannot be deleted, and Super Administrator cannot be edited at all.
+- A role still held by an account cannot be deleted; reassign first.
+- Self-registration cannot request a role that hands out privileges.
+- A privilege change is written to the activity log as *what changed* — `+3 (stock.edit, …) −1` —
+  rather than as "role updated", because that is what an auditor comes looking for.
+
 ---
 
 ## The table standard
@@ -136,6 +178,9 @@ them:
 | Warehouses | 6 — one central, four regional, one site store |
 | Master items | 58 across 9 categories, one deliberately discontinued |
 | Stock lines | 137, including expired, expiring, quarantined and empty bins |
+| Accounts | 12 — active, invited, unverified, locked and suspended; two carry privilege overrides |
+| Roles | 10 — 8 system, 2 custom, one of them deliberately switched off |
+| Privileges | 58 across 13 modules, 11 of them high risk |
 
 The gaps are deliberate: an unfilled night shift at the hospital, a gondola cleaner whose certificate
 lapsed, a contract 38 days from its end with no auto-renewal, one fall-protection harness short of what the
@@ -170,9 +215,11 @@ src/
     ui/             Buttons, inputs, selects, dialogs, toasts, menus, date picker
   data/
     types.ts        The domain model, with the relationships written into the types
+    permissions.ts  The privilege catalogue — code-defined, never user-created
     reference.ts    Catalogues, labels, the authentication policy
     seed-*.ts       The seeded book, split by module
   lib/
+    access.ts       Effective privileges, their sources, and the lock-out guard rails
     domain.ts       Everything the modules compute rather than store
     csv.ts          CSV parse/serialise for import and export
     format.ts       Money, dates, numbers, Indonesian casing rules
@@ -191,4 +238,7 @@ are not here — are:
 - **Billing.** Contract values and margins are computed, but no invoice is raised.
 - **Stock movements.** Quantities can be edited, but there is no receipt, issue, transfer or
   stock-take document behind the change — only an activity log.
-- **Server-side auth and permissions.** Roles are recorded and displayed but not enforced.
+- **Server-side enforcement.** Privileges are enforced throughout this front end — menus, routes and
+  controls all obey them — but a front end can only ever hide a control. Real enforcement belongs on
+  the server, where the same privilege keys would gate the API. Treat this module as the interface
+  for an access model, not as the access model itself.

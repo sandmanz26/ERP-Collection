@@ -14,6 +14,7 @@ import { Tooltip } from '@/components/ui/tooltip'
 import { ConfirmDelete } from '@/components/ui/confirm'
 import { useToast } from '@/components/ui/toast'
 import { WarehouseForm } from './WarehouseForm'
+import { useCan } from '@/lib/access'
 import { fmtCurrency, fmtDate, fmtNumber } from '@/lib/format'
 import { uid } from '@/lib/utils'
 import { stockValue, warehouseTotals } from '@/lib/domain'
@@ -21,6 +22,7 @@ import { stockValue, warehouseTotals } from '@/lib/domain'
 export function WarehousesPage() {
   const nav = useNavigate()
   const toast = useToast()
+  const can = useCan()
   const { warehouses, stock, items, removeWarehouses, importWarehouses } = useErp()
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Warehouse | null>(null)
@@ -137,6 +139,7 @@ export function WarehousesPage() {
             <Button variant="secondary" onClick={() => nav('/inventory/stock')}>
               <Boxes /> Open stock
             </Button>
+            {can('warehouses.create') && (
             <Button
               variant="primary"
               onClick={() => {
@@ -146,6 +149,7 @@ export function WarehousesPage() {
             >
               <Plus /> New warehouse
             </Button>
+            )}
           </>
         }
       />
@@ -177,13 +181,18 @@ export function WarehousesPage() {
         getLabel={(r) => `${r.code} — ${r.name}`}
         entityLabel="warehouse"
         storageKey="warehouses"
+        allowExport={can('warehouses.export')}
         exportName="tata-gemilang-warehouses"
         searchText={(r) => [r.code, r.name, r.city, r.province, r.address, r.managerName, r.notes].filter(Boolean).join(' ')}
         initialSort={{ key: 'code', dir: 'asc' }}
-        onRowClick={(r) => {
-          setEditing(r)
-          setFormOpen(true)
-        }}
+        onRowClick={
+          can('warehouses.edit')
+            ? (r) => {
+                setEditing(r)
+                setFormOpen(true)
+              }
+            : undefined
+        }
         rowTone={(r) => (r.status === 'INACTIVE' ? 'bg-bg-muted/60' : undefined)}
         filters={[
           {
@@ -205,16 +214,16 @@ export function WarehousesPage() {
             match: (r, v) => v.includes(r.status),
           },
         ]}
-        onDelete={(ids) => {
+        onDelete={can('warehouses.delete') ? (ids) => {
           removeWarehouses(ids)
           toast.push({ tone: 'success', title: `${ids.length} warehouse${ids.length === 1 ? '' : 's'} deleted` })
-        }}
+        } : undefined}
         cascadeWarning={(rows) => {
           const lines = stock.filter((s) => rows.some((r) => r.id === s.warehouseId))
           return lines.length ? [`${lines.length} stock lines worth ${fmtCurrency(lines.reduce((a, s) => a + stockValue(s), 0), 'IDR', { compact: true })} are deleted with them`] : []
         }}
         deleteNote="Stock held in a deleted warehouse is removed with it — there is nowhere left for it to sit."
-        importFields={[
+        importFields={can('warehouses.import') ? [
           { key: 'code', label: 'Warehouse code', required: true, hint: 'e.g. WH-SMG-07' },
           { key: 'name', label: 'Name', required: true },
           { key: 'type', label: 'Type', hint: 'CENTRAL / REGIONAL / SITE' },
@@ -224,7 +233,7 @@ export function WarehousesPage() {
           { key: 'managerName', label: 'Manager' },
           { key: 'phone', label: 'Phone' },
           { key: 'capacitySqm', label: 'Capacity (m²)' },
-        ]}
+        ] : undefined}
         importSample={{
           code: 'WH-SMG-07', name: 'Gudang Regional Semarang', type: 'REGIONAL', address: 'Jl. Kaligawe Raya No. 12',
           city: 'Semarang', province: 'Jawa Tengah', managerName: 'Rudi Prasetyo', phone: '+62 24 6500 220',
@@ -234,7 +243,7 @@ export function WarehousesPage() {
           code: r.code, name: r.name, type: r.type, address: r.address, city: r.city, province: r.province,
           managerName: r.managerName, phone: r.phone, capacitySqm: r.capacitySqm,
         })}
-        onImport={(rows) => {
+        onImport={can('warehouses.import') ? (rows) => {
           const mapped: Warehouse[] = rows.map((row) => {
             const existing = warehouses.find((w) => w.code === row.code)
             return {
@@ -255,10 +264,11 @@ export function WarehousesPage() {
           })
           importWarehouses(mapped)
           toast.push({ tone: 'success', title: `${mapped.length} warehouse${mapped.length === 1 ? '' : 's'} imported` })
-        }}
+        } : undefined}
         rowActions={(r) => (
           <>
-            <Tooltip content="Edit">
+            {can('warehouses.edit') && (
+              <Tooltip content="Edit">
               <Button
                 variant="ghost"
                 size="iconXs"
@@ -270,11 +280,14 @@ export function WarehousesPage() {
                 <Pencil />
               </Button>
             </Tooltip>
-            <Tooltip content="Delete">
+            )}
+            {can('warehouses.delete') && (
+              <Tooltip content="Delete">
               <Button variant="ghost" size="iconXs" className="text-danger hover:bg-danger-soft" onClick={() => setDeleting(r)}>
                 <Trash2 />
               </Button>
             </Tooltip>
+            )}
           </>
         )}
         footerSummary={(rows) => (

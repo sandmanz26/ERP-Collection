@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
 import { useErp } from '@/store/useErp'
 import { useAuth, useCurrentUser } from '@/store/useAuth'
-import { roleLabel } from '@/data/reference'
+import { primaryRoleName, rolesOf, useCan } from '@/lib/access'
 import { buildAlerts, daysUntil, fulfilment, isLiveProject, stockStatus } from '@/lib/domain'
 
 export function AppShell() {
@@ -30,6 +30,13 @@ export function AppShell() {
   const store = useErp()
   const signOut = useAuth((s) => s.signOut)
   const user = useCurrentUser()
+  const can = useCan()
+  /* The menu shows what the account may open. The route guard enforces it; this
+     only saves people from clicking into a page that would refuse them. */
+  const visibleNav = React.useMemo(
+    () => NAV.map((group) => ({ ...group, items: group.items.filter((i) => can(i.permission)) })).filter((g) => g.items.length > 0),
+    [can],
+  )
 
   const initials = (user?.fullName ?? 'Tata Gemilang')
     .split(' ')
@@ -108,7 +115,7 @@ export function AppShell() {
         </div>
 
         <nav className="scrollbar-thin flex-1 overflow-y-auto px-2 py-3">
-          {NAV.map((group) => (
+          {visibleNav.map((group) => (
             <div key={group.label} className="mb-4 last:mb-0">
               {!rail && (
                 <p className="mb-1 px-2.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-fg-subtle">{group.label}</p>
@@ -259,7 +266,10 @@ export function AppShell() {
                 <p className="truncate text-[13px] font-medium text-fg">{user?.fullName}</p>
                 <p className="truncate text-[11.5px] text-fg-subtle">{user?.email}</p>
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  <Badge tone="primary" size="sm">{user ? roleLabel(user.role) : '—'}</Badge>
+                  <Badge tone="primary" size="sm">{primaryRoleName(user, store.roles)}</Badge>
+                  {rolesOf(user, store.roles).length > 1 && (
+                    <Badge tone="neutral" size="sm">+{rolesOf(user, store.roles).length - 1} role</Badge>
+                  )}
                   {user?.branchCode && <Badge tone="outline" size="sm">{user.branchCode}</Badge>}
                   {user?.twoFactorEnabled && (
                     <Badge tone="success" size="sm">
@@ -270,9 +280,11 @@ export function AppShell() {
                 </div>
               </div>
               <MenuSeparator />
-              <MenuItem icon={<Settings />} onSelect={() => navigate('/settings')}>
-                Company & account settings
-              </MenuItem>
+              {can('settings.view') && (
+                <MenuItem icon={<Settings />} onSelect={() => navigate('/settings')}>
+                  Company & account settings
+                </MenuItem>
+              )}
               <MenuItem
                 icon={<RotateCcw />}
                 onSelect={() => {

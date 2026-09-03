@@ -14,6 +14,7 @@ import { Tooltip } from '@/components/ui/tooltip'
 import { ConfirmDelete } from '@/components/ui/confirm'
 import { useToast } from '@/components/ui/toast'
 import { ClientForm } from './ClientForm'
+import { useCan } from '@/lib/access'
 import { fmtCurrency, fmtDate } from '@/lib/format'
 import { uid } from '@/lib/utils'
 import { deployedHeadcount, isLiveProject, monthlyValue, requiredHeadcount } from '@/lib/domain'
@@ -21,6 +22,7 @@ import { deployedHeadcount, isLiveProject, monthlyValue, requiredHeadcount } fro
 export function ClientsPage() {
   const nav = useNavigate()
   const toast = useToast()
+  const can = useCan()
   const { clients, buildings, projects, removeClients, importClients } = useErp()
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Client | null>(null)
@@ -136,15 +138,17 @@ export function ClientsPage() {
         title="Clients"
         description="The companies that sign the contracts. Each one can hold as many buildings as it operates, and one project per building."
         actions={
-          <Button
-            variant="primary"
-            onClick={() => {
-              setEditing(null)
-              setFormOpen(true)
-            }}
-          >
-            <Plus /> New client
-          </Button>
+          can('clients.create') ? (
+            <Button
+              variant="primary"
+              onClick={() => {
+                setEditing(null)
+                setFormOpen(true)
+              }}
+            >
+              <Plus /> New client
+            </Button>
+          ) : undefined
         }
       />
 
@@ -174,6 +178,7 @@ export function ClientsPage() {
         getLabel={(r) => `${r.code} — ${r.legalName}`}
         entityLabel="client"
         storageKey="clients"
+        allowExport={can('clients.export')}
         exportName="tata-gemilang-clients"
         searchText={(r) =>
           [r.code, r.legalName, r.brandName, r.industry, r.city, r.province, r.accountManager, r.npwp, ...r.contacts.map((c) => c.name)]
@@ -200,10 +205,10 @@ export function ClientsPage() {
             match: (r, v) => v.includes(r.industry),
           },
         ]}
-        onDelete={(ids) => {
+        onDelete={can('clients.delete') ? (ids) => {
           removeClients(ids)
           toast.push({ tone: 'success', title: `${ids.length} client${ids.length === 1 ? '' : 's'} deleted` })
-        }}
+        } : undefined}
         cascadeWarning={(rows) => {
           const linkedBuildings = buildings.filter((b) => rows.some((r) => r.id === b.clientId))
           const linkedProjects = projects.filter((p) => rows.some((r) => r.id === p.clientId))
@@ -213,7 +218,7 @@ export function ClientsPage() {
           return warnings
         }}
         deleteNote="Deleting a client does not delete its buildings or projects."
-        importFields={[
+        importFields={can('clients.import') ? [
           { key: 'code', label: 'Client code', required: true, hint: 'e.g. CLT-0013' },
           { key: 'legalName', label: 'Legal name', required: true },
           { key: 'brandName', label: 'Brand name' },
@@ -230,7 +235,7 @@ export function ClientsPage() {
           { key: 'invoiceDay', label: 'Invoice day' },
           { key: 'creditLimit', label: 'Credit limit (IDR)' },
           { key: 'accountManager', label: 'Account manager' },
-        ]}
+        ] : undefined}
         importSample={{
           code: 'CLT-0013', legalName: 'PT Contoh Sejahtera Indonesia', brandName: 'Contoh Group',
           industry: 'Manufacturing', tier: 'CORPORATE', status: 'PROSPECT', npwp: '01.234.567.8-012.000',
@@ -244,7 +249,7 @@ export function ClientsPage() {
           phone: r.phone ?? '', email: r.email ?? '', paymentTermDays: r.paymentTermDays, invoiceDay: r.invoiceDay,
           creditLimit: r.creditLimit, accountManager: r.accountManager,
         })}
-        onImport={(rows) => {
+        onImport={can('clients.import') ? (rows) => {
           const mapped: Client[] = rows.map((row) => {
             const existing = clients.find((c) => c.code === row.code)
             const now = new Date().toISOString()
@@ -281,7 +286,7 @@ export function ClientsPage() {
             title: `${mapped.length} client${mapped.length === 1 ? '' : 's'} imported`,
             description: 'Rows whose code already existed were updated in place.',
           })
-        }}
+        } : undefined}
         rowActions={(r) => (
           <>
             <Tooltip content="Open record">
@@ -289,7 +294,8 @@ export function ClientsPage() {
                 <Eye />
               </Button>
             </Tooltip>
-            <Tooltip content="Edit">
+            {can('clients.edit') && (
+              <Tooltip content="Edit">
               <Button
                 variant="ghost"
                 size="iconXs"
@@ -301,11 +307,14 @@ export function ClientsPage() {
                 <Pencil />
               </Button>
             </Tooltip>
-            <Tooltip content="Delete">
+            )}
+            {can('clients.delete') && (
+              <Tooltip content="Delete">
               <Button variant="ghost" size="iconXs" className="text-danger hover:bg-danger-soft" onClick={() => setDeleting(r)}>
                 <Trash2 />
               </Button>
             </Tooltip>
+            )}
           </>
         )}
         footerSummary={(rows) => (
@@ -316,11 +325,9 @@ export function ClientsPage() {
         )}
         emptyTitle="No clients yet"
         emptyDescription="Create the first client, or import a list exported from your existing system."
-        emptyAction={
-          <Button variant="primary" size="sm" onClick={() => setFormOpen(true)}>
+        emptyAction={can('clients.create') ? <Button variant="primary" size="sm" onClick={() => setFormOpen(true)}>
             <Plus /> New client
-          </Button>
-        }
+          </Button> : undefined}
         toolbarLeft={
           <Badge tone="outline" size="md">
             {clients.filter((c) => c.status === 'ON_HOLD').length} on hold

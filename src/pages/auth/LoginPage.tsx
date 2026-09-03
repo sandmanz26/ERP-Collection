@@ -12,8 +12,10 @@ import { fmtDateTime } from '@/lib/format'
 
 /** The seeded accounts, including the three that deliberately fail. */
 const DEMO = [
-  { email: 'siti.rahmawati@tatagemilang.co.id', label: 'Operation Manager', note: 'signs in normally' },
-  { email: 'bayu.setiawan@tatagemilang.co.id', label: 'Warehouse Admin', note: 'signs in normally' },
+  { email: 'hendra.wijayanto@tatagemilang.co.id', label: 'Super Administrator', note: 'every module' },
+  { email: 'siti.rahmawati@tatagemilang.co.id', label: 'Operation Manager', note: 'no inventory edits' },
+  { email: 'lina.marlina@tatagemilang.co.id', label: 'Warehouse Admin', note: 'deletes revoked' },
+  { email: 'ratna.wulandari@tatagemilang.co.id', label: 'Site Supervisor', note: 'custom role, no clients' },
   { email: 'budi.santoso@tatagemilang.co.id', label: 'Unverified', note: 'email never verified' },
   { email: 'rina.kusuma@tatagemilang.co.id', label: 'Locked', note: 'five failed attempts' },
 ]
@@ -44,7 +46,7 @@ export function LoginPage() {
   return (
     <AuthLayout
       title="Sign in"
-      subtitle="Use a Tata Gemilang account. Every seeded account uses the password Gemilang#2026."
+      subtitle="Use a Tata Gemilang account — every seeded one uses the password Gemilang#2026. Each lands on a different set of modules, because the role decides what opens."
       footer={
         <span>
           No account yet?{' '}

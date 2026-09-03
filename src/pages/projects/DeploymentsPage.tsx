@@ -11,6 +11,7 @@ import { FulfilmentBar } from '@/components/shared/FulfilmentBar'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip } from '@/components/ui/tooltip'
+import { useCan } from '@/lib/access'
 import { fmtCurrency } from '@/lib/format'
 import { deploymentRows, isStaffedProject } from '@/lib/domain'
 import type { DeploymentRow } from '@/lib/domain'
@@ -22,6 +23,7 @@ import type { DeploymentRow } from '@/lib/domain'
  */
 export function DeploymentsPage() {
   const nav = useNavigate()
+  const can = useCan()
   const { projects, clients, buildings, positions } = useErp()
   const [service, setService] = React.useState<string[]>([])
   const [shift, setShift] = React.useState<string[]>([])
@@ -223,6 +225,7 @@ export function DeploymentsPage() {
         getLabel={(r) => `${r.project.code} · ${r.position?.name ?? 'line'}`}
         entityLabel="deployment line"
         storageKey="deployments"
+        allowExport={can('deployments.export')}
         exportName="tata-gemilang-deployments"
         searchText={(r) =>
           [r.project.code, r.project.name, r.client?.legalName, r.client?.brandName, r.building?.name, r.building?.city, r.position?.name, r.position?.code, r.requirement.note]

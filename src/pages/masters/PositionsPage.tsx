@@ -13,12 +13,14 @@ import { Tooltip } from '@/components/ui/tooltip'
 import { ConfirmDelete } from '@/components/ui/confirm'
 import { useToast } from '@/components/ui/toast'
 import { PositionForm } from './PositionForm'
+import { useCan } from '@/lib/access'
 import { fmtCurrency } from '@/lib/format'
 import { uid } from '@/lib/utils'
 import { isStaffedProject } from '@/lib/domain'
 
 export function PositionsPage() {
   const toast = useToast()
+  const can = useCan()
   const { positions, projects, removePositions, importPositions } = useErp()
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Position | null>(null)
@@ -159,15 +161,17 @@ export function PositionsPage() {
         title="Positions"
         description="The master of what can be deployed: certification, cost, list rate and the kit each person is issued."
         actions={
-          <Button
-            variant="primary"
-            onClick={() => {
-              setEditing(null)
-              setFormOpen(true)
-            }}
-          >
-            <Plus /> New position
-          </Button>
+          can('positions.create') ? (
+            <Button
+              variant="primary"
+              onClick={() => {
+                setEditing(null)
+                setFormOpen(true)
+              }}
+            >
+              <Plus /> New position
+            </Button>
+          ) : undefined
         }
       />
 
@@ -197,13 +201,18 @@ export function PositionsPage() {
         getLabel={(r) => `${r.code} — ${r.name}`}
         entityLabel="position"
         storageKey="positions"
+        allowExport={can('positions.export')}
         exportName="tata-gemilang-positions"
         searchText={(r) => [r.code, r.name, r.description, serviceLabel(r.serviceType), r.grade, ...r.certifications].join(' ')}
         initialSort={{ key: 'code', dir: 'asc' }}
-        onRowClick={(r) => {
-          setEditing(r)
-          setFormOpen(true)
-        }}
+        onRowClick={
+          can('positions.edit')
+            ? (r) => {
+                setEditing(r)
+                setFormOpen(true)
+              }
+            : undefined
+        }
         filters={[
           {
             key: 'service', label: 'Service line', values: service, onChange: setService,
@@ -224,15 +233,15 @@ export function PositionsPage() {
             match: (r, v) => v.includes(r.status),
           },
         ]}
-        onDelete={(ids) => {
+        onDelete={can('positions.delete') ? (ids) => {
           removePositions(ids)
           toast.push({ tone: 'success', title: `${ids.length} position${ids.length === 1 ? '' : 's'} deleted` })
-        }}
+        } : undefined}
         cascadeWarning={(rows) => {
           const lines = projects.flatMap((p) => p.requirements).filter((r) => rows.some((x) => x.id === r.positionId))
           return lines.length ? [`${lines.length} manpower lines across the project book use these positions and will lose their rate reference`] : []
         }}
-        importFields={[
+        importFields={can('positions.import') ? [
           { key: 'code', label: 'Position code', required: true, hint: 'e.g. POS-SEC-006' },
           { key: 'name', label: 'Position name', required: true },
           { key: 'serviceType', label: 'Service line', hint: 'SECURITY / CLEANING / DRIVER …' },
@@ -244,7 +253,7 @@ export function PositionsPage() {
           { key: 'baseSalary', label: 'Base salary' },
           { key: 'allowance', label: 'Allowance' },
           { key: 'defaultBillRate', label: 'Default bill rate' },
-        ]}
+        ] : undefined}
         importSample={{
           code: 'POS-SEC-006', name: 'Security Patroli Motor', serviceType: 'SECURITY', grade: 'REGULAR',
           description: 'Patroli keliling area luar dengan sepeda motor.', certifications: 'Gada Pratama|SIM A',
@@ -257,7 +266,7 @@ export function PositionsPage() {
           minExperienceYears: r.minExperienceYears, baseSalary: r.baseSalary, allowance: r.allowance,
           defaultBillRate: r.defaultBillRate,
         })}
-        onImport={(rows) => {
+        onImport={can('positions.import') ? (rows) => {
           const mapped: Position[] = rows.map((row) => {
             const existing = positions.find((p) => p.code === row.code)
             return {
@@ -280,10 +289,11 @@ export function PositionsPage() {
           })
           importPositions(mapped)
           toast.push({ tone: 'success', title: `${mapped.length} position${mapped.length === 1 ? '' : 's'} imported` })
-        }}
+        } : undefined}
         rowActions={(r) => (
           <>
-            <Tooltip content="Edit">
+            {can('positions.edit') && (
+              <Tooltip content="Edit">
               <Button
                 variant="ghost"
                 size="iconXs"
@@ -295,11 +305,14 @@ export function PositionsPage() {
                 <Pencil />
               </Button>
             </Tooltip>
-            <Tooltip content="Delete">
+            )}
+            {can('positions.delete') && (
+              <Tooltip content="Delete">
               <Button variant="ghost" size="iconXs" className="text-danger hover:bg-danger-soft" onClick={() => setDeleting(r)}>
                 <Trash2 />
               </Button>
             </Tooltip>
+            )}
           </>
         )}
         emptyTitle="No positions yet"

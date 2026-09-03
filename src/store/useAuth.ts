@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { PasswordResetToken, UserAccount, UserRole } from '@/data/types'
+import type { PasswordResetToken, UserAccount, UserStatus } from '@/data/types'
 import { AUTH_POLICY, passwordProblems } from '@/data/reference'
 import { resetTokens as seedTokens, users as seedUsers } from '@/data/seed-org'
 
@@ -41,13 +41,20 @@ interface AuthState {
   signIn: (email: string, password: string) => AuthResult
   signOut: () => void
   register: (input: {
-    fullName: string; email: string; jobTitle: string; role: UserRole; password: string; confirm: string
+    fullName: string; email: string; jobTitle: string; roleId: string; password: string; confirm: string
   }) => AuthResult
   verifyEmail: (email: string) => AuthResult
   requestReset: (email: string) => AuthResult & { token?: string }
   resetPassword: (token: string, password: string, confirm: string) => AuthResult
   unlock: (userId: string) => void
   resetAuthDemo: () => void
+
+  /* ---- account administration, gated by the users.* privileges ---- */
+  upsertUser: (user: UserAccount) => void
+  removeUsers: (ids: string[]) => void
+  setUserStatus: (id: string, status: UserStatus) => void
+  /** Issues a temporary password and forces a change at next sign-in. */
+  forcePasswordReset: (id: string) => string
 }
 
 const now = () => new Date().toISOString()
@@ -162,7 +169,7 @@ export const useAuth = create<AuthState>()(
 
       signOut: () => set({ currentUserId: null }),
 
-      register: ({ fullName, email, jobTitle, role, password, confirm }) => {
+      register: ({ fullName, email, jobTitle, roleId, password, confirm }) => {
         const key = norm(email)
         if (!fullName.trim()) return { ok: false, message: 'Enter your full name.' }
         if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(key)) return { ok: false, message: 'That does not look like an email address.' }
@@ -191,8 +198,11 @@ export const useAuth = create<AuthState>()(
           password,
           fullName: fullName.trim(),
           jobTitle: jobTitle.trim() || 'Team member',
-          role,
           status: 'PENDING_VERIFICATION',
+          roleIds: roleId ? [roleId] : [],
+          grantedPermissions: [],
+          revokedPermissions: [],
+          branchScope: [],
           failedAttempts: 0,
           mustChangePassword: false,
           twoFactorEnabled: false,
@@ -282,8 +292,40 @@ export const useAuth = create<AuthState>()(
         })),
 
       resetAuthDemo: () => set({ ...seedState() }),
+
+      upsertUser: (user) =>
+        set((s) => ({
+          users: s.users.some((u) => u.id === user.id)
+            ? s.users.map((u) => (u.id === user.id ? user : u))
+            : [user, ...s.users],
+        })),
+
+      removeUsers: (ids) =>
+        set((s) => ({
+          users: s.users.filter((u) => !ids.includes(u.id)),
+          /* Signing out an account that has just been deleted beats leaving a
+             session pointing at a user that no longer exists. */
+          currentUserId: ids.includes(s.currentUserId ?? '') ? null : s.currentUserId,
+        })),
+
+      setUserStatus: (id, status) =>
+        set((s) => ({
+          users: s.users.map((u) =>
+            u.id === id
+              ? { ...u, status, failedAttempts: status === 'ACTIVE' ? 0 : u.failedAttempts, lockedUntil: undefined }
+              : u,
+          ),
+        })),
+
+      forcePasswordReset: (id) => {
+        const temporary = `Tg-${Math.random().toString(36).slice(2, 8)}!${new Date().getFullYear()}`
+        set((s) => ({
+          users: s.users.map((u) => (u.id === id ? { ...u, password: temporary, mustChangePassword: true, failedAttempts: 0 } : u)),
+        }))
+        return temporary
+      },
     }),
-    { name: 'tata-gemilang-auth', version: 1 },
+    { name: 'tata-gemilang-auth', version: 2 },
   ),
 )
 

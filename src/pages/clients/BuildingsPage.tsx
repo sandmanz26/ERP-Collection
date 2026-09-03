@@ -14,6 +14,7 @@ import { Tooltip } from '@/components/ui/tooltip'
 import { ConfirmDelete } from '@/components/ui/confirm'
 import { useToast } from '@/components/ui/toast'
 import { BuildingForm } from './BuildingForm'
+import { useCan } from '@/lib/access'
 import { fmtNumber } from '@/lib/format'
 import { uid } from '@/lib/utils'
 import { isLiveProject } from '@/lib/domain'
@@ -21,6 +22,7 @@ import { isLiveProject } from '@/lib/domain'
 export function BuildingsPage() {
   const nav = useNavigate()
   const toast = useToast()
+  const can = useCan()
   const { buildings, clients, projects, removeBuildings, importBuildings } = useErp()
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Building | null>(null)
@@ -132,15 +134,17 @@ export function BuildingsPage() {
         title="Buildings"
         description="Every site a project can be attached to. One project serves one building — a client with three towers signs three projects."
         actions={
-          <Button
-            variant="primary"
-            onClick={() => {
-              setEditing(null)
-              setFormOpen(true)
-            }}
-          >
-            <Plus /> New building
-          </Button>
+          can('buildings.create') ? (
+            <Button
+              variant="primary"
+              onClick={() => {
+                setEditing(null)
+                setFormOpen(true)
+              }}
+            >
+              <Plus /> New building
+            </Button>
+          ) : undefined
         }
       />
 
@@ -170,6 +174,7 @@ export function BuildingsPage() {
         getLabel={(r) => `${r.code} — ${r.name}`}
         entityLabel="building"
         storageKey="buildings"
+        allowExport={can('buildings.export')}
         exportName="tata-gemilang-buildings"
         searchText={(r) => [r.code, r.name, r.city, r.province, r.address, r.picName, clientOf(r)?.legalName, clientOf(r)?.brandName].filter(Boolean).join(' ')}
         initialSort={{ key: 'code', dir: 'asc' }}
@@ -199,17 +204,17 @@ export function BuildingsPage() {
             match: (r, v) => (projectOf(r) ? v.includes('YES') : v.includes('NO')),
           },
         ]}
-        onDelete={(ids) => {
+        onDelete={can('buildings.delete') ? (ids) => {
           removeBuildings(ids)
           toast.push({ tone: 'success', title: `${ids.length} building${ids.length === 1 ? '' : 's'} deleted` })
-        }}
+        } : undefined}
         cascadeWarning={(rows) => {
           const linked = projects.filter((p) => rows.some((r) => r.id === p.buildingId))
           return linked.length
             ? [`${linked.length} project${linked.length === 1 ? '' : 's'} point at these buildings and will lose their site: ${linked.slice(0, 4).map((p) => p.code).join(', ')}`]
             : []
         }}
-        importFields={[
+        importFields={can('buildings.import') ? [
           { key: 'code', label: 'Building code', required: true, hint: 'e.g. BLD-0019' },
           { key: 'clientCode', label: 'Client code', required: true, hint: 'must match an existing client, e.g. CLT-0002' },
           { key: 'name', label: 'Building name', required: true },
@@ -223,7 +228,7 @@ export function BuildingsPage() {
           { key: 'shiftPattern', label: 'Shift pattern', hint: 'THREE_SHIFT / TWO_SHIFT / NON_SHIFT' },
           { key: 'picName', label: 'Site contact' },
           { key: 'picPhone', label: 'Contact phone' },
-        ]}
+        ] : undefined}
         importSample={{
           code: 'BLD-0019', clientCode: 'CLT-0002', name: 'Kantor Cabang Prima Bintaro', type: 'BANK_BRANCH',
           address: 'Jl. Bintaro Utama No. 5', city: 'Tangerang Selatan', province: 'Banten', floors: '2',
@@ -235,7 +240,7 @@ export function BuildingsPage() {
           city: r.city, province: r.province, floors: r.floors, areaSqm: r.areaSqm,
           operatingHours: r.operatingHours, shiftPattern: r.shiftPattern, picName: r.picName, picPhone: r.picPhone,
         })}
-        onImport={(rows) => {
+        onImport={can('buildings.import') ? (rows) => {
           const usable = rows.filter((row) => clients.some((c) => c.code === row.clientCode))
           const skipped = rows.length - usable.length
           const mapped: Building[] = usable.map((row) => {
@@ -266,7 +271,7 @@ export function BuildingsPage() {
             title: `${mapped.length} building${mapped.length === 1 ? '' : 's'} imported`,
             description: skipped ? `${skipped} row${skipped === 1 ? '' : 's'} skipped — the client code did not match any client.` : 'Rows whose code already existed were updated in place.',
           })
-        }}
+        } : undefined}
         rowActions={(r) => (
           <>
             <Tooltip content="Open client">
@@ -274,7 +279,8 @@ export function BuildingsPage() {
                 <Building2 />
               </Button>
             </Tooltip>
-            <Tooltip content="Edit">
+            {can('buildings.edit') && (
+              <Tooltip content="Edit">
               <Button
                 variant="ghost"
                 size="iconXs"
@@ -286,11 +292,14 @@ export function BuildingsPage() {
                 <Pencil />
               </Button>
             </Tooltip>
-            <Tooltip content="Delete">
+            )}
+            {can('buildings.delete') && (
+              <Tooltip content="Delete">
               <Button variant="ghost" size="iconXs" className="text-danger hover:bg-danger-soft" onClick={() => setDeleting(r)}>
                 <Trash2 />
               </Button>
             </Tooltip>
+            )}
           </>
         )}
         footerSummary={(rows) => (

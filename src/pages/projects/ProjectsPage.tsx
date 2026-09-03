@@ -15,6 +15,7 @@ import { Tooltip } from '@/components/ui/tooltip'
 import { ConfirmDelete } from '@/components/ui/confirm'
 import { useToast } from '@/components/ui/toast'
 import { ProjectForm } from './ProjectForm'
+import { useCan } from '@/lib/access'
 import { fmtCurrency, fmtDate } from '@/lib/format'
 import {
   contractValue, daysUntil, deployedHeadcount, fulfilment, isLiveProject, isStaffedProject,
@@ -24,6 +25,7 @@ import {
 export function ProjectsPage() {
   const nav = useNavigate()
   const toast = useToast()
+  const can = useCan()
   const { projects, clients, buildings, positions, removeProjects } = useErp()
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Project | null>(null)
@@ -199,15 +201,17 @@ export function ProjectsPage() {
         title="Projects"
         description="Each contract covers one building for one period, and lists the positions and headcount it has to keep on site."
         actions={
-          <Button
-            variant="primary"
-            onClick={() => {
-              setEditing(null)
-              setFormOpen(true)
-            }}
-          >
-            <Plus /> New project
-          </Button>
+          can('projects.create') ? (
+            <Button
+              variant="primary"
+              onClick={() => {
+                setEditing(null)
+                setFormOpen(true)
+              }}
+            >
+              <Plus /> New project
+            </Button>
+          ) : undefined
         }
       />
 
@@ -244,6 +248,7 @@ export function ProjectsPage() {
         getLabel={(r) => `${r.code} — ${r.name}`}
         entityLabel="project"
         storageKey="projects"
+        allowExport={can('projects.export')}
         exportName="tata-gemilang-projects"
         searchText={(r) =>
           [r.code, r.name, r.contractNo, r.projectManager, r.siteSupervisor, clientOf(r)?.legalName, clientOf(r)?.brandName, buildingOf(r)?.name, buildingOf(r)?.city]
@@ -285,10 +290,10 @@ export function ProjectsPage() {
             <Users /> {gapOnly ? 'Showing gaps only' : 'Gaps only'}
           </Button>
         }
-        onDelete={(ids) => {
+        onDelete={can('projects.delete') ? (ids) => {
           removeProjects(ids)
           toast.push({ tone: 'success', title: `${ids.length} project${ids.length === 1 ? '' : 's'} deleted` })
-        }}
+        } : undefined}
         cascadeWarning={(rows) => {
           const lines = rows.reduce((a, r) => a + r.requirements.length, 0)
           const people = rows.reduce((a, r) => a + requiredHeadcount(r), 0)
@@ -301,7 +306,8 @@ export function ProjectsPage() {
                 <Eye />
               </Button>
             </Tooltip>
-            <Tooltip content="Edit">
+            {can('projects.edit') && (
+              <Tooltip content="Edit">
               <Button
                 variant="ghost"
                 size="iconXs"
@@ -313,11 +319,14 @@ export function ProjectsPage() {
                 <Pencil />
               </Button>
             </Tooltip>
-            <Tooltip content="Delete">
+            )}
+            {can('projects.delete') && (
+              <Tooltip content="Delete">
               <Button variant="ghost" size="iconXs" className="text-danger hover:bg-danger-soft" onClick={() => setDeleting(r)}>
                 <Trash2 />
               </Button>
             </Tooltip>
+            )}
           </>
         )}
         footerSummary={(rows) => {
@@ -332,11 +341,9 @@ export function ProjectsPage() {
         }}
         emptyTitle="No projects yet"
         emptyDescription="Create a project against one of your clients' buildings."
-        emptyAction={
-          <Button variant="primary" size="sm" onClick={() => setFormOpen(true)}>
+        emptyAction={can('projects.create') ? <Button variant="primary" size="sm" onClick={() => setFormOpen(true)}>
             <Plus /> New project
-          </Button>
-        }
+          </Button> : undefined}
       />
 
       <ProjectForm open={formOpen} onOpenChange={setFormOpen} initial={editing} />

@@ -14,6 +14,7 @@ import { Tooltip } from '@/components/ui/tooltip'
 import { ConfirmDelete } from '@/components/ui/confirm'
 import { useToast } from '@/components/ui/toast'
 import { ItemForm } from './ItemForm'
+import { useCan } from '@/lib/access'
 import { fmtCurrency, fmtDate, fmtNumber } from '@/lib/format'
 import { uid } from '@/lib/utils'
 import { itemTotals } from '@/lib/domain'
@@ -21,6 +22,7 @@ import { itemTotals } from '@/lib/domain'
 export function ItemsPage() {
   const nav = useNavigate()
   const toast = useToast()
+  const can = useCan()
   const { items, stock, positions, removeItems, importItems } = useErp()
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<InventoryItem | null>(null)
@@ -195,6 +197,7 @@ export function ItemsPage() {
             <Button variant="secondary" onClick={() => nav('/inventory/stock')}>
               <Boxes /> Open stock
             </Button>
+            {can('items.create') && (
             <Button
               variant="primary"
               onClick={() => {
@@ -204,6 +207,7 @@ export function ItemsPage() {
             >
               <Plus /> New item
             </Button>
+            )}
           </>
         }
       />
@@ -234,13 +238,18 @@ export function ItemsPage() {
         getLabel={(r) => `${r.sku} — ${r.name}`}
         entityLabel="item"
         storageKey="items"
+        allowExport={can('items.export')}
         exportName="tata-gemilang-item-master"
         searchText={(r) => [r.sku, r.name, r.description, r.brand, r.variant, r.subCategory, r.barcode, r.defaultSupplier, itemCategoryLabel(r.category)].filter(Boolean).join(' ')}
         initialSort={{ key: 'sku', dir: 'asc' }}
-        onRowClick={(r) => {
-          setEditing(r)
-          setFormOpen(true)
-        }}
+        onRowClick={
+          can('items.edit')
+            ? (r) => {
+                setEditing(r)
+                setFormOpen(true)
+              }
+            : undefined
+        }
         rowTone={(r) => (r.status === 'DISCONTINUED' ? 'bg-bg-muted/60' : undefined)}
         pageSize={50}
         filters={[
@@ -273,10 +282,10 @@ export function ItemsPage() {
             match: (r, v) => v.includes(r.status),
           },
         ]}
-        onDelete={(ids) => {
+        onDelete={can('items.delete') ? (ids) => {
           removeItems(ids)
           toast.push({ tone: 'success', title: `${ids.length} item${ids.length === 1 ? '' : 's'} deleted` })
-        }}
+        } : undefined}
         cascadeWarning={(rows) => {
           const lines = stock.filter((s) => rows.some((r) => r.id === s.itemId))
           const issue = positions.filter((p) => p.standardIssue.some((s) => rows.some((r) => r.sku === s.sku)))
@@ -286,7 +295,7 @@ export function ItemsPage() {
           return warnings
         }}
         deleteNote="Warehouse stock exists only against a master item, so its lines go too."
-        importFields={[
+        importFields={can('items.import') ? [
           { key: 'sku', label: 'SKU', required: true, hint: 'e.g. ITM-UNI-0015' },
           { key: 'name', label: 'Item name', required: true },
           { key: 'category', label: 'Category', hint: 'UNIFORM / PPE / CLEANING_CHEMICAL …' },
@@ -306,7 +315,7 @@ export function ItemsPage() {
           { key: 'trackBatch', label: 'Track batch', hint: 'yes / no' },
           { key: 'hasExpiry', label: 'Has expiry', hint: 'yes / no' },
           { key: 'hazardous', label: 'Hazardous', hint: 'yes / no' },
-        ]}
+        ] : undefined}
         importSample={{
           sku: 'ITM-UNI-0015', name: 'Rompi Supervisor', category: 'UNIFORM', subCategory: 'Atribut', uom: 'PCS',
           brand: 'Sandang Mandiri', variant: 'Abu-abu, M–XL', barcode: '8991002110099', standardCost: '175000',
@@ -321,7 +330,7 @@ export function ItemsPage() {
           leadTimeDays: r.leadTimeDays, defaultSupplier: r.defaultSupplier ?? '', serviceTypes: r.serviceTypes.join('|'),
           trackBatch: r.trackBatch ? 'yes' : 'no', hasExpiry: r.hasExpiry ? 'yes' : 'no', hazardous: r.hazardous ? 'yes' : 'no',
         })}
-        onImport={(rows) => {
+        onImport={can('items.import') ? (rows) => {
           const yes = (v: string) => ['yes', 'true', '1', 'y'].includes((v ?? '').toLowerCase())
           const mapped: InventoryItem[] = rows.map((row) => {
             const existing = items.find((i) => i.sku === row.sku)
@@ -362,10 +371,11 @@ export function ItemsPage() {
             title: `${mapped.length} item${mapped.length === 1 ? '' : 's'} imported`,
             description: 'Rows whose SKU already existed were updated in place.',
           })
-        }}
+        } : undefined}
         rowActions={(r) => (
           <>
-            <Tooltip content="Edit">
+            {can('items.edit') && (
+              <Tooltip content="Edit">
               <Button
                 variant="ghost"
                 size="iconXs"
@@ -377,11 +387,14 @@ export function ItemsPage() {
                 <Pencil />
               </Button>
             </Tooltip>
-            <Tooltip content="Delete">
+            )}
+            {can('items.delete') && (
+              <Tooltip content="Delete">
               <Button variant="ghost" size="iconXs" className="text-danger hover:bg-danger-soft" onClick={() => setDeleting(r)}>
                 <Trash2 />
               </Button>
             </Tooltip>
+            )}
           </>
         )}
         footerSummary={(rows) => (

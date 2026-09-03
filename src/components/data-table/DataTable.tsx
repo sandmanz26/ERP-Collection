@@ -39,6 +39,8 @@ export interface DataTableProps<T> {
    *  Return an array when one record expands into several CSV rows (a journal entry's lines, say). */
   toImportRow?: (row: T) => Record<string, unknown> | Record<string, unknown>[]
   exportName: string
+  /** Export is a privilege of its own: it takes the data out of the system. */
+  allowExport?: boolean
   emptyTitle?: string
   emptyDescription?: string
   emptyAction?: React.ReactNode
@@ -72,6 +74,7 @@ export function DataTable<T>({
   importSample,
   toImportRow,
   exportName,
+  allowExport = true,
   emptyTitle,
   emptyDescription,
   emptyAction,
@@ -211,6 +214,7 @@ export function DataTable<T>({
         <div className="flex-1" />
         {toolbarRight}
 
+        {allowExport && (
         <Menu>
           <MenuTrigger asChild>
             <Button variant="secondary" size="md" data-tour="table-export">
@@ -255,6 +259,7 @@ export function DataTable<T>({
             )}
           </MenuContent>
         </Menu>
+        )}
 
         {importFields && onImport && (
           <Button variant="secondary" size="md" onClick={() => setImportOpen(true)}>
@@ -340,9 +345,11 @@ export function DataTable<T>({
           )}
           <Separator vertical className="mx-1 h-5" />
           {bulkActions?.(selectedRows, () => setSelected(new Set()))}
-          <Button variant="secondary" size="sm" onClick={() => exportRows(selectedRows, 'csv')}>
-            <Download /> Export selected
-          </Button>
+          {allowExport && (
+            <Button variant="secondary" size="sm" onClick={() => exportRows(selectedRows, 'csv')}>
+              <Download /> Export selected
+            </Button>
+          )}
           {onDelete && (
             <Button variant="danger" size="sm" onClick={() => setConfirmOpen(true)}>
               <Trash2 /> Delete selected

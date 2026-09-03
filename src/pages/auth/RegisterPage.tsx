@@ -7,17 +7,27 @@ import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { AUTH_POLICY, ROLES, passwordProblems, passwordStrength } from '@/data/reference'
+import { AUTH_POLICY, passwordProblems, passwordStrength } from '@/data/reference'
 import { useAuth } from '@/store/useAuth'
-import type { UserRole } from '@/data/types'
+import { useErp } from '@/store/useErp'
+import { isAdministrativeRole } from '@/lib/access'
 
 export function RegisterPage() {
   const navigate = useNavigate()
   const register = useAuth((s) => s.register)
   const verifyEmail = useAuth((s) => s.verifyEmail)
+  const roles = useErp((s) => s.roles)
+  /* A person cannot request a role that would let them hand out privileges;
+     those are assigned by an administrator, never claimed at the door. */
+  const requestable = roles.filter((r) => r.status === 'ACTIVE' && !isAdministrativeRole(r))
   const [form, setForm] = React.useState({
-    fullName: '', email: '', jobTitle: '', role: 'AREA_COORDINATOR' as UserRole, password: '', confirm: '',
+    fullName: '', email: '', jobTitle: '', roleId: '', password: '', confirm: '',
   })
+
+  React.useEffect(() => {
+    if (!form.roleId && requestable.length) setForm((f) => ({ ...f, roleId: requestable[0].id }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestable.length])
   const [show, setShow] = React.useState(false)
   const [error, setError] = React.useState<{ message: string; remedy?: string } | null>(null)
   const [done, setDone] = React.useState(false)
@@ -105,12 +115,18 @@ export function RegisterPage() {
           <Field label="Job title">
             <Input value={form.jobTitle} onChange={(e) => set('jobTitle', e.target.value)} placeholder="Koordinator Area" />
           </Field>
-          <Field label="Role" help="Determines which modules the account can work in once an administrator approves it.">
+          <Field
+            label="Role requested"
+            help="Decides which modules the account can work in. An administrator can change it, and administrative roles cannot be requested here."
+          >
             <Select
-              value={form.role}
-              onChange={(v) => set('role', v)}
-              options={ROLES.filter((r) => r.value !== 'DIRECTOR').map((r) => ({
-                value: r.value, label: r.label, description: r.description,
+              searchable
+              value={form.roleId}
+              onChange={(v) => set('roleId', v)}
+              options={requestable.map((r) => ({
+                value: r.id,
+                label: r.name,
+                description: `${r.permissions.length} privileges · ${r.description.split('.')[0]}`,
               }))}
             />
           </Field>

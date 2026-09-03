@@ -1,6 +1,6 @@
 import type {
   BuildingType, ClientStatus, ClientTier, ItemCategory, OperatingHours, PositionGrade,
-  ProjectStatus, ServiceType, Shift, ShiftPattern, StockCondition, Uom, UserRole, WarehouseType,
+  ProjectStatus, ServiceType, Shift, ShiftPattern, StockCondition, Uom, WarehouseType,
 } from './types'
 
 /* ------------------------------------------------------------------
@@ -152,20 +152,15 @@ export const SUPPLIERS = [
   'PT Mitra Higienis Indonesia', 'CV Bumi Safety Utama', 'PT Adijaya Machinery',
 ]
 
-/* ---------------- roles ---------------- */
-
-export const ROLES: { value: UserRole; label: string; description: string }[] = [
-  { value: 'DIRECTOR', label: 'Director', description: 'Full access across every module' },
-  { value: 'OPERATION_MANAGER', label: 'Operation Manager', description: 'Owns projects, approvals and deployment' },
-  { value: 'AREA_COORDINATOR', label: 'Area Coordinator', description: 'Runs the sites in one area' },
-  { value: 'HR_RECRUITMENT', label: 'HR & Recruitment', description: 'Fills the manpower gaps' },
-  { value: 'WAREHOUSE_ADMIN', label: 'Warehouse Admin', description: 'Stock, items and warehouses' },
-  { value: 'FINANCE', label: 'Finance', description: 'Contract values, billing and rates' },
-  { value: 'VIEWER', label: 'Viewer', description: 'Read-only across the suite' },
-]
-export const roleLabel = (v: UserRole) => ROLES.find((r) => r.value === v)?.label ?? v
-
 /* ---------------- authentication policy ---------------- */
+
+/** Branches the company operates from; an account may be scoped to some of them. */
+export const BRANCHES = [
+  { code: 'JKT', label: 'Jakarta (pusat)' },
+  { code: 'BDG', label: 'Bandung' },
+  { code: 'SBY', label: 'Surabaya' },
+  { code: 'BPN', label: 'Balikpapan' },
+]
 
 export const AUTH_POLICY = {
   minPasswordLength: 10,

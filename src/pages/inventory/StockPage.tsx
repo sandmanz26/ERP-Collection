@@ -13,12 +13,14 @@ import { Tooltip } from '@/components/ui/tooltip'
 import { ConfirmDelete } from '@/components/ui/confirm'
 import { useToast } from '@/components/ui/toast'
 import { StockForm } from './StockForm'
+import { useCan } from '@/lib/access'
 import { fmtCurrency, fmtDate, fmtNumber } from '@/lib/format'
 import { uid } from '@/lib/utils'
 import { availableQty, daysUntil, effectiveMin, expiryStatus, stockStatus, stockValue } from '@/lib/domain'
 
 export function StockPage() {
   const toast = useToast()
+  const can = useCan()
   const { stock, items, warehouses, removeStock, importStock } = useErp()
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<WarehouseStock | null>(null)
@@ -172,15 +174,17 @@ export function StockPage() {
         title="Warehouse Stock"
         description="One line per item, per warehouse, per bin. Availability is what is on hand less whatever a project has already reserved."
         actions={
-          <Button
-            variant="primary"
-            onClick={() => {
-              setEditing(null)
-              setFormOpen(true)
-            }}
-          >
-            <Plus /> New stock line
-          </Button>
+          can('stock.create') ? (
+            <Button
+              variant="primary"
+              onClick={() => {
+                setEditing(null)
+                setFormOpen(true)
+              }}
+            >
+              <Plus /> New stock line
+            </Button>
+          ) : undefined
         }
       />
 
@@ -224,6 +228,7 @@ export function StockPage() {
         getLabel={(r) => `${itemOf(r)?.sku ?? 'item'} at ${warehouseOf(r)?.code ?? 'warehouse'}`}
         entityLabel="stock line"
         storageKey="stock"
+        allowExport={can('stock.export')}
         exportName="tata-gemilang-warehouse-stock"
         searchText={(r) =>
           [itemOf(r)?.sku, itemOf(r)?.name, itemOf(r)?.brand, warehouseOf(r)?.code, warehouseOf(r)?.name, warehouseOf(r)?.city, r.binLocation, r.batchNo]
@@ -233,10 +238,14 @@ export function StockPage() {
         initialSort={{ key: 'health', dir: 'asc' }}
         pageSize={50}
         compactByDefault
-        onRowClick={(r) => {
-          setEditing(r)
-          setFormOpen(true)
-        }}
+        onRowClick={
+          can('stock.edit')
+            ? (r) => {
+                setEditing(r)
+                setFormOpen(true)
+              }
+            : undefined
+        }
         rowTone={(r) => {
           const status = stockStatus(r, itemOf(r))
           if (status === 'OUT_OF_STOCK') return 'bg-danger-soft/25'
@@ -283,11 +292,11 @@ export function StockPage() {
             match: (r, v) => v.includes(r.condition),
           },
         ]}
-        onDelete={(ids) => {
+        onDelete={can('stock.delete') ? (ids) => {
           removeStock(ids)
           toast.push({ tone: 'success', title: `${ids.length} stock line${ids.length === 1 ? '' : 's'} deleted` })
-        }}
-        importFields={[
+        } : undefined}
+        importFields={can('stock.import') ? [
           { key: 'warehouseCode', label: 'Warehouse code', required: true, hint: 'must match an existing warehouse, e.g. WH-JKT-01' },
           { key: 'sku', label: 'SKU', required: true, hint: 'must match an item in the master' },
           { key: 'binLocation', label: 'Bin / rack', required: true },
@@ -298,7 +307,7 @@ export function StockPage() {
           { key: 'expiryDate', label: 'Expiry date', hint: 'YYYY-MM-DD' },
           { key: 'condition', label: 'Condition', hint: 'GOOD / DAMAGED / QUARANTINE' },
           { key: 'minStockOverride', label: 'Minimum override' },
-        ]}
+        ] : undefined}
         importSample={{
           warehouseCode: 'WH-JKT-01', sku: 'ITM-UNI-0002', binLocation: 'RAK-A-01-2', qtyOnHand: '120',
           qtyReserved: '20', unitCost: '445000', batchNo: '', expiryDate: '', condition: 'GOOD', minStockOverride: '',
@@ -309,7 +318,7 @@ export function StockPage() {
           expiryDate: r.expiryDate?.slice(0, 10) ?? '', condition: r.condition,
           minStockOverride: r.minStockOverride ?? '',
         })}
-        onImport={(rows) => {
+        onImport={can('stock.import') ? (rows) => {
           const usable = rows.filter(
             (row) => warehouses.some((w) => w.code === row.warehouseCode) && items.some((i) => i.sku === row.sku),
           )
@@ -345,10 +354,11 @@ export function StockPage() {
               ? `${skipped} row${skipped === 1 ? '' : 's'} skipped — the warehouse code or SKU did not match.`
               : 'Lines matching an existing warehouse, item and batch were updated in place.',
           })
-        }}
+        } : undefined}
         rowActions={(r) => (
           <>
-            <Tooltip content="Edit">
+            {can('stock.edit') && (
+              <Tooltip content="Edit">
               <Button
                 variant="ghost"
                 size="iconXs"
@@ -360,11 +370,14 @@ export function StockPage() {
                 <Pencil />
               </Button>
             </Tooltip>
-            <Tooltip content="Delete">
+            )}
+            {can('stock.delete') && (
+              <Tooltip content="Delete">
               <Button variant="ghost" size="iconXs" className="text-danger hover:bg-danger-soft" onClick={() => setDeleting(r)}>
                 <Trash2 />
               </Button>
             </Tooltip>
+            )}
           </>
         )}
         footerSummary={(rows) => (
@@ -382,11 +395,9 @@ export function StockPage() {
         }
         emptyTitle="No stock recorded"
         emptyDescription="Create a stock line against a warehouse and a master item."
-        emptyAction={
-          <Button variant="primary" size="sm" onClick={() => setFormOpen(true)}>
+        emptyAction={can('stock.create') ? <Button variant="primary" size="sm" onClick={() => setFormOpen(true)}>
             <Plus /> New stock line
-          </Button>
-        }
+          </Button> : undefined}
       />
 
       <StockForm open={formOpen} onOpenChange={setFormOpen} initial={editing} />

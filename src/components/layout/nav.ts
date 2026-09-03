@@ -1,5 +1,6 @@
 import {
-  Boxes, Building2, ClipboardList, LayoutDashboard, MapPinned, Package, Settings, Users, Warehouse,
+  Boxes, Building2, ClipboardList, KeyRound, LayoutDashboard, MapPinned, Package, Settings,
+  ShieldCheck, Users, UsersRound, Warehouse,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -8,6 +9,8 @@ export interface NavItem {
   label: string
   icon: LucideIcon
   description: string
+  /** The privilege that opens this page. No privilege, no menu entry, no route. */
+  permission: string
   badgeKey?: 'gaps' | 'expiring' | 'approvals' | 'lowStock'
 }
 
@@ -20,36 +23,43 @@ export const NAV: NavGroup[] = [
   {
     label: 'Overview',
     items: [
-      { to: '/', label: 'Dashboard', icon: LayoutDashboard, description: 'Fulfilment, contracts and stock at a glance' },
+      { to: '/', label: 'Dashboard', icon: LayoutDashboard, permission: 'dashboard.view', description: 'Fulfilment, contracts and stock at a glance' },
     ],
   },
   {
     label: 'Clients',
     items: [
-      { to: '/clients', label: 'Clients', icon: Users, description: 'Companies we serve and their commercial terms' },
-      { to: '/buildings', label: 'Buildings', icon: Building2, description: 'Every site a project can be attached to' },
+      { to: '/clients', label: 'Clients', icon: Users, permission: 'clients.view', description: 'Companies we serve and their commercial terms' },
+      { to: '/buildings', label: 'Buildings', icon: Building2, permission: 'buildings.view', description: 'Every site a project can be attached to' },
     ],
   },
   {
     label: 'Operations',
     items: [
-      { to: '/projects', label: 'Projects', icon: ClipboardList, badgeKey: 'approvals', description: 'One contract, one building, one period' },
-      { to: '/deployments', label: 'Deployments', icon: MapPinned, badgeKey: 'gaps', description: 'Every manpower line across every project' },
-      { to: '/positions', label: 'Positions', icon: Users, description: 'What can be deployed, at what rate' },
+      { to: '/projects', label: 'Projects', icon: ClipboardList, permission: 'projects.view', badgeKey: 'approvals', description: 'One contract, one building, one period' },
+      { to: '/deployments', label: 'Deployments', icon: MapPinned, permission: 'deployments.view', badgeKey: 'gaps', description: 'Every manpower line across every project' },
+      { to: '/positions', label: 'Positions', icon: Users, permission: 'positions.view', description: 'What can be deployed, at what rate' },
     ],
   },
   {
     label: 'Inventory',
     items: [
-      { to: '/inventory/warehouses', label: 'Warehouses', icon: Warehouse, description: 'Where stock is held' },
-      { to: '/inventory/items', label: 'Item Master', icon: Package, description: 'The definition of everything we buy' },
-      { to: '/inventory/stock', label: 'Warehouse Stock', icon: Boxes, badgeKey: 'lowStock', description: 'Item by item, warehouse by warehouse' },
+      { to: '/inventory/warehouses', label: 'Warehouses', icon: Warehouse, permission: 'warehouses.view', description: 'Where stock is held' },
+      { to: '/inventory/items', label: 'Item Master', icon: Package, permission: 'items.view', description: 'The definition of everything we buy' },
+      { to: '/inventory/stock', label: 'Warehouse Stock', icon: Boxes, permission: 'stock.view', badgeKey: 'lowStock', description: 'Item by item, warehouse by warehouse' },
     ],
   },
   {
-    label: 'System',
+    label: 'Administration',
     items: [
-      { to: '/settings', label: 'Settings', icon: Settings, description: 'Company profile, accounts and activity' },
+      { to: '/admin/users', label: 'Users', icon: UsersRound, permission: 'users.view', description: 'Accounts, their roles and their overrides' },
+      { to: '/admin/roles', label: 'Roles', icon: ShieldCheck, permission: 'roles.view', description: 'Bundles of privileges assigned to accounts' },
+      { to: '/admin/privileges', label: 'Privileges', icon: KeyRound, permission: 'roles.view', description: 'Every privilege, and which role grants it' },
+      { to: '/settings', label: 'Settings', icon: Settings, permission: 'settings.view', description: 'Company profile and activity log' },
     ],
   },
 ]
+
+/** The privilege a path needs, for the route guard. */
+export const permissionForPath = (path: string) =>
+  NAV.flatMap((g) => g.items).find((i) => i.to === path)?.permission
