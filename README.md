@@ -8,7 +8,8 @@ This is a **front-end only** build. There is no backend and no API layer. All da
 browser (Zustand + `localStorage`), seeded with a realistic operating book: 12 clients, 18 buildings,
 18 projects carrying 136 manpower lines, 17 positions, 6 warehouses, 70 master items, 155 warehouse
 stock lines, 12 divisions, 10 suppliers with 107 purchase prices behind them, four monthly material
-request sessions, and 17 accounts across 12 roles built from a catalogue of 78 privileges.
+request sessions that produced 12 purchase orders, 10 deliveries and 10 payments, and 17 accounts
+across 12 roles built from a catalogue of 96 privileges.
 
 ```bash
 npm install
@@ -172,7 +173,59 @@ order), and **by division** (who is carrying what share of the value, and which 
 Both the seeded purchase requests and the Lock button build their lines with the same
 `buildPrLines()`, so the mock data and the running application cannot drift apart.
 
-### 7. User management — users, roles, privileges
+### 7. Purchasing — orders, deliveries, payments
+
+An approved purchase request is a company-wide shopping list; no supplier can act on it, because it
+names several of them at once. Splitting it by supplier produces the documents the outside world
+deals in:
+
+```
+PurchaseRequest (approved)
+  └── split by supplier ──> PurchaseOrder          PO-2026-0007, one per supplier
+                              ├──1:N──> GoodsReceipt   partial deliveries are normal
+                              │           ├── posts stock into a warehouse
+                              │           └── writes the price actually paid
+                              └──1:N──> SupplierPayment  in full, or in instalments
+```
+
+**Purchase orders** carry the supplier's own lead time, payment term and PPN rate — copied at issue,
+so renegotiating a term later cannot silently move an old order's due date. Late is measured against
+`ordered + lead time`; the register shows how many days past that an order has gone.
+
+**Goods receipt is the only event that adds stock from outside the company**, and it does three
+things at once: it adds to the order's received total, posts the goods into a warehouse (joining the
+line already holding that item in that batch, at a weighted average cost), and records what was
+actually paid per item. That last part is the answer to *"update harga pembelian terakhir"*: the
+next month's purchase request reads its `Last buy` from receipts, not from anybody's typing. Batch
+and expiry are demanded where the item master says so, and rejected goods never enter stock — they
+stay owed on the order until the supplier delivers them again.
+
+**Payments** go against the order, in full or in parts. A deposit before delivery, the balance after,
+and a giro in between are all ordinary here; the order settles when nothing is outstanding. The term
+runs from the **first delivery**, not from the order date — a supplier that has not delivered has not
+started the clock — and the payments page ages the unpaid balance into the usual buckets.
+
+**Manual price entry** exists for what the system did not see: on a supplier's price history, an
+account holding `suppliers.price` can record or correct a purchase, because a demo without history is
+a demo where every last price is missing.
+
+### 8. Stock transfers
+
+Goods moving between warehouses, and the only legitimate way stock leaves one and appears in another.
+
+```
+DRAFT ──dispatch──> IN_TRANSIT ──receive──> RECEIVED
+   │                     │
+   └───── cancel ────────┘   (a dispatched transfer puts the stock back on the source shelf)
+```
+
+Stock leaves the source **on dispatch** and arrives **on receipt**; in between it belongs to neither
+warehouse, which is exactly what in transit means and why the value in transit is shown separately. A
+line is drawn from a specific stock line, so the batch, its expiry and its cost travel with the
+goods. Receiving counts what actually arrived: anything short of what was sent is refused until
+somebody says what happened to it, and is then kept on the line as a variance.
+
+### 9. User management — users, roles, privileges
 
 Access is enforced, not decorated. The role an account holds decides which menu entries exist, which
 routes open, and which buttons render; a page that is not permitted refuses with the name of the
@@ -186,7 +239,7 @@ Three layers, each with one job:
 
 | Layer | Where it lives | Rule |
 | --- | --- | --- |
-| **Privilege** | In code (`data/permissions.ts`) — 78 of them, `<module>.<action>` | Never created by a user. Adding one is a code change, because each corresponds to a control the interface shows or hides. |
+| **Privilege** | In code (`data/permissions.ts`) — 96 of them, `<module>.<action>` | Never created by a user. Adding one is a code change, because each corresponds to a control the interface shows or hides. |
 | **Role** | Data — 10 system roles, 2 custom | Only ever *grants*. An inactive role grants nothing, so an engagement can be switched off without unpicking who held it. |
 | **Override** | On the account | Grants an exception, or revokes something a role gives. **Revoked always wins**, and the user record shows which layer every privilege came from. |
 
@@ -250,9 +303,13 @@ them:
 | MR sessions | 4 — September open now, August/July/June locked |
 | Division requests | 32 carrying 116 lines — submitted, draft, returned, approved |
 | Purchase requests | 3 — a draft mid-negotiation, one approved, one ordered — 72 merged lines |
+| Purchase orders | 12 across 42 lines, IDR 458M — 7 fully delivered, 2 part delivered, 3 not yet |
+| Goods receipts | 10 deliveries, 3,796 units in, 6 units rejected at the gate, 1 arrived late |
+| Payments | 10 — deposits, balances and one giro; IDR 346M paid, IDR 112M outstanding, 4 orders overdue |
+| Stock transfers | 5 — two received (one short in transit), one in transit, one draft, one cancelled |
 | Accounts | 17 — active, invited, unverified, locked and suspended; several carry privilege overrides |
 | Roles | 12 — 10 system, 2 custom, one of them deliberately switched off |
-| Privileges | 78 across 17 modules, 15 of them high risk |
+| Privileges | 96 across 21 modules, 17 of them high risk |
 
 The gaps are deliberate: an unfilled night shift at the hospital, a gondola cleaner whose certificate
 lapsed, a contract 38 days from its end with no auto-renewal, one fall-protection harness short of what the
@@ -294,6 +351,7 @@ src/
     access.ts       Effective privileges, their sources, and the lock-out guard rails
     domain.ts       Everything the modules compute rather than store
     procurement.ts  The MR → PR arithmetic: the merge, the lock guard, the price basis
+    purchasing.ts   Orders, receipts, payments, ageing — and the stock posting they share
     csv.ts          CSV parse/serialise for import and export
     format.ts       Money, dates, numbers, Indonesian casing rules
   pages/            One folder per module
@@ -309,11 +367,13 @@ are not here — are:
   Real fulfilment tracking needs a personnel master with certificates and their expiry dates.
 - **Attendance and payroll.** The system knows what a contract owes; it does not know who turned up.
 - **Billing.** Contract values and margins are computed, but no invoice is raised.
-- **Stock movements.** Quantities can be edited, but there is no receipt, issue, transfer or
-  stock-take document behind the change — only an activity log.
-- **Purchase orders and goods receipt.** A purchase request can be approved and marked as ordered,
-  but no order document is issued to a supplier and nothing books the delivery back into a warehouse.
-  Approving a request does not move stock; the two modules meet at the item master and stop there.
+- **Issue to project and stock takes.** Goods now arrive by receipt and move by transfer, but nothing
+  issues them out to a site, and a physical count still has to be typed over the quantity.
+- **Supplier invoices and three-way match.** Payment is recorded against the order, not against an
+  invoice document, so there is nothing to match order → receipt → invoice on. A supplier that
+  invoices two orders on one bill is entered as two payments.
+- **The ledger.** Money paid is recorded on the order; it is not posted anywhere, and there is no
+  accrual for goods received but not yet invoiced.
 - **Server-side enforcement.** Privileges are enforced throughout this front end — menus, routes and
   controls all obey them — but a front end can only ever hide a control. Real enforcement belongs on
   the server, where the same privilege keys would gate the API. Treat this module as the interface

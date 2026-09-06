@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
-  AlertTriangle, ArrowLeft, Building2, CheckCircle2, History, Layers, ShoppingCart, Store,
+  AlertTriangle, ArrowLeft, Building2, CheckCircle2, History, Layers, Receipt, ShoppingCart, Store,
   Truck, Wallet, XCircle,
 } from 'lucide-react'
 import type { PurchaseRequest, PurchaseRequestLine } from '@/data/types'
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs } from '@/components/ui/tabs'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
+import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { EmptyState } from '@/components/ui/misc'
@@ -55,12 +56,14 @@ export function PurchaseRequestDetailPage() {
   const can = useCan()
   const {
     purchaseRequests, mrSessions, mrRequests, divisions, items, suppliers, purchasePrices,
-    assignPrSupplier, setPrAgreedPrice, setPrStatus,
+    purchaseOrders, warehouses, assignPrSupplier, setPrAgreedPrice, setPrStatus, issuePurchaseOrders,
   } = useErp()
 
   const [tab, setTab] = React.useState<'lines' | 'suppliers' | 'divisions'>('lines')
   const [history, setHistory] = React.useState<PurchaseRequestLine | null>(null)
   const [confirm, setConfirm] = React.useState<PurchaseRequest['status'] | null>(null)
+  const [issuing, setIssuing] = React.useState(false)
+  const [issueWarehouse, setIssueWarehouse] = React.useState('wh_jkt')
 
   const pr = purchaseRequests.find((p) => p.id === id)
 
@@ -76,6 +79,7 @@ export function PurchaseRequestDetailPage() {
   }
 
   const session = mrSessions.find((s) => s.id === pr.sessionId)
+  const issuedOrders = purchaseOrders.filter((po) => po.purchaseRequestId === pr.id)
   const totals = prTotals(pr, purchasePrices, items)
   const itemOf = (line: PurchaseRequestLine) => items.find((i) => i.id === line.itemId)
   const divisionName = (divisionId: string) => divisions.find((d) => d.id === divisionId)?.name ?? 'Unknown division'
@@ -172,9 +176,14 @@ export function PurchaseRequestDetailPage() {
                 </Tooltip>
               </>
             )}
-            {can('pr.approve') && pr.status === 'APPROVED' && (
-              <Button variant="primary" onClick={() => setConfirm('ORDERED')}>
-                <Truck /> Mark as ordered
+            {can('po.create') && pr.status === 'APPROVED' && (
+              <Button variant="primary" onClick={() => setIssuing(true)}>
+                <Truck /> Issue purchase orders
+              </Button>
+            )}
+            {issuedOrders.length > 0 && (
+              <Button variant="secondary" onClick={() => nav(`/purchase-orders?pr=${pr.code}`)}>
+                <Receipt /> {issuedOrders.length} orders issued
               </Button>
             )}
           </div>
@@ -558,6 +567,75 @@ export function PurchaseRequestDetailPage() {
               </table>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Splitting the recap into documents suppliers can actually act on. */}
+      <Dialog open={issuing} onOpenChange={setIssuing}>
+        <DialogContent
+          size="lg"
+          icon={<Truck />}
+          title={`Issue ${buckets.filter((b) => b.supplierId !== '__unassigned').length} purchase orders`}
+          description="One order per supplier, priced at what this request settled on. From there each supplier delivers and invoices on its own."
+          footer={
+            <>
+              <Button variant="secondary" size="sm" onClick={() => setIssuing(false)}>Cancel</Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  const result = issuePurchaseOrders(pr.id, issueWarehouse)
+                  if (!result.ok) {
+                    toast.push({ tone: 'error', title: 'Nothing was issued', description: result.error ?? '' })
+                    return
+                  }
+                  setIssuing(false)
+                  toast.push({
+                    tone: 'success',
+                    title: `${result.codes?.length} orders issued`,
+                    description: `${result.codes?.join(', ')} — deliveries and payments are recorded against them.`,
+                  })
+                  nav('/purchase-orders')
+                }}
+              >
+                <Truck /> Issue the orders
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4 p-5">
+            <Field label="Deliver to" required hint="Where the suppliers should send everything. A delivery can still name a different warehouse when it arrives.">
+              <Select
+                value={issueWarehouse}
+                onChange={setIssueWarehouse}
+                options={warehouses.map((w) => ({ value: w.id, label: w.name, description: `${w.code} · ${w.city}` }))}
+              />
+            </Field>
+            <div className="rounded-lg border border-border">
+              {buckets
+                .filter((b) => b.supplierId !== '__unassigned')
+                .map((bucket) => {
+                  const supplier = suppliers.find((s) => s.id === bucket.supplierId)
+                  return (
+                    <div key={bucket.supplierId} className="flex items-center justify-between gap-3 border-b border-border px-3 py-2.5 last:border-b-0">
+                      <div className="min-w-0">
+                        <p className="truncate text-[12.5px] font-medium text-fg">{supplier?.brandName ?? supplier?.legalName}</p>
+                        <p className="text-[11px] text-fg-subtle">
+                          {bucket.lines.length} lines · {supplier?.leadTimeDays} day lead · {supplier?.paymentTermDays} day terms
+                        </p>
+                      </div>
+                      <span className="tnum shrink-0 text-[12.5px] font-semibold text-fg">
+                        {fmtCurrency(bucket.value, 'IDR', { compact: true })}
+                      </span>
+                    </div>
+                  )
+                })}
+            </div>
+            <p className="text-[12.5px] text-fg-muted">
+              Each order carries the supplier's own lead time and payment terms, copied at issue so a later renegotiation cannot
+              move an old due date. PPN is added on the order, not here.
+            </p>
+          </div>
         </DialogContent>
       </Dialog>
 

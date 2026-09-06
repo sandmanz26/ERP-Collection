@@ -1,6 +1,7 @@
 import {
-  Boxes, Building2, CalendarRange, ClipboardList, KeyRound, LayoutDashboard, MapPinned, Network,
-  Package, Settings, ShieldCheck, ShoppingCart, Store, Users, UsersRound, Warehouse,
+  ArrowLeftRight, Boxes, Building2, CalendarRange, ClipboardList, KeyRound, LayoutDashboard,
+  MapPinned, Network, Package, PackageCheck, Receipt, Settings, ShieldCheck, ShoppingCart, Store,
+  Users, UsersRound, Wallet, Warehouse,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -47,6 +48,7 @@ export const NAV: NavGroup[] = [
       { to: '/inventory/warehouses', label: 'Warehouses', icon: Warehouse, permission: 'warehouses.view', description: 'Where stock is held' },
       { to: '/inventory/items', label: 'Item Master', icon: Package, permission: 'items.view', description: 'The definition of everything we buy' },
       { to: '/inventory/stock', label: 'Warehouse Stock', icon: Boxes, permission: 'stock.view', badgeKey: 'lowStock', description: 'Item by item, warehouse by warehouse' },
+      { to: '/inventory/transfers', label: 'Stock Transfers', icon: ArrowLeftRight, permission: 'transfers.view', description: 'Goods moving from one warehouse to another' },
     ],
   },
   {
@@ -55,6 +57,9 @@ export const NAV: NavGroup[] = [
       { to: '/mr', label: 'Material Requests', icon: CalendarRange, permission: 'mr.view', description: 'The monthly session every division files into' },
       { to: '/mr/my', label: 'My Division Request', icon: ClipboardList, permission: 'mr.submit', description: 'What this division is asking for this month' },
       { to: '/purchase-requests', label: 'Purchase Requests', icon: ShoppingCart, permission: 'pr.view', description: 'The locked recap, split across suppliers' },
+      { to: '/purchase-orders', label: 'Purchase Orders', icon: Receipt, permission: 'po.view', description: 'One order per supplier, and what it cost' },
+      { to: '/goods-receipts', label: 'Goods Receipt', icon: PackageCheck, permission: 'grn.view', description: 'Deliveries arriving against an order' },
+      { to: '/payments', label: 'Payments', icon: Wallet, permission: 'payments.view', description: 'Paid to suppliers, and what is still owed' },
       { to: '/suppliers', label: 'Suppliers', icon: Store, permission: 'suppliers.view', description: 'Who we buy from, and at what price last time' },
       { to: '/divisions', label: 'Divisions', icon: Network, permission: 'divisions.view', description: 'The cost centres that can raise a request' },
     ],

@@ -26,6 +26,11 @@ import { MrSessionDetailPage } from '@/pages/procurement/MrSessionDetailPage'
 import { MyRequestPage } from '@/pages/procurement/MyRequestPage'
 import { PurchaseRequestsPage } from '@/pages/procurement/PurchaseRequestsPage'
 import { PurchaseRequestDetailPage } from '@/pages/procurement/PurchaseRequestDetailPage'
+import { PurchaseOrdersPage } from '@/pages/procurement/PurchaseOrdersPage'
+import { PurchaseOrderDetailPage } from '@/pages/procurement/PurchaseOrderDetailPage'
+import { GoodsReceiptsPage } from '@/pages/procurement/GoodsReceiptsPage'
+import { PaymentsPage } from '@/pages/procurement/PaymentsPage'
+import { StockTransfersPage } from '@/pages/inventory/StockTransfersPage'
 import { UsersPage } from '@/pages/admin/UsersPage'
 import { RolesPage } from '@/pages/admin/RolesPage'
 import { PrivilegesPage } from '@/pages/admin/PrivilegesPage'
@@ -79,6 +84,9 @@ export default function App() {
                 <Route element={<RequirePermission permission="stock.view" />}>
                   <Route path="/inventory/stock" element={<StockPage />} />
                 </Route>
+                <Route element={<RequirePermission permission="transfers.view" />}>
+                  <Route path="/inventory/transfers" element={<StockTransfersPage />} />
+                </Route>
 
                 {/* Procurement. `/mr/my` is declared before `/mr/:id` so the
                     division head's own page is never read as a session id. */}
@@ -92,6 +100,16 @@ export default function App() {
                 <Route element={<RequirePermission permission="pr.view" />}>
                   <Route path="/purchase-requests" element={<PurchaseRequestsPage />} />
                   <Route path="/purchase-requests/:id" element={<PurchaseRequestDetailPage />} />
+                </Route>
+                <Route element={<RequirePermission permission="po.view" />}>
+                  <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
+                  <Route path="/purchase-orders/:id" element={<PurchaseOrderDetailPage />} />
+                </Route>
+                <Route element={<RequirePermission permission="grn.view" />}>
+                  <Route path="/goods-receipts" element={<GoodsReceiptsPage />} />
+                </Route>
+                <Route element={<RequirePermission permission="payments.view" />}>
+                  <Route path="/payments" element={<PaymentsPage />} />
                 </Route>
                 <Route element={<RequirePermission permission="suppliers.view" />}>
                   <Route path="/suppliers" element={<SuppliersPage />} />

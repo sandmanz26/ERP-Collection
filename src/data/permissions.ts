@@ -26,6 +26,10 @@ export const MODULES: { key: PermissionModule; label: string; description: strin
   { key: 'suppliers', label: 'Suppliers', description: 'Approved vendors and what they have charged', group: 'Procurement' },
   { key: 'mr', label: 'Material Requests', description: 'The monthly request session and what each division asked for', group: 'Procurement' },
   { key: 'pr', label: 'Purchase Requests', description: 'The recap of a locked session, priced and assigned', group: 'Procurement' },
+  { key: 'po', label: 'Purchase Orders', description: 'What was ordered from each supplier, and what it cost', group: 'Procurement' },
+  { key: 'grn', label: 'Goods Receipt', description: 'Deliveries arriving into a warehouse against an order', group: 'Procurement' },
+  { key: 'payments', label: 'Payments', description: 'Money paid to suppliers, in full or in instalments', group: 'Procurement' },
+  { key: 'transfers', label: 'Stock Transfers', description: 'Goods moving from one warehouse to another', group: 'Inventory' },
   { key: 'users', label: 'Users', description: 'Accounts that can sign in', group: 'Administration' },
   { key: 'roles', label: 'Roles', description: 'Bundles of privileges assigned to accounts', group: 'Administration' },
   { key: 'settings', label: 'Settings', description: 'Company profile and system preferences', group: 'Administration' },
@@ -38,13 +42,15 @@ export const moduleLabel = (key: PermissionModule) => MODULES.find((m) => m.key 
 const RISK: Record<string, PermissionRisk> = {
   view: 'LOW', export: 'LOW', create: 'MEDIUM', edit: 'MEDIUM', import: 'MEDIUM', submit: 'MEDIUM',
   delete: 'HIGH', approve: 'HIGH', manage: 'HIGH', review: 'MEDIUM', lock: 'HIGH', assign: 'MEDIUM',
+  receive: 'MEDIUM', dispatch: 'MEDIUM', close: 'HIGH', price: 'MEDIUM', pay: 'HIGH',
 }
 
 /** Wording that says what the privilege lets a person do, not what it is called. */
 const VERB: Record<string, string> = {
   view: 'View', create: 'Create', edit: 'Edit', delete: 'Delete', import: 'Import',
   export: 'Export', approve: 'Approve', manage: 'Manage', submit: 'Submit', review: 'Review',
-  lock: 'Lock', assign: 'Assign supplier on',
+  lock: 'Lock', assign: 'Assign supplier on', receive: 'Receive against', dispatch: 'Dispatch',
+  close: 'Close', price: 'Record prices on', pay: 'Pay',
 }
 
 function perm(module: PermissionModule, action: string, description: string): PermissionDef {
@@ -126,6 +132,7 @@ export const PERMISSIONS: PermissionDef[] = [
   perm('suppliers', 'delete', 'Remove a supplier. Its price history goes with it.'),
   perm('suppliers', 'import', 'Load suppliers from a CSV file.'),
   perm('suppliers', 'export', 'Download the supplier list with its terms.'),
+  perm('suppliers', 'price', 'Record or correct a purchase price by hand, which changes the last price every future request is measured against.'),
 
   perm('mr', 'view', 'Open material request sessions and see your own division request.'),
   perm('mr', 'create', 'Open a monthly session and set the window it accepts requests in.'),
@@ -138,6 +145,27 @@ export const PERMISSIONS: PermissionDef[] = [
   perm('pr', 'assign', 'Assign a supplier to a line, which brings its last purchase price with it.'),
   perm('pr', 'approve', 'Approve a purchase request, or mark it ordered.'),
   perm('pr', 'export', 'Download a purchase request with its prices and suppliers.'),
+
+  perm('po', 'view', 'Open purchase orders and see what was ordered from each supplier.'),
+  perm('po', 'create', 'Split an approved purchase request into one order per supplier and issue them.'),
+  perm('po', 'edit', 'Change quantities, prices and the delivery warehouse on an order that has not been received.'),
+  perm('po', 'close', 'Close an order short or cancel it, giving up on what has not been delivered.'),
+  perm('po', 'export', 'Download purchase orders with their prices and delivery status.'),
+
+  perm('grn', 'view', 'Open the goods receipt register and any delivery record.'),
+  perm('grn', 'receive', 'Record a delivery against an order. This moves stock into the warehouse and records what was paid for the item.'),
+  perm('grn', 'export', 'Download goods receipts with quantities and rejections.'),
+
+  perm('payments', 'view', 'See what has been paid to suppliers and what is still outstanding.'),
+  perm('payments', 'pay', 'Record a payment against a purchase order, in full or in part.'),
+  perm('payments', 'export', 'Download the payment register and the outstanding balance per order.'),
+
+  perm('transfers', 'view', 'Open the stock transfer register.'),
+  perm('transfers', 'create', 'Raise a transfer between two warehouses.'),
+  perm('transfers', 'edit', 'Change a draft transfer before it is dispatched.'),
+  perm('transfers', 'dispatch', 'Dispatch a transfer. The stock leaves the source warehouse at that moment.'),
+  perm('transfers', 'receive', 'Receive a transfer into the destination warehouse, recording any shortfall in transit.'),
+  perm('transfers', 'export', 'Download transfers with their quantities and variances.'),
 
   perm('users', 'view', 'See the account register and what each account can do.'),
   perm('users', 'create', 'Invite a new account.'),
@@ -162,7 +190,8 @@ export const permissionsOf = (module: PermissionModule) => PERMISSIONS.filter((p
 
 /** Every action used anywhere, in the order a permission matrix should show them. */
 export const ACTION_ORDER = [
-  'view', 'create', 'edit', 'delete', 'import', 'export', 'submit', 'review', 'assign', 'approve', 'lock', 'manage',
+  'view', 'create', 'edit', 'delete', 'import', 'export', 'submit', 'review', 'assign', 'dispatch',
+  'receive', 'pay', 'price', 'approve', 'close', 'lock', 'manage',
 ]
 
 /**

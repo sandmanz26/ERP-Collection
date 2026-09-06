@@ -39,8 +39,9 @@ three cost money:
 | Projects: period, one building, manpower requirement lines | Contract document generation and e-signature |
 | Deployment register across all projects | Named personnel, certificates, attendance, payroll |
 | Position master with rates and standard issue | Recruitment pipeline, training records |
-| Inventory: warehouses, item master, warehouse stock | Goods receipt, issue notes, stock takes |
-| Procurement: divisions, suppliers, monthly material request sessions, purchase requests | Purchase orders sent to a supplier, delivery, three-way match, supplier invoices |
+| Inventory: warehouses, item master, warehouse stock, transfers between warehouses | Issue notes to a site, stock takes |
+| Procurement: divisions, suppliers, monthly material request sessions, purchase requests | Tendering, contracts, framework agreements |
+| Purchasing: orders per supplier, goods receipt, payments in full or in part | Supplier invoices, three-way match, the general ledger |
 | Fulfilment, contract value and margin as computed figures | Invoicing, tax documents, general ledger |
 | User management: accounts, roles and privilege control, enforced across the interface | Server-side enforcement, SSO, real second-factor challenge |
 
@@ -67,6 +68,14 @@ MrSession ──1:1──> PurchaseRequest        created by the lock, never by 
                             └── supplierId ──N:1──> Supplier
 
 Supplier ──1:N──> PurchasePrice ──N:1──> InventoryItem       what was paid, and when
+                      ▲
+                      │ written by every receipt
+PurchaseRequest ──split──> PurchaseOrder ──N:1──> Supplier
+                              ├──1:N──> GoodsReceipt ──> WarehouseStock   (stock in)
+                              └──1:N──> SupplierPayment
+
+StockTransfer ──N:1──> Warehouse (from) and Warehouse (to)
+      └── StockTransferLine ──N:1──> WarehouseStock (the exact source line)
 ```
 
 **R1 — One project serves exactly one building.** A client that wants a second building signs a second
@@ -157,6 +166,48 @@ line is unassigned, and freezes suppliers and prices.
 **R23 — A division with request history cannot be deleted.** Deleting it would orphan the sources the
 recap is built from and make an approved purchase request unreadable.
 
+**R24 — One supplier, one order.** An approved purchase request is split into one order per supplier,
+priced at what the request settled on. A request can be split only once, and only when every line
+carries a supplier — otherwise part of the demand would silently never be ordered.
+
+**R25 — Terms are copied onto the order at issue.** Lead time, payment term and the PPN rate are
+frozen on the document. Renegotiating a supplier's terms next quarter must not move the due date of
+an order placed last month.
+
+**R26 — A delivery can never exceed what is outstanding.** Received plus rejected is capped at
+`ordered − already received`, per line. Several deliveries against one order are normal; the order's
+status is derived from the totals, never chosen.
+
+**R27 — Rejected goods do not enter stock and stay owed.** They are recorded with a reason and remain
+outstanding on the order, because the supplier still has to deliver them.
+
+**R28 — Receiving is the only event that adds stock from outside the company**, and it does three
+things atomically: adds to the order's received total, posts the goods into a warehouse, and writes
+the price paid. Batch and expiry are required where the item master demands them.
+
+**R29 — Goods arriving join the line already holding that item in that batch, at a weighted average
+cost.** One bin now holds two purchases mixed together, and only one number can honestly describe
+what is in it.
+
+**R30 — The last purchase price is a fact, not a decision.** It is read from what a receipt recorded,
+never from a price typed on a request. A price entered by hand is possible but privileged
+(`suppliers.price`), for purchases made before or outside the system.
+
+**R31 — Payment is against the order, in full or in parts.** No payment may exceed the outstanding
+balance; an order is settled when nothing is outstanding. A deposit before delivery is allowed and
+flagged as paid ahead of receipt, because that is a decision somebody should make deliberately.
+
+**R32 — The payment term runs from the first delivery.** A supplier that has not delivered has not
+started the clock, so an order with nothing received is never overdue.
+
+**R33 — Stock leaves on dispatch and arrives on receipt.** Between the two it is counted in neither
+warehouse. A transfer can only send what is available at the source, and cancelling one already in
+transit puts the goods back on the shelf they left.
+
+**R34 — A shortfall in transit must be explained.** Receiving less than was sent is refused until a
+reason is given, and the difference is then kept on the line as a variance rather than quietly
+adjusting the quantity.
+
 ## 5. Module requirements
 
 ### 5.1 Authentication
@@ -227,10 +278,35 @@ recap is built from and make an approved purchase request unreadable.
   the item, an agreed price that overrides it, and the same recap grouped by supplier (with a minimum
   order warning) and by division (with each one's share of the value).
 
-### 5.8 User management
+### 5.8 Purchasing
+
+- **Purchase orders** — one per supplier, split from an approved request: lines with ordered
+  quantity, unit price and a running received total; delivery warehouse; ordered and expected dates;
+  the supplier's payment term and the PPN rate copied at issue. An order can be closed short or
+  cancelled, with a reason. The register shows delivery progress, payment state, days late and days
+  overdue.
+- **Goods receipt** — per delivery: warehouse, date, delivery note, vehicle, and per line the
+  quantity received, the quantity rejected with its reason, bin, batch and expiry. Receiving posts
+  stock and records the price paid. The register carries on-time performance and rejections.
+- **Payments** — per payment: amount, method (transfer, giro, cheque, cash), date, reference and
+  bank account. A "Full" button fills the outstanding balance; anything less is a part payment. The
+  register shows what has been paid and, on a second tab, every order still owed with an ageing
+  breakdown.
+- **Manual price entry** — recording or correcting a purchase price on the supplier record, for
+  purchases the system did not see.
+
+### 5.9 Stock transfers
+
+- Draft → dispatch → receive, with cancel available until it has arrived. Source, destination,
+  reason, expected date, and lines drawn from specific stock lines so batch, expiry and cost travel
+  with the goods.
+- Dispatch takes the stock out of the source warehouse; receipt puts what actually arrived into the
+  destination, and a shortfall is recorded as a variance with a reason.
+
+### 5.10 User management
 
 - **Privileges** are defined in code as `<module>.<action>` with a risk level, because each one
-  corresponds to a control the interface shows or hides. 78 of them across 17 modules.
+  corresponds to a control the interface shows or hides. 96 of them across 21 modules.
 - **Roles** bundle privileges. Ten ship with the system and cannot be deleted; custom roles are
   created by administrators, and any role can be duplicated as a starting point. The editor is a
   module × action matrix that states how many accounts a change will affect before it is saved.
@@ -269,6 +345,10 @@ shortfall, red a breach.
 | Which divisions have not filed yet | MR session, divisions submitted tile | while the window is still open |
 | What a line should cost | Purchase request, unit price and its basis | at the moment the supplier is chosen |
 | What one supplier is being asked for | Purchase request, by-supplier view | as a single order, not line by line |
+| Which suppliers are late | Purchase orders, days late on the register | before the site runs out |
+| What an item last actually cost | The item's price history, written by every receipt | at the moment a supplier is chosen |
+| What the company owes and when | Payments, ageing view | before the term runs out |
+| Where a batch physically is | Stock transfers, in-transit view | while it is still on the road |
 
 ## 8. Next phases
 
@@ -276,10 +356,9 @@ shortfall, red a breach.
    Turns fulfilment from a typed number into an attested one.
 2. **Attendance.** Daily post confirmation per shift, which turns fulfilment from a monthly claim into
    a daily fact and feeds the SLA deduction calculation.
-3. **Stock movements.** Purchase order issued to the supplier from an approved purchase request,
-   receipt, issue to project, transfer between warehouses, stock take. Removes the last place where a
-   quantity changes without a document behind it, and closes the loop the procurement module opens:
-   today an approved request is where the trail stops.
+3. **Issue and stock take.** Goods now arrive by receipt and move by transfer; what is missing is
+   issuing them out to a project and counting them physically. Those two close the last places where
+   a quantity changes without a document behind it.
 4. **Billing.** Monthly invoice from the manpower lines, with PPN and PPh 23 as the client record
    already describes them.
 5. **Server-side enforcement.** The same privilege keys gating the API, so the front end's checks

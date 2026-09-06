@@ -22,6 +22,9 @@ const TONES: Record<string, BadgeTone> = {
   /* procurement */
   OPEN: 'success', CLOSED: 'info', SUBMITTED: 'info', RETURNED: 'warning', APPROVED: 'success',
   ASSIGNED: 'info', ORDERED: 'purple', CANCELLED: 'danger', BLACKLISTED: 'danger',
+  ISSUED: 'info', PARTIALLY_RECEIVED: 'warning', RECEIVED: 'success',
+  UNPAID: 'danger', PARTIAL: 'warning', PAID: 'success',
+  IN_TRANSIT: 'info',
   /* shifts */
   PAGI: 'info', SIANG: 'warning', MALAM: 'purple', NON_SHIFT: 'neutral',
 }

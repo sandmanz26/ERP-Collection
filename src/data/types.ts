@@ -42,6 +42,10 @@ export type PermissionModule =
   | 'suppliers'
   | 'mr'
   | 'pr'
+  | 'po'
+  | 'grn'
+  | 'payments'
+  | 'transfers'
   | 'users'
   | 'roles'
   | 'settings'
@@ -599,6 +603,180 @@ export interface PurchaseRequest {
   updatedAt: ISODate
   approvedBy?: string
   approvedAt?: ISODate
+  note?: string
+}
+
+/* ================================================================
+   Purchase order → goods receipt → payment
+
+   An approved purchase request is a company-wide shopping list; it is not
+   something a supplier can act on. Splitting it by supplier produces the
+   documents the outside world actually deals in:
+
+       PurchaseRequest ──split──> PurchaseOrder (one per supplier)
+                                    ├──1:N──> GoodsReceipt   (partial deliveries allowed)
+                                    │           └── posts into WarehouseStock
+                                    │           └── writes PurchasePrice — the last buy price
+                                    └──1:N──> SupplierPayment (full or partial)
+   ================================================================ */
+
+export type PurchaseOrderStatus =
+  | 'DRAFT'
+  | 'ISSUED'
+  | 'PARTIALLY_RECEIVED'
+  | 'RECEIVED'
+  | 'CLOSED'
+  | 'CANCELLED'
+
+export interface PurchaseOrderLine {
+  id: string
+  itemId: string
+  /** How many were ordered. */
+  qty: number
+  /** The price this order was placed at. A receipt records it as the price actually paid. */
+  unitPrice: number
+  /** Running total across every receipt against this order. Never exceeds `qty`. */
+  qtyReceived: number
+  /** The purchase request line this was split from, so the order reads back to the divisions. */
+  prLineId?: string
+  note?: string
+}
+
+/** One supplier, one order. This is the document a supplier is given and invoices against. */
+export interface PurchaseOrder {
+  id: string
+  /** PO-2026-0001 */
+  code: string
+  supplierId: string
+  /** The approved purchase request this was split from. */
+  purchaseRequestId?: string
+  sessionId?: string
+  status: PurchaseOrderStatus
+  lines: PurchaseOrderLine[]
+  /** Where the goods are expected. A receipt may still name a different warehouse. */
+  warehouseId: string
+  orderedAt: ISODate
+  /** Ordered date plus the supplier's lead time — what "late" is measured against. */
+  expectedAt: ISODate
+  /**
+   * Terms and tax are copied at issue rather than read from the supplier later:
+   * renegotiating a term must not silently move the due date of an old order.
+   */
+  paymentTermDays: number
+  taxRate: number
+  createdBy: string
+  createdAt: ISODate
+  updatedAt: ISODate
+  /** Set when the order was closed short or cancelled, with the reason. */
+  closedAt?: ISODate
+  closeReason?: string
+  note?: string
+}
+
+export interface GoodsReceiptLine {
+  id: string
+  poLineId: string
+  itemId: string
+  /** What went into the warehouse. */
+  qtyReceived: number
+  /** What was sent back. Rejected goods never enter stock and stay owed on the order. */
+  qtyRejected: number
+  rejectReason?: string
+  binLocation: string
+  batchNo?: string
+  expiryDate?: ISODate
+  /** Copied from the order line, so the stock line's cost is what was actually paid. */
+  unitCost: number
+}
+
+/** One delivery against one order. Several are normal: suppliers deliver in parts. */
+export interface GoodsReceipt {
+  id: string
+  /** GRN-2026-0001 */
+  code: string
+  purchaseOrderId: string
+  supplierId: string
+  warehouseId: string
+  receivedAt: ISODate
+  /** Nomor surat jalan. */
+  deliveryNote?: string
+  vehicleNo?: string
+  lines: GoodsReceiptLine[]
+  receivedBy: string
+  /** Whether it arrived on or before the order's expected date, judged at receipt. */
+  onTime: boolean
+  createdAt: ISODate
+  note?: string
+}
+
+export type PaymentMethod = 'TRANSFER' | 'CASH' | 'CHEQUE' | 'GIRO'
+
+/**
+ * Money leaving the company against one order. Several are normal: a deposit up
+ * front and the balance on delivery is an ordinary arrangement here.
+ */
+export interface SupplierPayment {
+  id: string
+  /** PAY-2026-0001 */
+  code: string
+  purchaseOrderId: string
+  supplierId: string
+  amount: number
+  method: PaymentMethod
+  paidAt: ISODate
+  /** Nomor bukti transfer / nomor cek. */
+  reference?: string
+  bankAccount?: string
+  paidBy: string
+  createdAt: ISODate
+  note?: string
+}
+
+/* ================================================================
+   Stock transfer between warehouses
+   ================================================================ */
+
+export type StockTransferStatus = 'DRAFT' | 'IN_TRANSIT' | 'RECEIVED' | 'CANCELLED'
+
+export interface StockTransferLine {
+  id: string
+  itemId: string
+  /** The exact source line the goods leave — the batch and its cost travel with them. */
+  stockId: string
+  qty: number
+  /** What actually arrived. Less than `qty` is a variance the receiver has to explain. */
+  qtyReceived?: number
+  varianceReason?: string
+  batchNo?: string
+  expiryDate?: ISODate
+  unitCost: number
+  note?: string
+}
+
+/**
+ * Goods moving between two warehouses. Stock leaves the source on dispatch and
+ * arrives at the destination on receipt: in between it belongs to neither, which
+ * is exactly what `IN_TRANSIT` means.
+ */
+export interface StockTransfer {
+  id: string
+  /** TRF-2026-0001 */
+  code: string
+  fromWarehouseId: string
+  toWarehouseId: string
+  status: StockTransferStatus
+  lines: StockTransferLine[]
+  reason: string
+  requestedBy: string
+  createdAt: ISODate
+  updatedAt: ISODate
+  dispatchedAt?: ISODate
+  dispatchedBy?: string
+  expectedAt?: ISODate
+  receivedAt?: ISODate
+  receivedBy?: string
+  /** Bin at the destination. */
+  toBinLocation?: string
   note?: string
 }
 

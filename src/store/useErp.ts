@@ -1,8 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type {
-  Building, Client, CompanyProfile, Division, InventoryItem, MrRequest, MrSession, Position, Project,
-  PurchasePrice, PurchaseRequest, Role, Supplier, Warehouse, WarehouseStock,
+  Building, Client, CompanyProfile, Division, GoodsReceipt, InventoryItem, MrRequest, MrSession,
+  Position, Project, PurchaseOrder, PurchasePrice, PurchaseRequest, Role, StockTransfer, Supplier,
+  SupplierPayment, Warehouse, WarehouseStock,
 } from '@/data/types'
 import { company as seedCompany, positions as seedPositions } from '@/data/seed-org'
 import { buildings as seedBuildings, clients as seedClients } from '@/data/seed-clients'
@@ -12,7 +13,13 @@ import { roles as seedRoles } from '@/data/seed-roles'
 import { divisions as seedDivisions } from '@/data/seed-divisions'
 import { purchasePrices as seedPrices, suppliers as seedSuppliers } from '@/data/seed-suppliers'
 import { mrRequests as seedRequests, mrSessions as seedSessions, purchaseRequests as seedPurchaseRequests } from '@/data/seed-procurement'
+import { goodsReceipts as seedReceipts, payments as seedPayments, purchaseOrders as seedOrders } from '@/data/seed-purchasing'
+import { stockTransfers as seedTransfers } from '@/data/seed-transfers'
 import { buildPrLines, canLockSession } from '@/lib/procurement'
+import {
+  PPN_RATE, buildPurchaseOrders, dispatchProblem, paymentProblem, poTotals, stockIn, stockOut,
+} from '@/lib/purchasing'
+import { uid } from '@/lib/utils'
 import { useAuth } from './useAuth'
 
 /**
@@ -52,6 +59,10 @@ interface ErpState {
   mrSessions: MrSession[]
   mrRequests: MrRequest[]
   purchaseRequests: PurchaseRequest[]
+  purchaseOrders: PurchaseOrder[]
+  goodsReceipts: GoodsReceipt[]
+  payments: SupplierPayment[]
+  stockTransfers: StockTransfer[]
   company: CompanyProfile
   activity: ActivityLog[]
 
@@ -112,6 +123,27 @@ interface ErpState {
   setPrAgreedPrice: (prId: string, lineId: string, price: number | undefined) => void
   setPrStatus: (prId: string, status: PurchaseRequest['status']) => void
 
+  /** One order per supplier on an approved request. Returns the codes it created. */
+  issuePurchaseOrders: (prId: string, warehouseId: string) => { ok: boolean; codes?: string[]; error?: string }
+  upsertPurchaseOrder: (row: PurchaseOrder) => void
+  closePurchaseOrder: (id: string, outcome: 'CLOSED' | 'CANCELLED', reason: string) => void
+
+  /** Posts stock into the warehouse and records what was paid for each item. */
+  recordGoodsReceipt: (row: GoodsReceipt) => { ok: boolean; error?: string }
+
+  recordPayment: (row: SupplierPayment) => { ok: boolean; error?: string }
+
+  upsertTransfer: (row: StockTransfer) => void
+  removeTransfers: (ids: string[]) => void
+  /** Stock leaves the source warehouse at this moment. */
+  dispatchTransfer: (id: string) => { ok: boolean; error?: string }
+  /** Stock arrives at the destination; anything short of what was sent is a variance. */
+  receiveTransfer: (id: string, received: Record<string, number>, binLocation: string, reason?: string) => { ok: boolean; error?: string }
+  cancelTransfer: (id: string, reason: string) => { ok: boolean; error?: string }
+
+  upsertPurchasePrice: (row: PurchasePrice) => void
+  removePurchasePrices: (ids: string[]) => void
+
   updateCompany: (patch: Partial<CompanyProfile>) => void
   resetDemoData: () => void
 }
@@ -131,6 +163,10 @@ const seedState = () => ({
   mrSessions: structuredClone(seedSessions),
   mrRequests: structuredClone(seedRequests),
   purchaseRequests: structuredClone(seedPurchaseRequests),
+  purchaseOrders: structuredClone(seedOrders),
+  goodsReceipts: structuredClone(seedReceipts),
+  payments: structuredClone(seedPayments),
+  stockTransfers: structuredClone(seedTransfers),
   company: structuredClone(seedCompany),
   activity: [] as ActivityLog[],
 })
@@ -511,6 +547,316 @@ export const useErp = create<ErpState>()(
         if (pr) get().log('Status changed', 'Purchase request', `${pr.code} → ${status.toLowerCase()}`)
       },
 
+      /* ---------------- purchase orders ---------------- */
+      /**
+       * The split. An approved request names several suppliers at once, which
+       * nobody outside the company can act on; one order per supplier is what
+       * can actually be sent, delivered against and paid.
+       */
+      issuePurchaseOrders: (prId, warehouseId) => {
+        const state = get()
+        const pr = state.purchaseRequests.find((p) => p.id === prId)
+        if (!pr) return { ok: false, error: 'That purchase request no longer exists.' }
+        if (pr.status !== 'APPROVED') return { ok: false, error: 'Approve the purchase request before issuing orders from it.' }
+        if (state.purchaseOrders.some((po) => po.purchaseRequestId === prId)) {
+          return { ok: false, error: 'Orders have already been issued from this request.' }
+        }
+        const unassigned = pr.lines.filter((l) => !l.supplierId).length
+        if (unassigned > 0) return { ok: false, error: `${unassigned} lines still have no supplier.` }
+
+        const year = new Date().getFullYear()
+        const startNumber =
+          state.purchaseOrders.filter((po) => po.code.startsWith(`PO-${year}`)).length + 1
+        const orders = buildPurchaseOrders(pr, state.suppliers, state.items, state.purchasePrices, {
+          warehouseId,
+          orderedAt: new Date().toISOString(),
+          createdBy: actor(),
+          startNumber,
+          taxRate: PPN_RATE,
+        })
+
+        set((s) => ({
+          purchaseOrders: [...orders, ...s.purchaseOrders],
+          purchaseRequests: s.purchaseRequests.map((x) =>
+            x.id === prId ? { ...x, status: 'ORDERED', updatedAt: new Date().toISOString() } : x,
+          ),
+        }))
+        get().log(
+          'Issued orders',
+          'Purchase request',
+          `${pr.code} → ${orders.length} orders (${orders.map((o) => o.code).join(', ')})`,
+        )
+        return { ok: true, codes: orders.map((o) => o.code) }
+      },
+      upsertPurchaseOrder: (row) => {
+        const exists = get().purchaseOrders.some((x) => x.id === row.id)
+        set((s) => ({ purchaseOrders: upsert(s.purchaseOrders, { ...row, updatedAt: new Date().toISOString() }) }))
+        get().log(exists ? 'Updated' : 'Created', 'Purchase order', `${row.code} · ${row.lines.length} lines`)
+      },
+      closePurchaseOrder: (id, outcome, reason) => {
+        const po = get().purchaseOrders.find((x) => x.id === id)
+        const now = new Date().toISOString()
+        set((s) => ({
+          purchaseOrders: s.purchaseOrders.map((x) =>
+            x.id === id ? { ...x, status: outcome, closedAt: now, closeReason: reason, updatedAt: now } : x,
+          ),
+        }))
+        if (po) get().log(outcome === 'CLOSED' ? 'Closed short' : 'Cancelled', 'Purchase order', `${po.code} · ${reason}`)
+      },
+
+      /* ---------------- goods receipt ---------------- */
+      /**
+       * A delivery is the only event that does three things at once: it adds to
+       * the order's received total, moves the goods into a warehouse, and turns
+       * an agreed price into a price that was actually paid.
+       */
+      recordGoodsReceipt: (row) => {
+        const state = get()
+        const po = state.purchaseOrders.find((x) => x.id === row.purchaseOrderId)
+        if (!po) return { ok: false, error: 'That purchase order no longer exists.' }
+        if (po.status !== 'ISSUED' && po.status !== 'PARTIALLY_RECEIVED') {
+          return { ok: false, error: 'This order is not open for delivery.' }
+        }
+        const posted = row.lines.filter((l) => l.qtyReceived > 0 || l.qtyRejected > 0)
+        if (posted.length === 0) return { ok: false, error: 'Record at least one quantity received or rejected.' }
+
+        for (const line of posted) {
+          const poLine = po.lines.find((l) => l.id === line.poLineId)
+          if (!poLine) return { ok: false, error: 'A line on this delivery is not on the order.' }
+          const outstanding = poLine.qty - poLine.qtyReceived
+          if (line.qtyReceived > outstanding) {
+            const item = state.items.find((i) => i.id === line.itemId)
+            return { ok: false, error: `${item?.sku ?? 'A line'} has only ${outstanding} outstanding — ${line.qtyReceived} were entered.` }
+          }
+        }
+
+        /* Stock first: everything else is bookkeeping about goods that are now here. */
+        let stock = state.stock
+        posted
+          .filter((l) => l.qtyReceived > 0)
+          .forEach((line) => {
+            stock = stockIn(
+              stock,
+              {
+                warehouseId: row.warehouseId,
+                itemId: line.itemId,
+                qty: line.qtyReceived,
+                unitCost: line.unitCost,
+                binLocation: line.binLocation,
+                batchNo: line.batchNo,
+                expiryDate: line.expiryDate,
+                at: row.receivedAt,
+              },
+              () => uid('stk'),
+            )
+          })
+
+        /* What was paid, per item — this is what the next request reads as the last price. */
+        const prices: PurchasePrice[] = posted
+          .filter((l) => l.qtyReceived > 0)
+          .map((line) => ({
+            id: uid('pp'),
+            supplierId: row.supplierId,
+            itemId: line.itemId,
+            unitPrice: line.unitCost,
+            qty: line.qtyReceived,
+            poNumber: po.code,
+            purchasedAt: row.receivedAt,
+            note: `Diterima pada ${row.code}`,
+          }))
+
+        const lines = po.lines.map((l) => {
+          const received = posted.find((x) => x.poLineId === l.id)?.qtyReceived ?? 0
+          return received > 0 ? { ...l, qtyReceived: l.qtyReceived + received } : l
+        })
+        const complete = lines.every((l) => l.qtyReceived >= l.qty)
+
+        set((s) => ({
+          stock,
+          purchasePrices: [...prices, ...s.purchasePrices],
+          goodsReceipts: [{ ...row, lines: posted }, ...s.goodsReceipts],
+          purchaseOrders: s.purchaseOrders.map((x) =>
+            x.id === po.id
+              ? { ...x, lines, status: complete ? 'RECEIVED' : 'PARTIALLY_RECEIVED', updatedAt: row.receivedAt }
+              : x,
+          ),
+        }))
+        const units = posted.reduce((a, l) => a + l.qtyReceived, 0)
+        const rejected = posted.reduce((a, l) => a + l.qtyRejected, 0)
+        get().log(
+          'Received',
+          'Goods receipt',
+          `${row.code} · ${po.code} · ${units} units in${rejected ? `, ${rejected} rejected` : ''}`,
+        )
+        return { ok: true }
+      },
+
+      /* ---------------- payments ---------------- */
+      recordPayment: (row) => {
+        const state = get()
+        const po = state.purchaseOrders.find((x) => x.id === row.purchaseOrderId)
+        if (!po) return { ok: false, error: 'That purchase order no longer exists.' }
+        const problem = paymentProblem(po, row.amount, state.payments, state.goodsReceipts)
+        if (problem) return { ok: false, error: problem }
+
+        set((s) => ({ payments: [row, ...s.payments] }))
+        const { total } = poTotals(po)
+        const paid = state.payments.filter((p) => p.purchaseOrderId === po.id).reduce((a, p) => a + p.amount, 0) + row.amount
+        get().log(
+          'Paid',
+          'Purchase order',
+          `${po.code} · ${row.code} · ${Math.round(row.amount).toLocaleString('en-US')} of ${Math.round(total).toLocaleString('en-US')}${paid >= total ? ' — settled' : ' — part payment'}`,
+        )
+        return { ok: true }
+      },
+
+      /* ---------------- stock transfers ---------------- */
+      upsertTransfer: (row) => {
+        const exists = get().stockTransfers.some((x) => x.id === row.id)
+        set((s) => ({ stockTransfers: upsert(s.stockTransfers, { ...row, updatedAt: new Date().toISOString() }) }))
+        get().log(exists ? 'Updated' : 'Created', 'Stock transfer', `${row.code} · ${row.lines.length} lines`)
+      },
+      removeTransfers: (ids) => {
+        const rows = get().stockTransfers.filter((x) => ids.includes(x.id))
+        if (rows.some((r) => r.status === 'IN_TRANSIT')) {
+          /* Deleting one in transit would strand the stock: it has left the source
+             warehouse and would never arrive anywhere. */
+          return
+        }
+        set((s) => ({ stockTransfers: s.stockTransfers.filter((x) => !ids.includes(x.id)) }))
+        get().log('Deleted', 'Stock transfer', rows.map((r) => r.code).join(', '))
+      },
+      dispatchTransfer: (id) => {
+        const state = get()
+        const transfer = state.stockTransfers.find((x) => x.id === id)
+        if (!transfer) return { ok: false, error: 'That transfer no longer exists.' }
+        const problem = dispatchProblem(transfer, state.stock)
+        if (problem) return { ok: false, error: problem }
+
+        const now = new Date().toISOString()
+        let stock = state.stock
+        for (const line of transfer.lines) {
+          const result = stockOut(stock, { stockId: line.stockId, qty: line.qty, at: now })
+          if (result.error) return { ok: false, error: result.error }
+          stock = result.stock
+        }
+
+        set((s) => ({
+          stock,
+          stockTransfers: s.stockTransfers.map((x) =>
+            x.id === id ? { ...x, status: 'IN_TRANSIT', dispatchedAt: now, dispatchedBy: actor(), updatedAt: now } : x,
+          ),
+        }))
+        get().log('Dispatched', 'Stock transfer', `${transfer.code} · ${transfer.lines.reduce((a, l) => a + l.qty, 0)} units left the source warehouse`)
+        return { ok: true }
+      },
+      receiveTransfer: (id, received, binLocation, reason) => {
+        const state = get()
+        const transfer = state.stockTransfers.find((x) => x.id === id)
+        if (!transfer) return { ok: false, error: 'That transfer no longer exists.' }
+        if (transfer.status !== 'IN_TRANSIT') return { ok: false, error: 'Only a transfer in transit can be received.' }
+
+        const now = new Date().toISOString()
+        let stock = state.stock
+        const lines = transfer.lines.map((line) => {
+          const qty = received[line.id] ?? line.qty
+          if (qty > line.qty) return line
+          if (qty > 0) {
+            stock = stockIn(
+              stock,
+              {
+                warehouseId: transfer.toWarehouseId,
+                itemId: line.itemId,
+                qty,
+                unitCost: line.unitCost,
+                binLocation,
+                batchNo: line.batchNo,
+                expiryDate: line.expiryDate,
+                at: now,
+              },
+              () => uid('stk'),
+            )
+          }
+          return { ...line, qtyReceived: qty, varianceReason: qty < line.qty ? reason : undefined }
+        })
+
+        const short = lines.reduce((a, l) => a + (l.qty - (l.qtyReceived ?? l.qty)), 0)
+        if (short > 0 && !reason?.trim()) {
+          return { ok: false, error: `${short} units are missing against what was sent — say what happened to them before receiving.` }
+        }
+
+        set((s) => ({
+          stock,
+          stockTransfers: s.stockTransfers.map((x) =>
+            x.id === id
+              ? { ...x, status: 'RECEIVED', lines, receivedAt: now, receivedBy: actor(), toBinLocation: binLocation, updatedAt: now }
+              : x,
+          ),
+        }))
+        get().log(
+          'Received',
+          'Stock transfer',
+          `${transfer.code} · ${lines.reduce((a, l) => a + (l.qtyReceived ?? 0), 0)} units arrived${short ? `, ${short} short` : ''}`,
+        )
+        return { ok: true }
+      },
+      cancelTransfer: (id, reason) => {
+        const state = get()
+        const transfer = state.stockTransfers.find((x) => x.id === id)
+        if (!transfer) return { ok: false, error: 'That transfer no longer exists.' }
+        if (transfer.status === 'RECEIVED') return { ok: false, error: 'It has already arrived — raise a transfer back instead.' }
+
+        const now = new Date().toISOString()
+        let stock = state.stock
+        /* Goods already dispatched have to go back on the shelf they left. */
+        if (transfer.status === 'IN_TRANSIT') {
+          transfer.lines.forEach((line) => {
+            const source = state.stock.find((s) => s.id === line.stockId)
+            stock = stockIn(
+              stock,
+              {
+                warehouseId: transfer.fromWarehouseId,
+                itemId: line.itemId,
+                qty: line.qty,
+                unitCost: line.unitCost,
+                binLocation: source?.binLocation ?? 'RAK-RETUR',
+                batchNo: line.batchNo,
+                expiryDate: line.expiryDate,
+                at: now,
+              },
+              () => uid('stk'),
+            )
+          })
+        }
+
+        set((s) => ({
+          stock,
+          stockTransfers: s.stockTransfers.map((x) =>
+            x.id === id ? { ...x, status: 'CANCELLED', note: reason, updatedAt: now } : x,
+          ),
+        }))
+        get().log('Cancelled', 'Stock transfer', `${transfer.code} · ${reason}`)
+        return { ok: true }
+      },
+
+      /* ---------------- purchase prices ---------------- */
+      upsertPurchasePrice: (row) => {
+        const exists = get().purchasePrices.some((x) => x.id === row.id)
+        const item = get().items.find((i) => i.id === row.itemId)
+        const supplier = get().suppliers.find((s) => s.id === row.supplierId)
+        set((s) => ({ purchasePrices: upsert(s.purchasePrices, row) }))
+        get().log(
+          exists ? 'Updated price' : 'Recorded price',
+          'Purchase price',
+          `${item?.sku ?? row.itemId} · ${supplier?.legalName ?? row.supplierId} · ${Math.round(row.unitPrice).toLocaleString('en-US')}`,
+        )
+      },
+      removePurchasePrices: (ids) => {
+        const rows = get().purchasePrices.filter((x) => ids.includes(x.id))
+        set((s) => ({ purchasePrices: s.purchasePrices.filter((x) => !ids.includes(x.id)) }))
+        get().log('Deleted', 'Purchase price', rows.map((r) => r.poNumber).join(', '))
+      },
+
       updateCompany: (patch) => {
         set((s) => ({ company: { ...s.company, ...patch } }))
         get().log('Updated', 'Company profile', Object.keys(patch).join(', '))
@@ -518,6 +864,6 @@ export const useErp = create<ErpState>()(
 
       resetDemoData: () => set({ ...seedState() }),
     }),
-    { name: 'tata-gemilang-erp', version: 3 },
+    { name: 'tata-gemilang-erp', version: 4 },
   ),
 )

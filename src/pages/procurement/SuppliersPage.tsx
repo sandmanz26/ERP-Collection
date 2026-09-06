@@ -1,19 +1,20 @@
 import * as React from 'react'
 import { Handshake, History, Pencil, Plus, Star, Trash2, TrendingUp } from 'lucide-react'
-import type { ItemCategory, Supplier } from '@/data/types'
+import type { ItemCategory, PurchasePrice, Supplier } from '@/data/types'
 import { ITEM_CATEGORIES, PROVINCES, itemCategoryLabel } from '@/data/reference'
 import { useErp } from '@/store/useErp'
 import { DataTable } from '@/components/data-table/DataTable'
 import type { Column } from '@/components/data-table/types'
 import { KpiCard, PageHeader } from '@/components/shared/PageHeader'
 import { StatusBadge } from '@/components/shared/status'
-import { Sheet } from '@/components/ui/dialog'
+import { Dialog, DialogContent, Sheet } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Field } from '@/components/ui/field'
 import { Input, Textarea } from '@/components/ui/input'
 import { MultiSelect, Select } from '@/components/ui/select'
 import { Tabs } from '@/components/ui/tabs'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Tooltip } from '@/components/ui/tooltip'
 import { EmptyState } from '@/components/ui/misc'
 import { ConfirmDelete } from '@/components/ui/confirm'
@@ -29,6 +30,17 @@ const blank = (): Supplier => ({
   rating: 4, onTimeRate: 90, status: 'ACTIVE', supplierSince: new Date().toISOString(), notes: '',
 })
 
+/** A price row typed in rather than produced by a delivery. */
+const blankPrice = (supplierId: string): PurchasePrice => ({
+  id: uid('pp'),
+  supplierId,
+  itemId: '',
+  unitPrice: 0,
+  qty: 1,
+  poNumber: '',
+  purchasedAt: new Date().toISOString(),
+})
+
 function SupplierForm({
   open,
   onOpenChange,
@@ -38,15 +50,19 @@ function SupplierForm({
   onOpenChange: (v: boolean) => void
   initial?: Supplier | null
 }) {
-  const { suppliers, items, purchasePrices, upsertSupplier } = useErp()
+  const { suppliers, items, purchasePrices, upsertSupplier, upsertPurchasePrice, removePurchasePrices } = useErp()
   const toast = useToast()
+  const can = useCan()
+  const canPrice = can('suppliers.price')
   const [tab, setTab] = React.useState<'profile' | 'terms' | 'history'>('profile')
   const [draft, setDraft] = React.useState<Supplier>(blank)
+  const [priceRow, setPriceRow] = React.useState<PurchasePrice | null>(null)
   const [errors, setErrors] = React.useState<Record<string, string>>({})
 
   React.useEffect(() => {
     if (open) {
       setDraft(initial ? structuredClone(initial) : blank())
+      setPriceRow(null)
       setTab('profile')
       setErrors({})
     }
@@ -198,19 +214,30 @@ function SupplierForm({
       )}
 
       {tab === 'history' && (
-        <div className="p-5">
+        <div className="space-y-4 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <p className="max-w-md text-[12.5px] leading-relaxed text-fg-muted">
+              Written automatically every time a delivery is received against this supplier. Record one by hand only for a
+              purchase the system did not see — the newest row is what every future request reads as the last price.
+            </p>
+            {canPrice && (
+              <Button variant="secondary" size="sm" onClick={() => setPriceRow(blankPrice(draft.id))}>
+                <Plus /> Record a price
+              </Button>
+            )}
+          </div>
           {history.length === 0 ? (
             <EmptyState
               icon={<History />}
               title="Nothing purchased yet"
-              description="Prices appear here once a purchase order against this supplier has been recorded. Until then, a purchase request line assigned to them shows no last price."
+              description="Prices appear here once a delivery against this supplier has been received. Until then, a purchase request line assigned to them shows no last price."
             />
           ) : (
             <div className="overflow-hidden rounded-xl border border-border">
               <table className="w-full border-separate border-spacing-0 text-[13px]">
                 <thead>
                   <tr>
-                    {['Purchased', 'PO', 'Item', 'Qty', 'Unit price', 'Value'].map((h) => (
+                    {['Purchased', 'PO', 'Item', 'Qty', 'Unit price', 'Value', ''].map((h) => (
                       <th key={h} className="whitespace-nowrap border-b border-border bg-surface-sunken px-3 py-2 text-left text-[11.5px] font-semibold uppercase tracking-[0.055em] text-fg-muted">
                         {h}
                       </th>
@@ -231,6 +258,33 @@ function SupplierForm({
                         <td className="tnum border-b border-border px-3 py-2 text-right text-fg-muted">{fmtNumber(row.qty)}</td>
                         <td className="tnum whitespace-nowrap border-b border-border px-3 py-2 text-right font-medium text-fg">{fmtCurrency(row.unitPrice, 'IDR')}</td>
                         <td className="tnum whitespace-nowrap border-b border-border px-3 py-2 text-right text-fg-muted">{fmtCurrency(row.unitPrice * row.qty, 'IDR', { compact: true })}</td>
+                        <td className="whitespace-nowrap border-b border-border px-2 py-2 text-right">
+                          {canPrice && (
+                            <div className="flex justify-end gap-0.5">
+                              <Tooltip content="Correct this price">
+                                <Button variant="ghost" size="iconXs" onClick={() => setPriceRow(structuredClone(row))}>
+                                  <Pencil />
+                                </Button>
+                              </Tooltip>
+                              <Tooltip content="Delete this price">
+                                <Button
+                                  variant="ghost"
+                                  size="iconXs"
+                                  onClick={() => {
+                                    removePurchasePrices([row.id])
+                                    toast.push({
+                                      tone: 'warning',
+                                      title: 'Price deleted',
+                                      description: `${item?.sku} · ${row.poNumber}. The last price falls back to the one before it.`,
+                                    })
+                                  }}
+                                >
+                                  <Trash2 />
+                                </Button>
+                              </Tooltip>
+                            </div>
+                          )}
+                        </td>
                       </tr>
                     )
                   })}
@@ -240,6 +294,84 @@ function SupplierForm({
           )}
         </div>
       )}
+
+      {/* Recording a price by hand: for a purchase made before the system, or off-system. */}
+      <Dialog open={!!priceRow} onOpenChange={(v) => !v && setPriceRow(null)}>
+        <DialogContent
+          icon={<History />}
+          title={priceRow && purchasePrices.some((p) => p.id === priceRow.id) ? 'Correct a purchase price' : 'Record a purchase price'}
+          description="A price here is a fact that already happened, not a quotation. The most recent one is what a purchase request shows as the last buy."
+          footer={
+            <>
+              <Button variant="secondary" size="sm" onClick={() => setPriceRow(null)}>Cancel</Button>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={!priceRow?.itemId || !(priceRow.unitPrice > 0) || !(priceRow.qty > 0)}
+                onClick={() => {
+                  if (!priceRow) return
+                  upsertPurchasePrice({ ...priceRow, poNumber: priceRow.poNumber.trim() || 'MANUAL' })
+                  toast.push({
+                    tone: 'success',
+                    title: 'Price recorded',
+                    description: `${items.find((i) => i.id === priceRow.itemId)?.sku} at ${fmtCurrency(priceRow.unitPrice, 'IDR')} — every future request will read it.`,
+                  })
+                  setPriceRow(null)
+                }}
+              >
+                Save price
+              </Button>
+            </>
+          }
+        >
+          {priceRow && (
+            <div className="grid gap-4 p-5 sm:grid-cols-2">
+              <Field label="Item" required className="sm:col-span-2" hint="Only items this supplier is approved to sell">
+                <Select
+                  value={priceRow.itemId || null}
+                  onChange={(v) => setPriceRow({ ...priceRow, itemId: v })}
+                  placeholder="Choose an item"
+                  searchable
+                  options={items
+                    .filter((i) => draft.categories.includes(i.category))
+                    .map((i) => ({ value: i.id, label: `${i.sku} · ${i.name}`, description: `standard cost ${fmtCurrency(i.standardCost, 'IDR')}` }))}
+                />
+              </Field>
+              <Field label="Unit price" required>
+                <Input
+                  type="number"
+                  min={0}
+                  value={priceRow.unitPrice || ''}
+                  onChange={(e) => setPriceRow({ ...priceRow, unitPrice: Number(e.target.value) })}
+                  className="tnum"
+                />
+              </Field>
+              <Field label="Quantity" required>
+                <Input
+                  type="number"
+                  min={1}
+                  value={priceRow.qty || ''}
+                  onChange={(e) => setPriceRow({ ...priceRow, qty: Number(e.target.value) })}
+                  className="tnum"
+                />
+              </Field>
+              <Field label="Purchased on" required>
+                <DatePicker
+                  value={priceRow.purchasedAt}
+                  onChange={(v) => setPriceRow({ ...priceRow, purchasedAt: v ?? new Date().toISOString() })}
+                  clearable={false}
+                />
+              </Field>
+              <Field label="Purchase order" hint="Or another reference for where the price came from">
+                <Input value={priceRow.poNumber} onChange={(e) => setPriceRow({ ...priceRow, poNumber: e.target.value.toUpperCase() })} placeholder="PO-2026-0042" className="font-mono" />
+              </Field>
+              <Field label="Note" hint="optional" className="sm:col-span-2">
+                <Input value={priceRow.note ?? ''} onChange={(e) => setPriceRow({ ...priceRow, note: e.target.value })} placeholder="Harga naik karena bahan baku…" />
+              </Field>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Sheet>
   )
 }
