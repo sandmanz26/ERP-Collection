@@ -17,7 +17,7 @@ export function RegisterPage() {
   const [fullName, setFullName] = React.useState('')
   const [email, setEmail] = React.useState('')
   const [jobTitle, setJobTitle] = React.useState('')
-  const [role, setRole] = React.useState<UserRole>('OPERATIONS')
+  const [role, setRole] = React.useState<UserRole>('SALES')
   const [password, setPassword] = React.useState('')
   const [confirm, setConfirm] = React.useState('')
   const [accepted, setAccepted] = React.useState(false)

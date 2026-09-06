@@ -1,8 +1,8 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth, useCurrentUser } from '@/store/useAuth'
 
-/** Where a role starts its day. An operator works the four-phase view. */
-export const homeFor = (role?: string) => (role === 'OPERATOR' ? '/my' : '/')
+/** Everyone starts on the control tower — it is the same board for every desk. */
+export const homeFor = (_role?: string) => '/'
 
 /** Everything behind the shell needs a signed-in user; the attempted path is remembered. */
 export function RequireAuth() {

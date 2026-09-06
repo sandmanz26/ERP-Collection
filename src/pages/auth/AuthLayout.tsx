@@ -1,16 +1,16 @@
 import * as React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Anchor, Monitor, Moon, Sun } from 'lucide-react'
+import { Monitor, Moon, Sun, Trees } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Segmented } from '@/components/ui/checkbox'
 import { useTheme } from '@/hooks/useTheme'
-import { company } from '@/data/seed3'
+import { company } from '@/data/seed-master'
 
 /** The three numbers on the marketing panel — real figures from the seeded book. */
 const PROOF = [
-  { value: '14', label: 'live export jobs' },
-  { value: '23', label: 'containers on the water' },
-  { value: '18', label: 'destination countries' },
+  { value: '15', label: 'orders in the book' },
+  { value: '63', label: 'purchase orders live' },
+  { value: '11', label: 'destination countries' },
 ]
 
 export function AuthLayout({
@@ -52,21 +52,22 @@ export function AuthLayout({
         <div className="relative flex h-full flex-col justify-between p-10 text-auth-panel-fg xl:p-14">
           <div className="flex items-center gap-3">
             <span className="grid size-10 place-items-center rounded-xl bg-white/15 backdrop-blur">
-              <Anchor className="size-5" />
+              <Trees className="size-5" />
             </span>
             <div>
-              <p className="text-[15px] font-semibold leading-tight tracking-[-0.01em]">Meridian Freight</p>
-              <p className="text-[12px] leading-tight text-auth-panel-fg/70">Export Operations Suite</p>
+              <p className="text-[15px] font-semibold leading-tight tracking-[-0.01em]">Kriyanusa Furniture</p>
+              <p className="text-[12px] leading-tight text-auth-panel-fg/70">Export Manufacturing Suite</p>
             </div>
           </div>
 
           <div className="max-w-[430px]">
             <h1 className="text-[30px] font-semibold leading-[1.15] tracking-[-0.02em] xl:text-[34px]">
-              Every cut-off, certificate and charge on one job record.
+From the buyer’s first email to the container’s V-Legal document.
             </h1>
             <p className="mt-4 text-[14px] leading-relaxed text-auth-panel-fg/75">
-              Quotation to settlement, with the gates that stop a container reaching the terminal without a VGM, a
-              treatment certificate or an accepted export declaration.
+Negotiation, drawings and samples; the anggaran belanja that costs the order; the purchase orders and
+              the deliveries that arrive in pieces; seven warehouses; and the paperwork without which none of it
+              legally leaves Java.
             </p>
 
             <dl className="mt-9 grid grid-cols-3 gap-4 border-t border-white/15 pt-6">
@@ -80,8 +81,7 @@ export function AuthLayout({
           </div>
 
           <p className="max-w-[430px] text-[11px] leading-relaxed text-auth-panel-fg/50">
-            {company.legalName} · {company.registrationNo} · Business undertaken subject to ALFI Standard Trading
-            Conditions.
+{company.legalName} · {company.registrationNo} · SVLK {company.licences.find((l) => l.kind === 'SVLK')?.reference ?? ''}
           </p>
         </div>
       </aside>
@@ -91,9 +91,9 @@ export function AuthLayout({
         <header className="flex h-14 shrink-0 items-center justify-between px-5 lg:px-8">
           <Link to="/login" className="flex items-center gap-2.5 lg:invisible">
             <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-fg">
-              <Anchor className="size-[17px]" />
+              <Trees className="size-[17px]" />
             </span>
-            <span className="text-[13.5px] font-semibold tracking-[-0.01em] text-fg">Meridian Freight</span>
+            <span className="text-[13.5px] font-semibold tracking-[-0.01em] text-fg">Kriyanusa Furniture</span>
           </Link>
           <Segmented
             value={mode}

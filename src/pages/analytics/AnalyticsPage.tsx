@@ -1,245 +1,314 @@
 import * as React from 'react'
-import { useNavigate } from 'react-router-dom'
-import { BarChart3, Building2, Download, Target, TrendingUp, Users } from 'lucide-react'
-import { useErp } from '@/store/useErp'
-import { KpiCard, PageHeader } from '@/components/shared/PageHeader'
+import { Link } from 'react-router-dom'
+import { LineChart } from 'lucide-react'
+import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Progress, Separator } from '@/components/ui/misc'
+import { Tabs } from '@/components/ui/tabs'
 import { Tooltip } from '@/components/ui/tooltip'
-import { companyKpis, customerProfitability, type Kpi } from '@/lib/analytics2'
-import { jobFinancials } from '@/lib/analytics'
-import { utilisation } from '@/lib/shipping'
-import { fmtCurrency, fmtNumber, fmtPercent } from '@/lib/format'
-import { exportCsv } from '@/lib/csv'
+import { UtilisationBar } from '@/components/shared/UtilisationBar'
+import { StatusBadge } from '@/components/shared/status'
 import { cn } from '@/lib/utils'
-import { useToast } from '@/components/ui/toast'
+import { fmtCurrency, fmtDate, fmtNumber, fmtPercent, titleCase } from '@/lib/format'
+import { useErp } from '@/store/useErp'
+import { useStock } from '@/hooks/useExceptions'
+import {
+  byCountry, deliveryPunctuality, marginByProject, negotiationEffort, shipmentForecast,
+  spendBySupplier, winLoss,
+} from '@/lib/analytics'
+import { slowMoving } from '@/lib/inventory'
+import { supplierScores } from '@/lib/procurement'
 
 export function AnalyticsPage() {
-  const nav = useNavigate()
-  const toast = useToast()
   const store = useErp()
-  const { projects, charges, containers, documents, milestones, quotations, invoices, receipts, customers, settings } = store
+  const { positions } = useStock()
+  const [view, setView] = React.useState<'commercial' | 'supply' | 'stock'>('commercial')
 
-  const kpis = React.useMemo(
-    () => companyKpis({ projects, charges, containers, documents, milestones, quotations, invoices, receipts, settings }),
-    [projects, charges, containers, documents, milestones, quotations, invoices, receipts, settings],
-  )
-  const byCustomer = customerProfitability(projects, charges, customers)
-  const revenueTotal = byCustomer.reduce((a, c) => a + c.revenue, 0) || 1
-  const concentration = byCustomer.length ? (byCustomer[0].revenue / revenueTotal) * 100 : 0
+  const wl = winLoss(store.projects)
+  const countries = byCountry(store.projects, store.buyers)
+  const margins = marginByProject(store.projects, store.budgets)
+  const punctuality = deliveryPunctuality(store.orders, store.receipts)
+  const spend = spendBySupplier(store.orders, store.receipts, store.suppliers)
+  const scores = supplierScores(store.suppliers, store.orders, store.receipts)
+  const forecast = shipmentForecast(store.projects)
+  const effort = negotiationEffort(store.projects)
+  const slow = slowMoving(positions, store.settings.slowMovingDays)
 
-  /* margin distribution — the average hides the loss-makers */
-  const jobMargins = projects
-    .filter((p) => charges.some((c) => c.projectId === p.id))
-    .map((p) => ({ project: p, ...jobFinancials(charges.filter((c) => c.projectId === p.id)) }))
-  const bands = [
-    { label: 'Below 0%', min: -Infinity, max: 0, tone: 'bg-danger' },
-    { label: '0–8%', min: 0, max: 8, tone: 'bg-danger/70' },
-    { label: '8–15%', min: 8, max: 15, tone: 'bg-warning' },
-    { label: '15–25%', min: 15, max: 25, tone: 'bg-primary' },
-    { label: 'Above 25%', min: 25, max: Infinity, tone: 'bg-success' },
-  ].map((b) => ({ ...b, count: jobMargins.filter((j) => j.marginPct >= b.min && j.marginPct < b.max).length }))
-  const bandMax = Math.max(...bands.map((b) => b.count), 1)
-
-  const utilBands = containers
-    .filter((c) => c.type !== 'LCL')
-    .map((c) => {
-      const u = utilisation(c.type, c.items, c.tareKg)
-      return Math.max(u.volumePct, u.weightPct)
-    })
-  const utilGroups = [
-    { label: '<50%', count: utilBands.filter((v) => v < 50).length, tone: 'bg-danger' },
-    { label: '50–65%', count: utilBands.filter((v) => v >= 50 && v < 65).length, tone: 'bg-warning' },
-    { label: '65–90%', count: utilBands.filter((v) => v >= 65 && v < 90).length, tone: 'bg-success' },
-    { label: '90–100%', count: utilBands.filter((v) => v >= 90 && v <= 100).length, tone: 'bg-accent' },
-    { label: 'Over 100%', count: utilBands.filter((v) => v > 100).length, tone: 'bg-danger' },
-  ]
-  const utilMax = Math.max(...utilGroups.map((g) => g.count), 1)
+  const maxCountry = Math.max(...countries.map((c) => c.valueIdr), 1)
 
   return (
-    <>
+    <div className="min-h-0">
       <PageHeader
-        title="Operations Analytics"
-        description="The measures the trade actually renews contracts on: punctuality, win rate, margin per shipment, days sales outstanding, container fill and document accuracy. Every figure is computed from records — change a milestone or a charge and these move."
+        eyebrow={<Badge tone="primary" size="sm">Insight</Badge>}
+        title="Analytics"
+        description="Everything here is derived from the same records the operational screens use. There is no reporting table, no nightly job and no number that can be true on one page and false on another."
         actions={
-          <Button
-            variant="secondary"
-            onClick={() => {
-              exportCsv(
-                'operations-kpis',
-                kpis.map((k) => ({ kpi: k.label, value: k.value.toFixed(2), unit: k.unit, target: k.target ?? '', detail: k.detail })),
-                [
-                  { key: 'kpi', header: 'KPI' }, { key: 'value', header: 'Value' }, { key: 'unit', header: 'Unit' },
-                  { key: 'target', header: 'Target' }, { key: 'detail', header: 'Detail' },
-                ],
-              )
-              toast.push({ tone: 'success', title: 'KPI set exported' })
-            }}
-          >
-            <Download /> Export KPIs
-          </Button>
+          <Tabs
+            variant="pill"
+            value={view}
+            onChange={setView}
+            items={[
+              { value: 'commercial', label: 'Commercial' },
+              { value: 'supply', label: 'Supply chain' },
+              { value: 'stock', label: 'Stock' },
+            ]}
+          />
         }
       />
 
-      <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Revenue concentration" value={fmtPercent(concentration, 0)} icon={<Users />} accent={concentration > 40 ? 'warning' : 'success'} sub={byCustomer[0] ? `${byCustomer[0].customer.tradeName ?? byCustomer[0].customer.legalName} is the largest account` : '—'} />
-        <KpiCard label="Jobs measured" value={jobMargins.length} icon={<BarChart3 />} accent="primary" sub={`${projects.length} in the register`} />
-        <KpiCard label="Loss-making jobs" value={jobMargins.filter((j) => j.marginPct < 0).length} icon={<TrendingUp />} accent={jobMargins.some((j) => j.marginPct < 0) ? 'danger' : 'success'} sub="Below zero after direct cost" />
-        <KpiCard label="KPIs off target" value={kpis.filter((k) => k.target !== undefined && (k.higherIsBetter ? k.value < k.target : k.value > k.target)).length} icon={<Target />} accent="warning" sub={`of ${kpis.filter((k) => k.target !== undefined).length} with a target set`} />
-      </div>
+      {view === 'commercial' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard label="Win rate" value={fmtPercent(wl.winRatePct, 0)} sub={`${wl.won} won, ${wl.lost} lost`} icon={<LineChart />} accent="primary" />
+            <KpiCard label="Won value" value={fmtCurrency(wl.wonValue, 'IDR', { compact: true })} sub="across the whole book" accent="success" />
+            <KpiCard label="Lost value" value={fmtCurrency(wl.lostValue, 'IDR', { compact: true })} sub={Object.entries(wl.lossReasons).map(([k, v]) => `${titleCase(k)} ${v}`).join(', ') || '—'} accent="danger" />
+            <KpiCard
+              label="Average rounds to win"
+              value={fmtNumber(effort.length ? effort.reduce((a, e) => a + e.rounds, 0) / effort.length : 0, 1)}
+              sub="of negotiation per order"
+              accent="accent"
+            />
+          </div>
 
-      <Card className="mb-5">
-        <CardHeader
-          icon={<Target />}
-          title="Scorecard"
-          description="Targets are set in Settings. Variance is against the target, not against last month."
-        />
-        <div className="grid gap-px bg-border sm:grid-cols-2">
-          {kpis.map((k) => (
-            <KpiRow key={k.key} kpi={k} />
-          ))}
-        </div>
-      </Card>
-
-      <div className="mb-5 grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader title="Margin distribution" description="The average margin hides the jobs that lose money. This does not." />
-          <CardBody className="space-y-2.5">
-            {bands.map((b) => (
-              <div key={b.label} className="flex items-center gap-3">
-                <span className="w-[92px] shrink-0 text-[12.5px] text-fg-muted">{b.label}</span>
-                <span className="relative h-5 flex-1 overflow-hidden rounded-md bg-surface-sunken">
-                  <span className={cn('absolute inset-y-0 left-0 rounded-md', b.tone)} style={{ width: `${(b.count / bandMax) * 100}%` }} />
-                </span>
-                <span className="tnum w-8 shrink-0 text-right text-[12px] text-fg">{b.count}</span>
-              </div>
-            ))}
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader title="Container fill" description="Freight is paid on the box, not on what is in it." />
-          <CardBody className="space-y-2.5">
-            {utilGroups.map((g) => (
-              <div key={g.label} className="flex items-center gap-3">
-                <span className="w-[92px] shrink-0 text-[12.5px] text-fg-muted">{g.label}</span>
-                <span className="relative h-5 flex-1 overflow-hidden rounded-md bg-surface-sunken">
-                  <span className={cn('absolute inset-y-0 left-0 rounded-md', g.tone)} style={{ width: `${(g.count / utilMax) * 100}%` }} />
-                </span>
-                <span className="tnum w-8 shrink-0 text-right text-[12px] text-fg">{g.count}</span>
-              </div>
-            ))}
-            <p className="pt-1 text-[11.5px] leading-relaxed text-fg-muted">
-              Anything below 65% is a consolidation opportunity. Anything above 100% will be refused at the gate.
-            </p>
-          </CardBody>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader
-          icon={<Building2 />}
-          title="Customer profitability"
-          description="Revenue is vanity. This is ranked on what is left after direct cost."
-        />
-        <div className="scrollbar-thin overflow-x-auto">
-          <table className="w-full text-[12.5px]">
-            <thead className="bg-surface-sunken text-[10.5px] uppercase tracking-[0.06em] text-fg-subtle">
-              <tr>
-                <th className="px-4 py-2 text-left font-semibold">Customer</th>
-                <th className="px-4 py-2 text-right font-semibold">Jobs</th>
-                <th className="px-4 py-2 text-right font-semibold">Revenue</th>
-                <th className="px-4 py-2 text-right font-semibold">Cost</th>
-                <th className="px-4 py-2 text-right font-semibold">Margin</th>
-                <th className="px-4 py-2 text-left font-semibold">Margin %</th>
-                <th className="px-4 py-2 text-right font-semibold">Share of book</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {byCustomer.map((r) => (
-                <tr
-                  key={r.customer.id}
-                  onClick={() => nav(`/customers/${r.customer.id}`)}
-                  className="cursor-pointer hover:bg-bg-muted/60"
-                >
-                  <td className="px-4 py-2">
-                    <span className="font-medium text-fg">{r.customer.tradeName ?? r.customer.legalName}</span>
-                    <span className="ml-2 font-mono text-[11px] text-fg-subtle">{r.customer.code}</span>
-                  </td>
-                  <td className="tnum px-4 py-2 text-right text-fg-muted">{r.jobs}</td>
-                  <td className="tnum px-4 py-2 text-right text-fg">{fmtCurrency(r.revenue, 'IDR', { compact: true })}</td>
-                  <td className="tnum px-4 py-2 text-right text-fg-muted">{fmtCurrency(r.cost, 'IDR', { compact: true })}</td>
-                  <td className={cn('tnum px-4 py-2 text-right font-medium', r.margin < 0 ? 'text-danger' : 'text-fg')}>
-                    {fmtCurrency(r.margin, 'IDR', { compact: true })}
-                  </td>
-                  <td className="px-4 py-2">
-                    <div className="flex w-[130px] items-center gap-2">
-                      <Progress value={Math.max(0, Math.min(100, r.marginPct * 2.5))} tone={r.marginPct >= 20 ? 'success' : r.marginPct >= 8 ? 'warning' : 'danger'} size="sm" />
-                      <span className={cn('tnum w-9 text-right text-[11.5px] font-medium', r.marginPct >= 20 ? 'text-success' : r.marginPct >= 8 ? 'text-warning' : 'text-danger')}>
-                        {r.marginPct.toFixed(0)}%
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <Card>
+              <CardHeader title="Where the money comes from" description="Won orders by destination country." />
+              <CardBody className="space-y-2.5">
+                {countries.map((c) => (
+                  <div key={c.code} className="flex items-center gap-3">
+                    <span className="w-[130px] shrink-0 truncate text-[12.5px] text-fg-muted">{c.name}</span>
+                    <div className="relative h-6 min-w-0 flex-1 overflow-hidden rounded bg-surface-sunken">
+                      <div className="h-full rounded bg-primary/70" style={{ width: `${Math.max(3, (c.valueIdr / maxCountry) * 100)}%` }} />
+                      <span className="tnum absolute inset-y-0 left-2 flex items-center text-[11.5px] font-medium text-fg">
+                        {c.count} · {fmtCurrency(c.valueIdr, 'IDR', { compact: true })}
                       </span>
                     </div>
-                  </td>
-                  <td className="tnum px-4 py-2 text-right text-fg-muted">{((r.revenue / revenueTotal) * 100).toFixed(1)}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="border-t border-border bg-surface-sunken/60 px-4 py-2.5 text-[12px] text-fg-muted">
-          {concentration > 40 ? (
-            <>
-              <span className="font-semibold text-warning">Concentration risk:</span> {concentration.toFixed(0)}% of revenue sits
-              with one account. Losing it would take most of the margin with it.
-            </>
-          ) : (
-            <>Revenue is spread across {byCustomer.length} paying accounts — the largest holds {concentration.toFixed(0)}%.</>
-          )}
-        </div>
-      </Card>
-    </>
-  )
-}
+                  </div>
+                ))}
+              </CardBody>
+            </Card>
 
-function KpiRow({ kpi }: { kpi: Kpi }) {
-  const onTarget = kpi.target === undefined ? null : kpi.higherIsBetter ? kpi.value >= kpi.target : kpi.value <= kpi.target
-  const format = (v: number) =>
-    kpi.unit === '%' ? fmtPercent(v, 1)
-      : kpi.unit === 'days' ? `${v.toFixed(1)} d`
-        : kpi.unit === 'idr' ? fmtCurrency(v, 'IDR', { compact: true })
-          : kpi.unit === 'cbm' ? `${fmtNumber(v, 1)} m³`
-            : fmtNumber(v)
-  const pctOfTarget = kpi.target ? Math.min(140, kpi.higherIsBetter ? (kpi.value / kpi.target) * 100 : (kpi.target / Math.max(kpi.value, 0.01)) * 100) : null
+            <Card>
+              <CardHeader title="Ship forecast" description="Value by the month an order is due to leave the yard." />
+              <CardBody className="space-y-2.5">
+                {forecast.map((m) => {
+                  const max = Math.max(...forecast.map((x) => x.valueIdr), 1)
+                  return (
+                    <div key={m.key} className="flex items-center gap-3">
+                      <span className="w-[64px] shrink-0 text-[12.5px] text-fg-muted">{m.label}</span>
+                      <div className="relative h-6 min-w-0 flex-1 overflow-hidden rounded bg-surface-sunken">
+                        <div className="h-full rounded bg-accent/70" style={{ width: `${Math.max(2, (m.valueIdr / max) * 100)}%` }} />
+                        <span className="tnum absolute inset-y-0 left-2 flex items-center text-[11.5px] font-medium text-fg">
+                          {m.count} · {fmtCurrency(m.valueIdr, 'IDR', { compact: true })}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </CardBody>
+            </Card>
+          </div>
 
-  return (
-    <div className="bg-surface px-4 py-3.5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[12.5px] font-medium text-fg">{kpi.label}</p>
-          <p className="mt-1 flex items-baseline gap-2">
-            <span className={cn('tnum text-[20px] font-semibold tracking-[-0.02em]', onTarget === null ? 'text-fg' : onTarget ? 'text-success' : 'text-danger')}>
-              {format(kpi.value)}
-            </span>
-            {kpi.target !== undefined && (
-              <span className="tnum text-[11.5px] text-fg-subtle">target {format(kpi.target)}</span>
-            )}
-          </p>
-        </div>
-        {onTarget !== null && (
-          <Tooltip content={onTarget ? 'Meeting the target' : 'Below the target'}>
-            <Badge tone={onTarget ? 'success' : 'danger'} size="sm">{onTarget ? 'On target' : 'Off target'}</Badge>
-          </Tooltip>
-        )}
-      </div>
-      {pctOfTarget !== null && (
-        <div className="mt-2">
-          <Progress value={pctOfTarget} tone={onTarget ? 'success' : 'danger'} size="sm" />
+          <Card>
+            <CardHeader title="Margin by order" description="What each budget leaves, against the target it was built to." />
+            <div className="scrollbar-thin overflow-x-auto">
+              <table className="w-full min-w-[760px] text-[12.5px]">
+                <thead>
+                  <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
+                    <th className="px-4 py-2 font-medium">Order</th>
+                    <th className="px-4 py-2 font-medium">Buyer</th>
+                    <th className="px-4 py-2 text-right font-medium">Revenue</th>
+                    <th className="px-4 py-2 text-right font-medium">Cost</th>
+                    <th className="px-4 py-2 text-right font-medium">Margin</th>
+                    <th className="px-4 py-2 text-right font-medium">Target</th>
+                    <th className="px-4 py-2 font-medium">Against target</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {margins.map((m) => (
+                    <tr key={m.project.id} className="hover:bg-bg-muted/50">
+                      <td className="px-4 py-2.5">
+                        <Link to={`/projects/${m.project.id}`} className="font-medium text-fg hover:text-primary">{m.project.code}</Link>
+                      </td>
+                      <td className="px-4 py-2.5 text-fg-muted">{m.project.buyerName}</td>
+                      <td className="tnum px-4 py-2.5 text-right">{fmtCurrency(m.revenue, 'IDR', { compact: true })}</td>
+                      <td className="tnum px-4 py-2.5 text-right text-fg-muted">{m.cost ? fmtCurrency(m.cost, 'IDR', { compact: true }) : '—'}</td>
+                      <td className="tnum px-4 py-2.5 text-right font-semibold">{m.cost ? fmtPercent(m.marginPct, 1) : '—'}</td>
+                      <td className="tnum px-4 py-2.5 text-right text-fg-muted">{m.targetPct ? `${m.targetPct}%` : '—'}</td>
+                      <td className="px-4 py-2.5">
+                        {m.cost ? <UtilisationBar pct={(m.marginPct / Math.max(1, m.targetPct)) * 100} lowIsBad className="w-32" /> : <span className="text-fg-subtle">not costed</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         </div>
       )}
-      <p className="mt-2 text-[11.5px] leading-relaxed text-fg-muted">{kpi.detail}</p>
-      <Separator className="mt-0" />
+
+      {view === 'supply' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard label="Deliveries on time" value={fmtPercent(punctuality.onTimePct, 0)} sub={`${punctuality.onTime} of ${punctuality.total}`} accent={punctuality.onTimePct > 80 ? 'success' : 'warning'} />
+            <KpiCard label="Average days late" value={fmtNumber(punctuality.averageDaysLate, 1)} sub="across every delivery" accent="warning" />
+            <KpiCard
+              label="Spent with suppliers"
+              value={fmtCurrency(spend.reduce((a, s) => a + s.received, 0), 'IDR', { compact: true })}
+              sub={`${spend.length} suppliers used`}
+              accent="primary"
+            />
+            <KpiCard
+              label="Still on order"
+              value={fmtCurrency(spend.reduce((a, s) => a + s.open, 0), 'IDR', { compact: true })}
+              sub="promised, not yet delivered"
+              accent="accent"
+            />
+          </div>
+
+          <Card>
+            <CardHeader title="Supplier scorecard" description="Built from what they actually did: deliveries against the promised date, and quantities rejected on arrival." />
+            <div className="scrollbar-thin overflow-x-auto">
+              <table className="w-full min-w-[900px] text-[12.5px]">
+                <thead>
+                  <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
+                    <th className="px-4 py-2 font-medium">Supplier</th>
+                    <th className="px-4 py-2 font-medium">Type</th>
+                    <th className="px-4 py-2 text-right font-medium">Orders</th>
+                    <th className="px-4 py-2 text-right font-medium">Ordered</th>
+                    <th className="px-4 py-2 text-right font-medium">Still open</th>
+                    <th className="px-4 py-2 text-right font-medium">On time</th>
+                    <th className="px-4 py-2 text-right font-medium">Rejected</th>
+                    <th className="px-4 py-2 font-medium">Composite</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {scores
+                    .filter((s) => s.orders > 0)
+                    .sort((a, b) => b.value - a.value)
+                    .map((s) => (
+                      <tr key={s.supplier.id} className="hover:bg-bg-muted/50">
+                        <td className="px-4 py-2.5">
+                          <p className="font-medium text-fg">{s.supplier.name}</p>
+                          <p className="text-[11.5px] text-fg-muted">{s.supplier.city}</p>
+                        </td>
+                        <td className="px-4 py-2.5"><StatusBadge value={s.supplier.status} size="sm" /></td>
+                        <td className="tnum px-4 py-2.5 text-right">{s.orders}</td>
+                        <td className="tnum px-4 py-2.5 text-right">{fmtCurrency(s.value, 'IDR', { compact: true })}</td>
+                        <td className="tnum px-4 py-2.5 text-right text-fg-muted">{fmtCurrency(s.openValue, 'IDR', { compact: true })}</td>
+                        <td className={cn('tnum px-4 py-2.5 text-right', s.onTimePct < 70 ? 'text-danger' : s.onTimePct < 88 ? 'text-warning-soft-fg' : 'text-success')}>
+                          {s.deliveries ? fmtPercent(s.onTimePct, 0) : '—'}
+                        </td>
+                        <td className={cn('tnum px-4 py-2.5 text-right', s.rejectRatePct > 5 ? 'text-danger' : 'text-fg-muted')}>
+                          {s.deliveredQty ? fmtPercent(s.rejectRatePct, 1) : '—'}
+                        </td>
+                        <td className="px-4 py-2.5"><UtilisationBar pct={s.composite} className="w-24" label={`${s.composite}/100`} /></td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader title="Late deliveries" description="Every receipt that arrived after the date its order promised." />
+            <div className="divide-y divide-border">
+              {punctuality.rows
+                .filter((r) => r.daysLate > 0)
+                .sort((a, b) => b.daysLate - a.daysLate)
+                .slice(0, 12)
+                .map((r) => (
+                  <Link key={r.receipt.id} to={`/receipts/${r.receipt.id}`} className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-bg-muted/60">
+                    <div className="min-w-0">
+                      <p className="truncate text-[12.5px] font-medium text-fg">{r.receipt.code} · {r.receipt.supplierName}</p>
+                      <p className="truncate text-[11.5px] text-fg-muted">
+                        {r.po?.code} · expected {fmtDate(r.po?.expectedAt)} · arrived {fmtDate(r.receipt.receivedAt)}
+                      </p>
+                    </div>
+                    <Badge size="sm" tone={r.daysLate > 14 ? 'danger' : 'warning'}>{r.daysLate}d late</Badge>
+                  </Link>
+                ))}
+              {punctuality.rows.every((r) => r.daysLate <= 0) && (
+                <p className="px-4 py-6 text-center text-[12.5px] text-fg-muted">Everything arrived on time.</p>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {view === 'stock' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard
+              label="Stock at cost"
+              value={fmtCurrency(positions.reduce((a, p) => a + p.value, 0), 'IDR', { compact: true })}
+              sub={`${positions.filter((p) => p.onHand > 0).length} items with a position`}
+              accent="primary"
+            />
+            <KpiCard
+              label="Reserved to orders"
+              value={fmtCurrency(positions.reduce((a, p) => a + p.reserved * p.item.standardCost, 0), 'IDR', { compact: true })}
+              sub="spoken for and unavailable"
+              accent="accent"
+            />
+            <KpiCard
+              label="Idle stock"
+              value={fmtCurrency(slow.reduce((a, p) => a + p.value, 0), 'IDR', { compact: true })}
+              sub={`${slow.length} items untouched for ${store.settings.slowMovingDays} days`}
+              accent="warning"
+            />
+            <KpiCard
+              label="Quarantined"
+              value={fmtCurrency(positions.reduce((a, p) => a + p.quarantined * p.item.standardCost, 0), 'IDR', { compact: true })}
+              sub="rejected on arrival"
+              accent="danger"
+            />
+          </div>
+
+          <Card>
+            <CardHeader
+              title="Money standing still"
+              description="Stock that has not moved in months, worst first. Every rupiah here was borrowed or earned before it was turned into a plank."
+            />
+            <div className="scrollbar-thin overflow-x-auto">
+              <table className="w-full min-w-[720px] text-[12.5px]">
+                <thead>
+                  <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
+                    <th className="px-4 py-2 font-medium">Item</th>
+                    <th className="px-4 py-2 font-medium">Category</th>
+                    <th className="px-4 py-2 text-right font-medium">On hand</th>
+                    <th className="px-4 py-2 text-right font-medium">Value</th>
+                    <th className="px-4 py-2 text-right font-medium">Days since it moved</th>
+                    <th className="px-4 py-2 text-right font-medium">Cover</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {slow.slice(0, 20).map((p) => (
+                    <tr key={p.item.id} className="hover:bg-bg-muted/50">
+                      <td className="px-4 py-2.5">
+                        <p className="font-medium text-fg">{p.item.name}</p>
+                        <p className="tnum text-[11.5px] text-fg-muted">{p.item.sku}</p>
+                      </td>
+                      <td className="px-4 py-2.5 text-fg-muted">{titleCase(p.item.category)}</td>
+                      <td className="tnum px-4 py-2.5 text-right">{fmtNumber(p.onHand, 2)}</td>
+                      <td className="tnum px-4 py-2.5 text-right font-medium">{fmtCurrency(p.value, 'IDR', { compact: true })}</td>
+                      <td className="tnum px-4 py-2.5 text-right text-warning-soft-fg">{p.daysSinceMovement}</td>
+                      <td className="tnum px-4 py-2.5 text-right text-fg-muted">
+                        <Tooltip content="Days of cover at the rate this item has been consumed over the last quarter.">
+                          <span>{p.coverDays > 900 ? 'no demand' : `${fmtNumber(p.coverDays, 0)}d`}</span>
+                        </Tooltip>
+                      </td>
+                    </tr>
+                  ))}
+                  {slow.length === 0 && (
+                    <tr><td colSpan={6} className="px-4 py-8 text-center text-fg-muted">Nothing has been standing still.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,7 +1,9 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as D from '@radix-ui/react-dialog'
-import { ArrowRight, Building2, Container, CornerDownLeft, FileStack, Search, Ship, Tags } from 'lucide-react'
+import {
+  ArrowRight, Boxes, Building2, CornerDownLeft, Handshake, Ruler, Search, ShoppingCart,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useErp } from '@/store/useErp'
 import { NAV } from './nav'
@@ -20,7 +22,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   const nav = useNavigate()
   const [q, setQ] = React.useState('')
   const [active, setActive] = React.useState(0)
-  const { projects, customers, packages, containers } = useErp()
+  const { projects, buyers, suppliers, items, orders } = useErp()
 
   const commands = React.useMemo<Cmd[]>(() => {
     const list: Cmd[] = []
@@ -30,130 +32,123 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
       ),
     )
     projects.forEach((p) =>
-      list.push({ id: p.id, label: `${p.code} · ${p.name}`, hint: `${p.polName} → ${p.podName}`, group: 'Projects', to: `/projects/${p.id}`, icon: <Ship /> }),
+      list.push({
+        id: p.id,
+        label: `${p.code} · ${p.name}`,
+        hint: `${p.buyerName} → ${p.destinationPort}`,
+        group: 'Orders',
+        to: `/projects/${p.id}`,
+        icon: <Ruler />,
+      }),
     )
-    customers.forEach((c) =>
-      list.push({ id: c.id, label: `${c.code} · ${c.legalName}`, hint: `${c.offices.length} offices`, group: 'Customers', to: `/customers/${c.id}`, icon: <Building2 /> }),
+    buyers.forEach((b) =>
+      list.push({ id: b.id, label: `${b.code} · ${b.tradingName}`, hint: b.countryName, group: 'Buyers', to: `/buyers/${b.id}`, icon: <Building2 /> }),
     )
-    packages.forEach((p) =>
-      list.push({ id: p.id, label: `${p.code} · ${p.name}`, hint: `${p.originPortName} → ${p.destPortName}`, group: 'Packages', to: `/packages`, icon: <Tags /> }),
+    suppliers.forEach((s) =>
+      list.push({ id: s.id, label: `${s.code} · ${s.name}`, hint: s.city, group: 'Suppliers', to: '/suppliers', icon: <Handshake /> }),
     )
-    containers
-      .filter((c) => c.containerNo)
-      .forEach((c) =>
-        list.push({ id: c.id, label: c.containerNo!, hint: `${c.type} · ${c.status}`, group: 'Containers', to: `/projects/${c.projectId}?tab=containers`, icon: <Container /> }),
-      )
+    orders.forEach((o) =>
+      list.push({ id: o.id, label: `${o.code} · ${o.supplierName}`, hint: o.status.toLowerCase().replace('_', ' '), group: 'Purchase orders', to: `/purchase-orders/${o.id}`, icon: <ShoppingCart /> }),
+    )
+    items.forEach((i) =>
+      list.push({ id: i.id, label: `${i.sku} · ${i.name}`, hint: i.category.toLowerCase(), group: 'Items', to: '/items', icon: <Boxes /> }),
+    )
     return list
-  }, [projects, customers, packages, containers])
+  }, [projects, buyers, suppliers, items, orders])
 
   const filtered = React.useMemo(() => {
-    if (!q.trim()) return commands.filter((c) => c.group === 'Navigate').concat(commands.filter((c) => c.group === 'Projects').slice(0, 5))
-    const s = q.toLowerCase()
-    return commands.filter((c) => c.label.toLowerCase().includes(s) || c.hint?.toLowerCase().includes(s)).slice(0, 40)
-  }, [q, commands])
+    if (!q.trim()) return commands.filter((c) => c.group === 'Navigate')
+    const needle = q.toLowerCase()
+    return commands.filter((c) => `${c.label} ${c.hint ?? ''}`.toLowerCase().includes(needle)).slice(0, 40)
+  }, [commands, q])
 
-  React.useEffect(() => {
-    if (open) {
-      setQ('')
-      setActive(0)
-    }
-  }, [open])
   React.useEffect(() => setActive(0), [q])
+  React.useEffect(() => {
+    if (!open) setQ('')
+  }, [open])
 
-  const go = (c: Cmd) => {
-    nav(c.to)
+  const go = (cmd?: Cmd) => {
+    if (!cmd) return
+    nav(cmd.to)
     onOpenChange(false)
   }
 
   const groups = React.useMemo(() => {
-    const m = new Map<string, Cmd[]>()
-    filtered.forEach((c) => {
-      if (!m.has(c.group)) m.set(c.group, [])
-      m.get(c.group)!.push(c)
-    })
-    return Array.from(m.entries())
+    const map = new Map<string, Cmd[]>()
+    filtered.forEach((c) => map.set(c.group, [...(map.get(c.group) ?? []), c]))
+    return Array.from(map.entries())
   }, [filtered])
+
+  let index = -1
 
   return (
     <D.Root open={open} onOpenChange={onOpenChange}>
       <D.Portal>
-        <D.Overlay className="fixed inset-0 z-[80] bg-overlay/50 backdrop-blur-[3px] animate-fade-in" />
+        <D.Overlay className="fixed inset-0 z-50 bg-overlay/50 backdrop-blur-[2px]" />
         <D.Content
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown') {
               e.preventDefault()
-              setActive((a) => Math.min(filtered.length - 1, a + 1))
-            } else if (e.key === 'ArrowUp') {
+              setActive((a) => Math.min(a + 1, filtered.length - 1))
+            }
+            if (e.key === 'ArrowUp') {
               e.preventDefault()
-              setActive((a) => Math.max(0, a - 1))
-            } else if (e.key === 'Enter') {
+              setActive((a) => Math.max(a - 1, 0))
+            }
+            if (e.key === 'Enter') {
               e.preventDefault()
-              const c = filtered[active]
-              if (c) go(c)
+              go(filtered[active])
             }
           }}
-          className="fixed left-1/2 top-[14vh] z-[81] w-[94vw] max-w-xl -translate-x-1/2 overflow-hidden rounded-2xl border border-border bg-surface-raised shadow-pop animate-slide-up"
+          className="fixed left-1/2 top-[14vh] z-50 w-[min(94vw,620px)] -translate-x-1/2 overflow-hidden rounded-xl border border-border bg-surface shadow-pop animate-pop-in"
         >
-          <D.Title className="sr-only">Command palette</D.Title>
+          <D.Title className="sr-only">Search</D.Title>
+          <D.Description className="sr-only">Jump to any record or screen</D.Description>
           <div className="flex items-center gap-2.5 border-b border-border px-4">
             <Search className="size-4 shrink-0 text-fg-subtle" />
             <input
               autoFocus
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search jobs, containers, customers, packages…"
-              className="h-12 flex-1 bg-transparent text-[14px] text-fg placeholder:text-fg-subtle focus:outline-none"
+              placeholder="Search orders, buyers, suppliers, purchase orders, items…"
+              className="h-12 min-w-0 flex-1 bg-transparent text-[14px] text-fg outline-none placeholder:text-fg-subtle"
             />
-            <Kbd>Esc</Kbd>
+            <Kbd>esc</Kbd>
           </div>
-          <div className="scrollbar-thin max-h-[52vh] overflow-y-auto p-1.5">
+
+          <div className="scrollbar-thin max-h-[52vh] overflow-y-auto p-2">
             {filtered.length === 0 && (
-              <p className="px-3 py-10 text-center text-[13px] text-fg-subtle">Nothing matches “{q}”.</p>
+              <p className="px-3 py-8 text-center text-[13px] text-fg-muted">Nothing matches “{q}”.</p>
             )}
-            {groups.map(([group, items]) => (
-              <div key={group}>
-                <p className="px-2.5 pb-1 pt-2 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">{group}</p>
-                {items.map((c) => {
-                  const idx = filtered.indexOf(c)
+            {groups.map(([group, rows]) => (
+              <div key={group} className="mb-2 last:mb-0">
+                <p className="px-2.5 py-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">{group}</p>
+                {rows.map((c) => {
+                  index += 1
+                  const isActive = index === active
                   return (
                     <button
                       key={c.id}
-                      onMouseEnter={() => setActive(idx)}
+                      onMouseEnter={() => setActive(commands.indexOf(c) >= 0 ? filtered.indexOf(c) : 0)}
                       onClick={() => go(c)}
                       className={cn(
-                        'flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left transition-colors',
-                        idx === active && 'bg-primary-soft/70',
+                        'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors',
+                        isActive ? 'bg-primary-soft text-primary-soft-fg' : 'text-fg hover:bg-neutral-soft',
                       )}
                     >
-                      <span className="grid size-7 shrink-0 place-items-center rounded-md bg-bg-muted text-fg-muted [&_svg]:size-4">
+                      <span className="grid size-7 shrink-0 place-items-center rounded-md bg-surface-sunken [&_svg]:size-[15px]">
                         {c.icon}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] font-medium text-fg">{c.label}</span>
+                        <span className="block truncate text-[13px] font-medium">{c.label}</span>
                         {c.hint && <span className="block truncate text-[11.5px] text-fg-muted">{c.hint}</span>}
                       </span>
-                      {idx === active ? (
-                        <CornerDownLeft className="size-3.5 shrink-0 text-primary" />
-                      ) : (
-                        <ArrowRight className="size-3.5 shrink-0 text-fg-subtle opacity-0" />
-                      )}
+                      {isActive ? <CornerDownLeft className="size-3.5 shrink-0 opacity-60" /> : <ArrowRight className="size-3.5 shrink-0 opacity-0" />}
                     </button>
                   )
                 })}
               </div>
             ))}
-          </div>
-          <div className="flex items-center gap-3 border-t border-border bg-surface-sunken px-4 py-2 text-[11.5px] text-fg-muted">
-            <span className="flex items-center gap-1">
-              <Kbd>↑</Kbd>
-              <Kbd>↓</Kbd> navigate
-            </span>
-            <span className="flex items-center gap-1">
-              <Kbd>↵</Kbd> open
-            </span>
-            <span className="ml-auto flex items-center gap-1">
-              <FileStack className="size-3" /> {commands.length} records indexed
-            </span>
           </div>
         </D.Content>
       </D.Portal>

@@ -1,25 +1,37 @@
-import { STAGES, stageIndex } from '@/data/reference'
-import type { StageKey } from '@/data/types'
+import { PROJECT_STAGES, stageIndex } from '@/data/reference'
+import type { ProjectStage } from '@/data/types'
 import { cn } from '@/lib/utils'
+import { Tooltip } from '@/components/ui/tooltip'
+import { StatusBadge } from './status'
 
-export function StageChip({ stage, className }: { stage: StageKey; className?: string }) {
-  const idx = stageIndex(stage)
-  const meta = STAGES[idx]
-  const pct = ((idx + 1) / STAGES.length) * 100
+export function StageChip({ stage }: { stage: ProjectStage }) {
+  const spec = PROJECT_STAGES.find((s) => s.key === stage)!
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-2 rounded-md border border-border bg-surface-sunken px-2 py-1 text-[11.5px] font-medium text-fg-muted',
-        className,
-      )}
-    >
-      <span className="tnum text-[10px] text-fg-subtle">
-        {idx + 1}/{STAGES.length}
+    <Tooltip content={spec.hint}>
+      <span>
+        <StatusBadge value={stage} />
       </span>
-      <span className="relative h-1 w-9 overflow-hidden rounded-full bg-neutral-soft">
-        <span className="absolute inset-y-0 left-0 rounded-full bg-primary" style={{ width: `${pct}%` }} />
-      </span>
-      <span className="text-fg">{meta?.short}</span>
-    </span>
+    </Tooltip>
+  )
+}
+
+/** The eleven stages as a rail, with everything before the current one filled. */
+export function StageRail({ stage, className }: { stage: ProjectStage; className?: string }) {
+  const current = stageIndex(stage)
+  return (
+    <div className={cn('flex items-center gap-[3px]', className)}>
+      {PROJECT_STAGES.map((s, i) => (
+        <Tooltip key={s.key} content={`${s.label} — ${s.hint}`}>
+          <span
+            className={cn(
+              'h-1.5 flex-1 rounded-full transition-colors',
+              i < current && 'bg-primary/50',
+              i === current && 'bg-primary',
+              i > current && 'bg-border',
+            )}
+          />
+        </Tooltip>
+      ))}
+    </div>
   )
 }

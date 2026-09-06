@@ -1,450 +1,438 @@
 import * as React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  AlertTriangle, ArrowRight, Banknote, CalendarClock, Container as ContainerIcon, FileSignature, Gauge,
-  Radio, Ship, TrendingUp, Trophy, Wallet, Warehouse, Anchor, FileStack, PackageCheck, ShieldAlert,
-  Repeat,
+  AlertTriangle, ArrowUpRight, Boxes, CalendarClock, Container, Factory, Gauge, ShoppingCart,
+  TrendingDown, Wallet,
 } from 'lucide-react'
-import { useErp } from '@/store/useErp'
-import { countryFlag } from '@/data/reference'
-import { KpiCard, PageHeader } from '@/components/shared/PageHeader'
+import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs } from '@/components/ui/tabs'
-import { EmptyState, Progress } from '@/components/ui/misc'
-import { StageChip } from '@/components/shared/StageChip'
-import { buildExceptions, jobFinancials, pipelineByStage, trialBalance, incomeStatement, arAging, type Exception } from '@/lib/analytics'
-import { buildPhase2Exceptions, milestoneHealth, pipelineSummary, warehouseSummary } from '@/lib/analytics2'
-import { buildPhase3Exceptions, incidentExposure } from '@/lib/services'
-import { buildStuffingExceptions, stuffingMetrics } from '@/lib/stuffing'
-import { itemCbm, itemGrossKg, utilisation } from '@/lib/shipping'
-import { fmtCurrency, fmtDate, fmtNumber, fmtPercent, pluralDays, relativeDays } from '@/lib/format'
+import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/misc'
+import { UtilisationBar } from '@/components/shared/UtilisationBar'
+import { StatusBadge } from '@/components/shared/status'
+import { Tooltip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { fmtCurrency, fmtDate, fmtNumber, fmtPercent, relativeLabel } from '@/lib/format'
+import { useErp } from '@/store/useErp'
+import { useExceptions, useWarehouseLoads } from '@/hooks/useExceptions'
+import { inventoryValue } from '@/lib/inventory'
+import { budgetTotal, revenueIdr } from '@/lib/costing'
+import { orderProgress } from '@/lib/procurement'
+import {
+  cashPosition, pipeline, productionLoad, shipCalendar, spendByCategory, winLoss,
+} from '@/lib/analytics'
+import { COST_CATEGORIES, complianceSpec } from '@/data/reference'
+import type { Exception, Severity } from '@/lib/exceptions'
+
+const SEVERITY_TONE: Record<Severity, string> = {
+  CRITICAL: 'text-danger',
+  HIGH: 'text-warning',
+  MEDIUM: 'text-info',
+}
 
 export function DashboardPage() {
-  const nav = useNavigate()
+  const navigate = useNavigate()
   const store = useErp()
-  const { projects, containers, documents, charges, customers, invoices, accounts, journal } = store
-  const { quotations, partners, milestones, receipts, filings, settings } = store
-  const { jobServices, services, incidents, company, stuffingJobs } = store
-  const [sev, setSev] = React.useState<'ALL' | 'CRITICAL' | 'HIGH' | 'MEDIUM'>('ALL')
+  const { exceptions, rows } = useExceptions()
+  const loads = useWarehouseLoads()
+  const [area, setArea] = React.useState<'ALL' | Exception['area']>('ALL')
 
-  const exceptions = React.useMemo(() => {
-    const core = buildExceptions({ projects, containers, documents, charges, customers, invoices })
-    const extra = buildPhase2Exceptions({ quotations, partners, milestones, receipts, filings, projects, settings })
-    const phase3 = buildPhase3Exceptions({ projects, containers, documents, jobServices, services, incidents, company })
-    const yard = buildStuffingExceptions({ projects, charges, stuffingJobs })
-    const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2 } as const
-    return [...core, ...extra, ...phase3, ...yard].sort((a, b) => order[a.severity] - order[b.severity])
-  }, [projects, containers, documents, charges, customers, invoices, quotations, partners, milestones, receipts, filings, settings, jobServices, services, incidents, company, stuffingJobs])
+  const live = store.projects.filter((p) => p.status === 'WON' && p.stage !== 'CLOSED')
+  const orderBook = live.reduce((a, p) => a + revenueIdr(p), 0)
 
-  const quotePipeline = pipelineSummary(quotations)
-  const tracking = milestoneHealth(milestones)
-  const warehouse = warehouseSummary(receipts)
-  const claims = incidentExposure(incidents)
-  const yard = stuffingMetrics(stuffingJobs)
-  const filteredExceptions = sev === 'ALL' ? exceptions : exceptions.filter((e) => e.severity === sev)
+  const exposure = store.orders
+    .filter((o) => !['DRAFT', 'CANCELLED'].includes(o.status))
+    .reduce((a, o) => {
+      const progress = orderProgress(o, store.receipts)
+      return a + progress.openValue + progress.receivedValue
+    }, 0)
 
-  const activeJobs = projects.filter((p) => p.status === 'ACTIVE')
-  const pipeline = pipelineByStage(projects)
-  const pipelineMax = Math.max(...pipeline.map((p) => p.count), 1)
-  const fin = jobFinancials(charges)
-  const pl = incomeStatement(trialBalance(accounts, journal))
-  const aging = arAging(invoices)
-  const overdueAr = aging.filter((b) => b.label !== 'Current').reduce((a, b) => a + b.amount, 0)
+  const stockValue = inventoryValue(rows)
+  const cash = cashPosition(store.invoices, store.bills)
+  const ships = shipCalendar(store.projects, 45)
+  const load = productionLoad(store.workOrders)
+  const wl = winLoss(store.projects)
+  const funnel = pipeline(store.projects)
+  const spend = spendByCategory(store.orders, store.budgets, (id) => store.items.find((i) => i.id === id))
 
-  const sailing = activeJobs
-    .filter((p) => p.etd && !p.atd)
-    .sort((a, b) => (a.etd ?? '').localeCompare(b.etd ?? ''))
-    .slice(0, 6)
+  const areas = React.useMemo(() => {
+    const map = new Map<Exception['area'], number>()
+    exceptions.forEach((e) => map.set(e.area, (map.get(e.area) ?? 0) + 1))
+    return Array.from(map.entries()).sort((a, b) => b[1] - a[1])
+  }, [exceptions])
 
-  const upcomingCutoffs = activeJobs
-    .flatMap((p) =>
-      [
-        { label: 'SI', iso: p.siCutoff },
-        { label: 'VGM', iso: p.vgmCutoff },
-        { label: 'Gate-in', iso: p.gateInCutoff },
-      ]
-        .filter((c) => c.iso && relativeDays(c.iso)! >= -1 && relativeDays(c.iso)! <= 7)
-        .map((c) => ({ ...c, project: p })),
-    )
-    .sort((a, b) => (a.iso ?? '').localeCompare(b.iso ?? ''))
-    .slice(0, 7)
-
-  const teu = containers.reduce((a, c) => a + (c.type.startsWith('40') || c.type.startsWith('45') ? 2 : c.type === 'LCL' ? 0 : 1), 0)
-  const totalCbm = containers.reduce((a, c) => a + c.items.reduce((s, i) => s + itemCbm(i), 0), 0)
-  const totalKg = containers.reduce((a, c) => a + c.items.reduce((s, i) => s + itemGrossKg(i), 0), 0)
-  const poorlyUsed = containers.filter((c) => {
-    const u = utilisation(c.type, c.items, c.tareKg)
-    return c.type !== 'LCL' && (u.status === 'LIGHT' || u.status === 'OVERLOADED')
-  })
-
-  const consignmentJobs = projects.filter((p) => p.consignment)
-  const consignmentUnsold = consignmentJobs.reduce(
-    (a, p) => a + (p.consignment!.totalUnitsShipped - p.consignment!.reportedUnitsSold),
-    0,
-  )
-
-  const critical = exceptions.filter((e) => e.severity === 'CRITICAL').length
+  const shown = area === 'ALL' ? exceptions : exceptions.filter((e) => e.area === area)
+  const counts = {
+    critical: exceptions.filter((e) => e.severity === 'CRITICAL').length,
+    high: exceptions.filter((e) => e.severity === 'HIGH').length,
+    medium: exceptions.filter((e) => e.severity === 'MEDIUM').length,
+  }
 
   return (
-    <>
+    <div className="min-h-0">
       <PageHeader
         eyebrow={
           <>
-            <Badge tone="primary" size="sm" dot>Live</Badge>
-            <span className="text-[12px] text-fg-muted">{fmtDate(new Date().toISOString(), 'long')}</span>
+            <Badge tone="primary" size="sm">Control Tower</Badge>
+            <span className="text-[12px] text-fg-muted">{store.company.tradingName} · {store.company.city}</span>
           </>
         }
-        title="Control Tower"
-        description="What needs a decision today, ranked by what it costs to ignore. Everything here is derived from the jobs, containers, documents and charges in the system — not typed in by hand."
+        title="What needs a decision today"
+        description="Every figure below is folded out of the order book, the purchase ledger and the stock movements as the page renders. Nothing on this screen is a stored total, and nothing on the exception list was put there by hand."
         actions={
           <>
-            <Button variant="secondary" onClick={() => nav('/projects')}>
-              <Ship /> All jobs
+            <Button variant="secondary" onClick={() => navigate('/analytics')}>
+              <Gauge /> Analytics
             </Button>
-            <Button variant="primary" onClick={() => nav('/projects')}>
-              <Gauge /> Open the job board <ArrowRight />
+            <Button variant="primary" onClick={() => navigate('/projects')}>
+              <ArrowUpRight /> Open the order book
             </Button>
           </>
         }
       />
 
-      <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {/* ---------------- KPIs ---------------- */}
+      <div data-tour="kpis" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         <KpiCard
-          label="Open exceptions"
-          value={exceptions.length}
-          icon={<AlertTriangle />}
-          accent={critical ? 'danger' : exceptions.length ? 'warning' : 'success'}
-          sub={`${critical} critical · ${exceptions.filter((e) => e.severity === 'HIGH').length} high`}
-        />
-        <KpiCard
-          label="Active jobs"
-          value={activeJobs.length}
-          icon={<Ship />}
+          label="Order book"
+          value={fmtCurrency(orderBook, 'IDR', { compact: true })}
+          sub={`${live.length} orders won and open`}
+          icon={<Boxes />}
           accent="primary"
-          sub={`${teu} TEU · ${fmtNumber(totalCbm, 0)} m³ under management`}
-          onClick={() => nav('/projects')}
+          onClick={() => navigate('/projects')}
         />
         <KpiCard
-          label="Gross margin"
-          value={fmtCurrency(fin.margin, 'IDR', { compact: true })}
-          icon={<TrendingUp />}
-          accent={fin.marginPct >= 20 ? 'success' : 'warning'}
-          sub={`${fmtPercent(fin.marginPct)} on ${fmtCurrency(fin.revenue, 'IDR', { compact: true })} revenue`}
-          onClick={() => nav('/finance/profitability')}
+          label="Purchase exposure"
+          value={fmtCurrency(exposure, 'IDR', { compact: true })}
+          sub={`${store.orders.filter((o) => ['SENT', 'APPROVED', 'PARTIALLY_RECEIVED'].includes(o.status)).length} orders open`}
+          icon={<ShoppingCart />}
+          accent="warning"
+          onClick={() => navigate('/purchase-orders')}
         />
         <KpiCard
-          label="Overdue receivables"
-          value={fmtCurrency(overdueAr, 'IDR', { compact: true })}
-          icon={<Wallet />}
-          accent={overdueAr > 0 ? 'danger' : 'success'}
-          sub={`${invoices.filter((i) => i.status === 'OVERDUE').length} invoices past due`}
-          onClick={() => nav('/finance/invoices')}
-        />
-      </div>
-
-      <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard
-          label="Open quotations"
-          value={fmtCurrency(quotePipeline.openValue, 'IDR', { compact: true })}
-          icon={<FileSignature />}
+          label="Stock at cost"
+          value={fmtCurrency(stockValue, 'IDR', { compact: true })}
+          sub={`across ${loads.filter((l) => l.cbm > 0).length} warehouses`}
+          icon={<Boxes />}
           accent="accent"
-          sub={`${quotePipeline.openCount} live · ${fmtCurrency(quotePipeline.weightedValue, 'IDR', { compact: true })} weighted`}
-          onClick={() => nav('/quotations')}
+          onClick={() => navigate('/inventory')}
         />
         <KpiCard
-          label="Win rate"
-          value={fmtPercent(quotePipeline.winRatePct, 0)}
-          icon={<Trophy />}
-          accent={quotePipeline.winRatePct >= 35 ? 'success' : 'warning'}
-          sub={`${quotePipeline.won.length} won of ${quotePipeline.decided.length} decided`}
-          onClick={() => nav('/quotations')}
+          label="Owed to us"
+          value={fmtCurrency(cash.receivable, 'IDR', { compact: true })}
+          delta={cash.overdueIn > 0 ? `${fmtCurrency(cash.overdueIn, 'IDR', { compact: true })} late` : undefined}
+          deltaTone={cash.overdueIn > 0 ? 'down' : 'neutral'}
+          icon={<Wallet />}
+          accent="success"
+          onClick={() => navigate('/receivables')}
         />
         <KpiCard
-          label="Milestone punctuality"
-          value={fmtPercent(tracking.onTimePct, 0)}
-          icon={<Radio />}
-          accent={tracking.onTimePct >= 90 ? 'success' : tracking.onTimePct >= 75 ? 'warning' : 'danger'}
-          sub={`${tracking.recorded} events recorded · avg slip ${tracking.avgSlipDays.toFixed(1)} d`}
-          onClick={() => nav('/tracking')}
+          label="We owe"
+          value={fmtCurrency(cash.payable, 'IDR', { compact: true })}
+          delta={cash.overdueOut > 0 ? `${fmtCurrency(cash.overdueOut, 'IDR', { compact: true })} late` : undefined}
+          deltaTone={cash.overdueOut > 0 ? 'down' : 'neutral'}
+          icon={<TrendingDown />}
+          accent="danger"
+          onClick={() => navigate('/payables')}
         />
         <KpiCard
-          label="Cargo in store"
-          value={`${fmtNumber(warehouse.cbmOnHand, 1)} m³`}
-          icon={<Warehouse />}
-          accent={warehouse.aged ? 'warning' : 'primary'}
-          sub={`${warehouse.openCount} receipts · ${fmtCurrency(warehouse.storageAccrued, 'IDR', { compact: true })} storage accrued`}
-          onClick={() => nav('/warehouse')}
-        />
-        <KpiCard
-          label="Stuffing this week"
-          value={yard.thisWeek}
-          icon={<PackageCheck />}
-          accent={yard.atRisk ? 'danger' : 'primary'}
-          sub={
-            yard.atRisk
-              ? `${yard.atRisk} at risk against the gate-in cut-off`
-              : `${yard.today} today · every slot clears its cut-off`
-          }
-          onClick={() => nav('/stuffing')}
-        />
-        <KpiCard
-          label="Open claims"
-          value={claims.open}
-          icon={<ShieldAlert />}
-          accent={claims.critical ? 'danger' : claims.open ? 'warning' : 'success'}
-          sub={`${fmtCurrency(claims.outstanding, 'IDR', { compact: true })} outstanding · ${claims.recoveryRatePct.toFixed(0)}% recovered to date`}
-          onClick={() => nav('/incidents')}
+          label="On the floor"
+          value={`${fmtNumber(load.produced)} / ${fmtNumber(load.pieces)}`}
+          sub={`${load.open} work orders · ${load.late} late${load.onHold ? ` · ${load.onHold} on hold` : ''}`}
+          icon={<Factory />}
+          accent={load.late > 0 ? 'warning' : 'accent'}
+          onClick={() => navigate('/production')}
         />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
-        <div className="space-y-4">
-          <Card>
-            <CardHeader
-              icon={<AlertTriangle />}
-              title="Exception queue"
-              description="Ranked by what it costs to ignore: missed cut-offs and rejected documents first, then margin and credit."
-              actions={
-                <Tabs
-                  variant="pill"
-                  value={sev}
-                  onChange={setSev}
-                  items={[
-                    { value: 'ALL', label: 'All', count: exceptions.length },
-                    { value: 'CRITICAL', label: 'Critical', count: exceptions.filter((e) => e.severity === 'CRITICAL').length },
-                    { value: 'HIGH', label: 'High', count: exceptions.filter((e) => e.severity === 'HIGH').length },
-                  ]}
-                />
-              }
-            />
-            {filteredExceptions.length === 0 ? (
-              <EmptyState icon={<ShieldAlert />} title="Nothing needs attention" description="Every job is inside its cut-offs with complete documents and healthy margin." />
-            ) : (
-              <div className="scrollbar-thin max-h-[520px] divide-y divide-border overflow-y-auto">
-                {filteredExceptions.map((e) => (
-                  <ExceptionRow key={e.id} exception={e} />
-                ))}
-              </div>
-            )}
-          </Card>
-
-          <Card>
-            <CardHeader icon={<Gauge />} title="Pipeline by stage" description="Where the book is sitting right now, and how much revenue is behind each stage." />
-            <CardBody className="space-y-2.5">
-              {pipeline.map((p) => (
+      {/* ---------------- exceptions + ship calendar ---------------- */}
+      <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+        <Card data-tour="exceptions" className="min-w-0">
+          <CardHeader
+            icon={<AlertTriangle />}
+            title={`${exceptions.length} things want attention`}
+            description={`${counts.critical} critical · ${counts.high} high · ${counts.medium} worth knowing. Each one is a rule read off the live records, not a flag somebody set.`}
+          />
+          <div className="border-b border-border px-4 py-2.5">
+            <div className="scrollbar-thin flex gap-1.5 overflow-x-auto pb-0.5">
+              <button
+                onClick={() => setArea('ALL')}
+                className={cn(
+                  'shrink-0 rounded-full px-2.5 py-1 text-[12px] font-medium transition-colors',
+                  area === 'ALL' ? 'bg-primary text-primary-fg' : 'bg-neutral-soft text-neutral-soft-fg hover:text-fg',
+                )}
+              >
+                Everything {exceptions.length}
+              </button>
+              {areas.map(([a, n]) => (
                 <button
-                  key={p.stage.key}
-                  onClick={() => nav('/projects')}
-                  className="group flex w-full items-center gap-3 text-left"
+                  key={a}
+                  onClick={() => setArea(a)}
+                  className={cn(
+                    'shrink-0 rounded-full px-2.5 py-1 text-[12px] font-medium transition-colors',
+                    area === a ? 'bg-primary text-primary-fg' : 'bg-neutral-soft text-neutral-soft-fg hover:text-fg',
+                  )}
                 >
-                  <span className="w-[104px] shrink-0 truncate text-[12.5px] text-fg-muted group-hover:text-fg">{p.stage.short}</span>
-                  <span className="relative h-6 flex-1 overflow-hidden rounded-md bg-surface-sunken">
-                    <span
-                      className="absolute inset-y-0 left-0 rounded-md bg-primary/85 transition-[width] duration-500"
-                      style={{ width: `${(p.count / pipelineMax) * 100}%` }}
-                    />
-                    <span className="absolute inset-y-0 left-2 flex items-center text-[11.5px] font-semibold text-primary-fg mix-blend-luminosity">
-                      {p.count > 0 && p.count}
-                    </span>
-                  </span>
-                  <span className="tnum w-[86px] shrink-0 text-right text-[12px] text-fg-muted">
-                    {p.value ? fmtCurrency(p.value, 'IDR', { compact: true }) : '—'}
-                  </span>
+                  {a} {n}
                 </button>
               ))}
-            </CardBody>
-          </Card>
-        </div>
-
-        <div className="space-y-4">
-          <Card>
-            <CardHeader icon={<CalendarClock />} title="Cut-offs in the next 7 days" description="Miss one and the box rolls to the next sailing." />
-            {upcomingCutoffs.length === 0 ? (
-              <EmptyState icon={<CalendarClock />} title="No cut-offs this week" description="Nothing closes in the next seven days." />
-            ) : (
-              <div className="divide-y divide-border">
-                {upcomingCutoffs.map((c, i) => {
-                  const d = relativeDays(c.iso)!
-                  return (
-                    <Link
-                      key={i}
-                      to={`/projects/${c.project.id}`}
-                      className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-bg-muted/60"
-                    >
-                      <span
-                        className={cn(
-                          'grid w-11 shrink-0 place-items-center rounded-md py-1 text-[11px] font-semibold',
-                          d < 0 ? 'bg-danger-soft text-danger-soft-fg' : d <= 1 ? 'bg-warning-soft text-warning-soft-fg' : 'bg-neutral-soft text-neutral-soft-fg',
-                        )}
-                      >
-                        {d < 0 ? 'late' : d === 0 ? 'today' : `${d}d`}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[12.5px] font-medium text-fg">
-                          {c.label} cut-off · {c.project.code}
-                        </span>
-                        <span className="block truncate text-[11.5px] text-fg-muted">{c.project.name}</span>
-                      </span>
-                      <StageChip stage={c.project.stage} />
-                    </Link>
-                  )
-                })}
-              </div>
+            </div>
+          </div>
+          <div className="scrollbar-thin max-h-[560px] divide-y divide-border overflow-y-auto">
+            {shown.length === 0 && (
+              <EmptyState
+                title="Nothing outstanding here"
+                description="No rule in this area is firing against the current records."
+              />
             )}
+            {shown.map((e) => (
+              <Link
+                key={e.id}
+                to={e.to}
+                className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-bg-muted/60"
+              >
+                <AlertTriangle className={cn('mt-0.5 size-4 shrink-0', SEVERITY_TONE[e.severity])} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-[13px] font-semibold leading-snug text-fg">{e.title}</p>
+                    <Badge size="sm" tone={e.severity === 'CRITICAL' ? 'danger' : e.severity === 'HIGH' ? 'warning' : 'info'}>
+                      {e.severity.toLowerCase()}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-fg-muted">{e.detail}</p>
+                  <p className="mt-1.5 text-[11.5px] text-fg-subtle">
+                    {e.area} · {e.entity}
+                    {e.value ? ` · ${fmtCurrency(e.value, e.currency ?? 'IDR', { compact: true })}` : ''}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </Card>
+
+        <div className="min-w-0 space-y-4">
+          <Card data-tour="ship">
+            <CardHeader
+              icon={<CalendarClock />}
+              title="Sailing soonest"
+              description="Orders by target ship date, with what each one still owes before a container can legally leave."
+            />
+            <div className="divide-y divide-border">
+              {ships.length === 0 && <EmptyState title="Nothing due in the next six weeks" />}
+              {ships.slice(0, 7).map(({ project, daysToShip }) => {
+                const missing = project.compliance.filter(
+                  (c) => complianceSpec(c.key).blocking && c.status !== 'SATISFIED',
+                )
+                return (
+                  <Link
+                    key={project.id}
+                    to={`/projects/${project.id}`}
+                    className="block px-4 py-3 transition-colors hover:bg-bg-muted/60"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-[13px] font-semibold text-fg">{project.code}</p>
+                        <p className="truncate text-[12px] text-fg-muted">
+                          {project.buyerName} → {project.destinationPort}
+                        </p>
+                      </div>
+                      <Badge
+                        size="sm"
+                        tone={daysToShip < 0 ? 'danger' : daysToShip <= 10 ? 'warning' : 'neutral'}
+                      >
+                        {daysToShip < 0 ? `${Math.abs(daysToShip)}d late` : `${daysToShip}d`}
+                      </Badge>
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <StatusBadge value={project.stage} size="sm" />
+                      {missing.length > 0 ? (
+                        <Tooltip content={missing.map((m) => complianceSpec(m.key).label).join(' · ')}>
+                          <span>
+                            <Badge size="sm" tone="danger">
+                              {missing.length} certificate{missing.length > 1 ? 's' : ''} outstanding
+                            </Badge>
+                          </span>
+                        </Tooltip>
+                      ) : (
+                        <Badge size="sm" tone="success">Paperwork complete</Badge>
+                      )}
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
           </Card>
 
           <Card>
-            <CardHeader icon={<Anchor />} title="Next sailings" description="Jobs with a confirmed ETD that have not departed." />
-            {sailing.length === 0 ? (
-              <EmptyState icon={<Ship />} title="No sailings scheduled" />
-            ) : (
-              <div className="divide-y divide-border">
-                {sailing.map((p) => (
-                  <Link key={p.id} to={`/projects/${p.id}`} className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-bg-muted/60">
+            <CardHeader
+              icon={<Container />}
+              title="Warehouse load"
+              description="Volume standing in each store against what it holds."
+            />
+            <CardBody className="space-y-3">
+              {loads
+                .filter((l) => l.warehouse.active)
+                .sort((a, b) => b.utilisationPct - a.utilisationPct)
+                .map((l) => (
+                  <div key={l.warehouse.id} className="flex items-center gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[12.5px] font-medium text-fg">{p.name}</p>
-                      <p className="flex items-center gap-1 truncate text-[11.5px] text-fg-muted">
-                        🇮🇩 {p.polName} <ArrowRight className="size-3" /> {countryFlag(p.destCountry)} {p.podName}
-                        {p.vessel && <span className="ml-1 text-fg-subtle">· {p.vessel}</span>}
+                      <p className="truncate text-[12.5px] font-medium text-fg">{l.warehouse.name}</p>
+                      <p className="tnum truncate text-[11.5px] text-fg-muted">
+                        {fmtNumber(l.cbm, 1)} of {fmtNumber(l.warehouse.capacityM3)} m³ · {fmtCurrency(l.value, 'IDR', { compact: true })}
                       </p>
                     </div>
-                    <span className="shrink-0 text-right">
-                      <span className="tnum block text-[12px] font-medium text-fg">{fmtDate(p.etd)}</span>
-                      <span className="block text-[11px] text-fg-muted">
-                        {relativeDays(p.etd)! > 0 ? `in ${pluralDays(relativeDays(p.etd)!)}` : relativeDays(p.etd) === 0 ? 'today' : 'overdue'}
-                      </span>
-                    </span>
-                  </Link>
+                    <UtilisationBar pct={l.utilisationPct} className="w-24 shrink-0" />
+                  </div>
                 ))}
-              </div>
-            )}
-          </Card>
-
-          <Card>
-            <CardHeader icon={<ContainerIcon />} title="Capacity & equipment" />
-            <CardBody className="space-y-3">
-              <Row label="Units under management" value={`${containers.length} (${teu} TEU)`} />
-              <Row label="Volume planned" value={`${fmtNumber(totalCbm, 1)} m³`} />
-              <Row label="Gross weight" value={`${fmtNumber(totalKg / 1000, 1)} tonnes`} />
-              <Row label="Units needing a re-plan" value={`${poorlyUsed.length}`} tone={poorlyUsed.length ? 'warning' : 'success'} />
-              <div className="pt-1">
-                <div className="mb-1.5 flex items-baseline justify-between">
-                  <span className="text-[11.5px] text-fg-muted">VGM submitted</span>
-                  <span className="tnum text-[11.5px] font-medium text-fg">
-                    {containers.filter((c) => c.vgmSubmittedAt).length}/{containers.filter((c) => c.type !== 'LCL').length}
-                  </span>
-                </div>
-                <Progress
-                  value={
-                    (containers.filter((c) => c.vgmSubmittedAt).length /
-                      Math.max(1, containers.filter((c) => c.type !== 'LCL').length)) *
-                    100
-                  }
-                  tone="accent"
-                />
-              </div>
             </CardBody>
           </Card>
+        </div>
+      </div>
 
-          {consignmentJobs.length > 0 && (
-            <Card className="border-purple/25">
-              <CardHeader icon={<Repeat />} title="Consignment programme" description="Stock sitting at destination that the shipper still owns." className="bg-purple-soft/30" />
-              <CardBody className="space-y-3">
-                <Row label="Active consignment jobs" value={`${consignmentJobs.length}`} />
-                <Row label="Units unsold at destination" value={fmtNumber(consignmentUnsold)} tone={consignmentUnsold > 500 ? 'warning' : undefined} />
-                <Row
-                  label="Settled to date"
-                  value={fmtCurrency(consignmentJobs.reduce((a, p) => a + p.consignment!.settledAmount, 0), consignmentJobs[0].consignment!.currency, { compact: true })}
-                />
-                {consignmentJobs.map((p) => {
-                  const c = p.consignment!
-                  const pct = (c.reportedUnitsSold / Math.max(1, c.totalUnitsShipped)) * 100
-                  return (
-                    <Link key={p.id} to={`/projects/${p.id}`} className="block rounded-lg border border-border bg-surface-sunken px-3 py-2 transition-colors hover:border-border-strong">
-                      <div className="mb-1 flex items-baseline justify-between gap-2">
-                        <span className="truncate text-[12px] font-medium text-fg">{p.code}</span>
-                        <span className="tnum text-[11.5px] text-fg-muted">
-                          {c.reportedUnitsSold}/{c.totalUnitsShipped} sold
-                        </span>
-                      </div>
-                      <Progress value={pct} tone="accent" size="sm" />
-                    </Link>
-                  )
-                })}
-              </CardBody>
-            </Card>
-          )}
-
-          <Card>
-            <CardHeader icon={<Banknote />} title="Company P&L snapshot" description="From the posted journal." />
-            <CardBody className="space-y-3">
-              <Row label="Revenue" value={fmtCurrency(pl.totalRevenue, 'IDR', { compact: true })} />
-              <Row label="Cost of service" value={fmtCurrency(pl.totalCogs, 'IDR', { compact: true })} />
-              <Row label="Gross profit" value={`${fmtCurrency(pl.grossProfit, 'IDR', { compact: true })} · ${fmtPercent(pl.grossMarginPct)}`} tone="success" />
-              <Row label="Operating expense" value={fmtCurrency(pl.totalExpense, 'IDR', { compact: true })} />
-              <Row
-                label="Operating profit"
-                value={`${fmtCurrency(pl.operatingProfit, 'IDR', { compact: true })} · ${fmtPercent(pl.netMarginPct)}`}
-                tone={pl.operatingProfit >= 0 ? 'success' : 'danger'}
-                strong
-              />
-              <Button variant="secondary" size="sm" className="w-full" onClick={() => nav('/finance/reports')}>
-                <FileStack /> Open the full reports
+      {/* ---------------- pipeline and spend ---------------- */}
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <Card>
+          <CardHeader
+            title="The order book by stage"
+            description={`${wl.open} still being won, ${wl.won} won, ${wl.lost} lost. Win rate ${fmtPercent(wl.winRatePct, 0)} on decided enquiries.`}
+            actions={
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/pipeline">Open the board</Link>
               </Button>
-            </CardBody>
-          </Card>
-        </div>
-      </div>
-    </>
-  )
-}
+            }
+          />
+          <CardBody className="space-y-2">
+            {funnel
+              .filter((f) => f.count > 0)
+              .map((f) => {
+                const max = Math.max(...funnel.map((x) => x.valueIdr), 1)
+                return (
+                  <div key={f.stage.key} className="flex items-center gap-3">
+                    <span className="w-[124px] shrink-0 truncate text-[12.5px] text-fg-muted">{f.stage.label}</span>
+                    <div className="relative h-6 min-w-0 flex-1 overflow-hidden rounded bg-surface-sunken">
+                      <div
+                        className="h-full rounded bg-primary/75 transition-all"
+                        style={{ width: `${Math.max(3, (f.valueIdr / max) * 100)}%` }}
+                      />
+                      <span className="tnum absolute inset-y-0 left-2 flex items-center text-[11.5px] font-medium text-fg">
+                        {f.count} · {fmtCurrency(f.valueIdr, 'IDR', { compact: true })}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+          </CardBody>
+        </Card>
 
-function ExceptionRow({ exception }: { exception: Exception }) {
-  const tone =
-    exception.severity === 'CRITICAL'
-      ? { chip: 'bg-danger-soft text-danger-soft-fg', dot: 'bg-danger' }
-      : exception.severity === 'HIGH'
-        ? { chip: 'bg-warning-soft text-warning-soft-fg', dot: 'bg-warning' }
-        : { chip: 'bg-neutral-soft text-neutral-soft-fg', dot: 'bg-fg-subtle' }
-  return (
-    <Link to={exception.link} className="flex gap-3 px-4 py-3 transition-colors hover:bg-bg-muted/60">
-      <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', tone.dot)} />
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-[13px] font-medium text-fg">{exception.title}</p>
-          <span className={cn('rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide', tone.chip)}>
-            {exception.severity}
-          </span>
-          <Badge tone="outline" size="sm">{exception.category.replace(/_/g, ' ').toLowerCase()}</Badge>
-        </div>
-        <p className="mt-1 text-[12.5px] leading-relaxed text-fg-muted">{exception.detail}</p>
-        <p className="mt-1.5 flex items-center gap-1.5 text-[11.5px] font-medium text-primary">
-          {exception.action} <ArrowRight className="size-3" />
-        </p>
+        <Card>
+          <CardHeader
+            title="Where the money is being spent"
+            description="Purchase orders by cost category, showing what has actually been received against what is only committed."
+            actions={
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/purchase-orders">Orders</Link>
+              </Button>
+            }
+          />
+          <CardBody className="space-y-2">
+            {spend.slice(0, 9).map((row) => {
+              const max = Math.max(...spend.map((x) => x.ordered), 1)
+              const label = COST_CATEGORIES.find((c) => c.value === row.category)?.label ?? row.category
+              return (
+                <div key={row.category} className="flex items-center gap-3">
+                  <span className="w-[124px] shrink-0 truncate text-[12.5px] text-fg-muted">{label}</span>
+                  <div className="relative h-6 min-w-0 flex-1 overflow-hidden rounded bg-surface-sunken">
+                    <div className="absolute inset-y-0 left-0 rounded bg-warning/30" style={{ width: `${(row.ordered / max) * 100}%` }} />
+                    <div className="absolute inset-y-0 left-0 rounded bg-accent/70" style={{ width: `${(row.received / max) * 100}%` }} />
+                    <span className="tnum absolute inset-y-0 left-2 flex items-center text-[11.5px] font-medium text-fg">
+                      {fmtCurrency(row.received, 'IDR', { compact: true })} of {fmtCurrency(row.ordered, 'IDR', { compact: true })}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+            <p className="pt-1 text-[11.5px] text-fg-subtle">
+              Solid is received and therefore a real cost. The pale band behind it is ordered and not yet delivered — money
+              promised to a supplier that has not yet turned into anything you can put in a container.
+            </p>
+          </CardBody>
+        </Card>
       </div>
-    </Link>
-  )
-}
 
-function Row({
-  label,
-  value,
-  tone,
-  strong,
-}: {
-  label: string
-  value: string
-  tone?: 'success' | 'warning' | 'danger'
-  strong?: boolean
-}) {
-  const toneCls = tone === 'success' ? 'text-success' : tone === 'warning' ? 'text-warning' : tone === 'danger' ? 'text-danger' : 'text-fg'
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-[12px] text-fg-muted">{label}</span>
-      <span className={cn('tnum text-[12.5px]', strong ? 'font-semibold' : 'font-medium', toneCls)}>{value}</span>
+      {/* ---------------- margin watch ---------------- */}
+      <Card className="mt-4">
+        <CardHeader
+          title="Margin watch"
+          description="Every won order, ranked by the margin its approved budget leaves. The thinnest ones are where a late delivery or a rework turns a profit into a loss."
+          actions={
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/profitability">Full profitability</Link>
+            </Button>
+          }
+        />
+        <div className="scrollbar-thin overflow-x-auto">
+          <table className="w-full min-w-[720px] text-[12.5px]">
+            <thead>
+              <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
+                <th className="px-4 py-2 font-medium">Order</th>
+                <th className="px-4 py-2 font-medium">Buyer</th>
+                <th className="px-4 py-2 text-right font-medium">Revenue</th>
+                <th className="px-4 py-2 text-right font-medium">Budget</th>
+                <th className="px-4 py-2 text-right font-medium">Margin</th>
+                <th className="px-4 py-2 font-medium">Against target</th>
+                <th className="px-4 py-2 font-medium">Ships</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {live
+                .map((p) => {
+                  const budget = store.budgets.find(
+                    (b) => b.projectId === p.id && (b.status === 'APPROVED' || b.status === 'CLOSED'),
+                  )
+                  const revenue = revenueIdr(p)
+                  const cost = budgetTotal(budget)
+                  return { p, budget, revenue, cost, pct: revenue && cost ? ((revenue - cost) / revenue) * 100 : null }
+                })
+                .sort((a, b) => (a.pct === null ? 999 : a.pct) - (b.pct === null ? 999 : b.pct))
+                .slice(0, 8)
+                .map(({ p, budget, revenue, cost, pct }) => (
+                  <tr key={p.id} className="hover:bg-bg-muted/50">
+                    <td className="px-4 py-2.5">
+                      <Link to={`/projects/${p.id}`} className="font-medium text-fg hover:text-primary">
+                        {p.code}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-2.5 text-fg-muted">{p.buyerName}</td>
+                    <td className="tnum px-4 py-2.5 text-right">{fmtCurrency(revenue, 'IDR', { compact: true })}</td>
+                    <td className="tnum px-4 py-2.5 text-right text-fg-muted">
+                      {cost ? fmtCurrency(cost, 'IDR', { compact: true }) : '—'}
+                    </td>
+                    <td className="tnum px-4 py-2.5 text-right font-semibold">
+                      {pct === null ? <span className="text-fg-subtle">no budget</span> : fmtPercent(pct as number, 1)}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {budget && pct !== null ? (
+                        <Badge
+                          size="sm"
+                          tone={pct >= budget.targetMarginPct ? 'success' : pct >= budget.targetMarginPct - 4 ? 'warning' : 'danger'}
+                        >
+                          target {budget.targetMarginPct}%
+                        </Badge>
+                      ) : (
+                        <Badge size="sm" tone="danger">not costed</Badge>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-fg-muted">
+                      {fmtDate(p.targetShipAt, 'short')}{' '}
+                      <span className="text-fg-subtle">({relativeLabel(p.targetShipAt)})</span>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
   )
 }

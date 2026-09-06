@@ -1,7 +1,7 @@
 import {
-  Banknote, BarChart3, BookOpen, Boxes, Building2, Container, FileSignature, FileStack, Gauge,
-  Globe2, Handshake, LineChart, Radio, Receipt, Settings, Ship, ShieldAlert, SprayCan, Stamp, Tags,
-  LayoutList, PackageCheck, Wallet, Warehouse,
+  ArrowLeftRight, Banknote, BookOpen, Boxes, Building2, ClipboardList, Container, FileSpreadsheet,
+  Factory, Gauge, Handshake, LineChart, Package, PackageCheck, Receipt, Ruler, Settings, ShoppingCart,
+  Trees, Warehouse, Wallet,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -10,9 +10,11 @@ export interface NavItem {
   label: string
   icon: LucideIcon
   badgeKey?:
-    | 'exceptions' | 'projects' | 'overdue' | 'quotes' | 'customs' | 'incidents' | 'stuffing'
-    | 'myBlocking' | 'myIntake' | 'myExecute' | 'myDocs' | 'myClosing'
+    | 'exceptions' | 'projects' | 'inquiries' | 'budgets' | 'requests' | 'orders' | 'receipts'
+    | 'reorder' | 'production' | 'shipments' | 'payables' | 'receivables'
   description?: string
+  /** matched as a prefix, for detail routes */
+  end?: boolean
 }
 
 export interface NavGroup {
@@ -20,82 +22,70 @@ export interface NavGroup {
   items: NavItem[]
 }
 
-/**
- * The operator's navigation. Four phases instead of twenty menu items, because
- * an operator does not browse the system — they work a job from one end to the
- * other and need to know what it wants next.
- */
-export const OPERATOR_NAV: NavGroup[] = [
-  {
-    label: 'My work',
-    items: [
-      { to: '/my', label: 'My jobs', icon: LayoutList, badgeKey: 'myBlocking', description: 'Everything on your desk, by phase' },
-    ],
-  },
-  {
-    label: 'A job, end to end',
-    items: [
-      { to: '/my/intake', label: '1 · Take it on', icon: Handshake, badgeKey: 'myIntake', description: 'Menerima project — read the brief and accept' },
-      { to: '/my/execute', label: '2 · Run it', icon: Ship, badgeKey: 'myExecute', description: 'Execute project — containers, stuffing, gate-in' },
-      { to: '/my/documents', label: '3 · Paper it', icon: FileStack, badgeKey: 'myDocs', description: 'Pengaturan dokumen — the full checklist' },
-      { to: '/my/closing', label: '4 · Close it', icon: Receipt, badgeKey: 'myClosing', description: 'Penutup — charges, settlement, job sheet' },
-    ],
-  },
-  {
-    label: 'Reference',
-    items: [
-      { to: '/tracking', label: 'Tracking', icon: Radio, description: 'Milestones and punctuality' },
-      { to: '/stuffing', label: 'Yard schedule', icon: PackageCheck, description: 'Every stuffing slot by day' },
-      { to: '/incidents', label: 'Incidents', icon: ShieldAlert, description: 'Log what went wrong' },
-    ],
-  },
-]
-
 export const NAV: NavGroup[] = [
   {
     label: 'Control',
-    items: [{ to: '/', label: 'Control Tower', icon: Gauge, description: 'Exceptions, cut-offs and pipeline health' }],
+    items: [
+      { to: '/', label: 'Control Tower', icon: Gauge, badgeKey: 'exceptions', end: true, description: 'Everything about to go wrong, ranked' },
+    ],
   },
   {
     label: 'Commercial',
     items: [
-      { to: '/quotations', label: 'Quotations', icon: FileSignature, badgeKey: 'quotes', description: 'Pipeline, revisions, win and loss' },
-      { to: '/customers', label: 'Customers', icon: Building2, description: 'Clients, shippers and consignees' },
-      { to: '/offices', label: 'Country Offices', icon: Globe2, description: 'Every customer office worldwide' },
-      { to: '/packages', label: 'Service Packages', icon: Tags, description: 'Rate cards and tariffs' },
-      { to: '/partners', label: 'Partners & Vendors', icon: Handshake, description: 'Carriers, agents, truckers, brokers' },
+      { to: '/projects', label: 'Projects', icon: Ruler, badgeKey: 'projects', description: 'Inquiry, negotiation, drawings, samples, order' },
+      { to: '/pipeline', label: 'Pipeline', icon: LineChart, badgeKey: 'inquiries', description: 'The order book by stage' },
+      { to: '/buyers', label: 'Buyers', icon: Building2, description: 'Overseas customers, terms and credit' },
     ],
   },
   {
-    label: 'Operations',
+    label: 'Costing',
     items: [
-      { to: '/projects', label: 'Projects', icon: Ship, badgeKey: 'projects', description: 'Export jobs from inquiry to settlement' },
-      { to: '/tracking', label: 'Tracking', icon: Radio, description: 'Milestones, punctuality, event log' },
-      { to: '/containers', label: 'Containers', icon: Container, description: 'Every unit across all jobs' },
-      { to: '/stuffing', label: 'Stuffing', icon: PackageCheck, badgeKey: 'stuffing', description: 'Yard schedule, tally and gate-in' },
-      { to: '/documents', label: 'Documents', icon: FileStack, description: 'Document register and compliance' },
-      { to: '/customs', label: 'Customs', icon: Stamp, badgeKey: 'customs', description: 'PEB filings, CEISA 4.0, LARTAS' },
-      { to: '/warehouse', label: 'Warehouse & CFS', icon: Warehouse, description: 'Receipts, dwell and storage' },
-      { to: '/services', label: 'Additional Services', icon: SprayCan, description: 'Fumigation, crating, survey, insurance' },
-      { to: '/incidents', label: 'Incidents & Claims', icon: ShieldAlert, badgeKey: 'incidents', description: 'Rollovers, holds, damage, demurrage' },
-      { to: '/charges', label: 'Charges', icon: Receipt, description: 'Buy and sell lines across all jobs' },
+      { to: '/budgets', label: 'Budgets (RAB)', icon: FileSpreadsheet, badgeKey: 'budgets', description: 'Anggaran belanja, approval and variance' },
+      { to: '/profitability', label: 'Profitability', icon: LineChart, description: 'Budget against committed, actual and margin' },
+    ],
+  },
+  {
+    label: 'Procurement',
+    items: [
+      { to: '/requests', label: 'Purchase Requests', icon: ClipboardList, badgeKey: 'requests', description: 'What production is asking for' },
+      { to: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingCart, badgeKey: 'orders', description: 'Placed, open and overdue' },
+      { to: '/receipts', label: 'Goods Receipts', icon: PackageCheck, badgeKey: 'receipts', description: 'Full, partial and direct deliveries' },
+      { to: '/suppliers', label: 'Suppliers', icon: Handshake, description: 'Sawmills, workshops and their certificates' },
+    ],
+  },
+  {
+    label: 'Inventory',
+    items: [
+      { to: '/inventory', label: 'Stock on Hand', icon: Boxes, badgeKey: 'reorder', description: 'Item by warehouse, with what is spoken for' },
+      { to: '/items', label: 'Item Master', icon: Package, description: 'Timber, panel, hardware, finished goods' },
+      { to: '/warehouses', label: 'Warehouses', icon: Warehouse, description: 'Seven locations and how full they are' },
+      { to: '/movements', label: 'Stock Ledger', icon: BookOpen, description: 'Every movement that made a balance' },
+      { to: '/transfers', label: 'Transfers & Counts', icon: ArrowLeftRight, description: 'Between warehouses, and stock opname' },
+    ],
+  },
+  {
+    label: 'Make & ship',
+    items: [
+      { to: '/production', label: 'Work Orders', icon: Factory, badgeKey: 'production', description: 'The floor, stage by stage' },
+      { to: '/shipments', label: 'Shipments & Docs', icon: Container, badgeKey: 'shipments', description: 'Containers, V-Legal, PEB, EUDR' },
     ],
   },
   {
     label: 'Finance',
     items: [
-      { to: '/finance/ledger', label: 'General Ledger', icon: BookOpen, description: 'Double-entry journal' },
-      { to: '/finance/accounts', label: 'Chart of Accounts', icon: Boxes, description: 'Account structure' },
-      { to: '/finance/invoices', label: 'Invoices & Bills', icon: Wallet, badgeKey: 'overdue', description: 'AR and AP' },
-      { to: '/finance/reports', label: 'Financial Reports', icon: LineChart, description: 'P&L, balance sheet, trial balance' },
-      { to: '/finance/profitability', label: 'Job Profitability', icon: Banknote, description: 'Margin per project' },
+      { to: '/payables', label: 'Payables', icon: Receipt, badgeKey: 'payables', description: 'Supplier bills and the three-way match' },
+      { to: '/receivables', label: 'Receivables', icon: Banknote, badgeKey: 'receivables', description: 'Deposits, balances and what is late' },
+      { to: '/payments', label: 'Payments', icon: Wallet, description: 'Money in and money out' },
+      { to: '/ledger', label: 'General Ledger', icon: BookOpen, description: 'Journal and chart of accounts' },
     ],
   },
   {
     label: 'Insight',
     items: [
-      { to: '/analytics', label: 'Operations Analytics', icon: BarChart3, description: 'On-time, win rate, DSO, utilisation' },
-      { to: '/settings', label: 'Settings & Audit', icon: Settings, description: 'Rates, tax, numbering, audit trail' },
+      { to: '/analytics', label: 'Analytics', icon: LineChart, description: 'Win rate, spend, punctuality, margin' },
+      { to: '/settings', label: 'Settings & Audit', icon: Settings, description: 'Company, licences, thresholds, activity' },
     ],
   },
 ]
+
+export const BRAND_ICON = Trees

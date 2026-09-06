@@ -1,209 +1,248 @@
 import * as React from 'react'
-import {
-  Banknote, Building2, Coins, Cog, Download, Hash, History, RotateCcw, ShieldCheck, Target, Trash2,
-  Users,
-} from 'lucide-react'
-import type { AppSettings, NumberingSeries } from '@/data/types'
-import { useErp } from '@/store/useErp'
-import { PageHeader } from '@/components/shared/PageHeader'
+import { Building2, History, Settings as SettingsIcon, ShieldCheck, Users } from 'lucide-react'
+import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Tabs } from '@/components/ui/tabs'
 import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/checkbox'
-import { Tabs } from '@/components/ui/tabs'
-import { EmptyState, Separator } from '@/components/ui/misc'
-import { ConfirmDelete } from '@/components/ui/confirm'
-import { exportCsv } from '@/lib/csv'
-import { fmtCurrency, fmtDateTime, titleCase } from '@/lib/format'
+import { EmptyState } from '@/components/ui/misc'
 import { useToast } from '@/components/ui/toast'
-import { defaultSettings } from '@/data/seed2'
-import { CompanyPanel } from './CompanyPanel'
-import { UsersPanel } from './UsersPanel'
+import { MetaRow, StatusBadge } from '@/components/shared/status'
+import { cn } from '@/lib/utils'
+import { fmtDate, fmtDateTime, fmtNumber, relativeDays, titleCase } from '@/lib/format'
+import { useErp } from '@/store/useErp'
+import { useAuth } from '@/store/useAuth'
+import { ACCOUNT_STATUSES, roleLabel } from '@/data/reference'
 
 export function SettingsPage() {
+  const store = useErp()
+  const auth = useAuth()
   const toast = useToast()
-  const { settings, activity, updateSettings, clearActivity, resetDemoData } = useErp()
-  const [tab, setTab] = React.useState<'organisation' | 'users' | 'company' | 'finance' | 'numbering' | 'targets' | 'audit'>('organisation')
-  const [clearOpen, setClearOpen] = React.useState(false)
+  const [view, setView] = React.useState<'company' | 'thresholds' | 'people' | 'audit'>('company')
+  const [draft, setDraft] = React.useState(store.settings)
 
-  const set = <K extends keyof AppSettings>(k: K, v: AppSettings[K]) => updateSettings({ [k]: v } as Partial<AppSettings>)
+  React.useEffect(() => setDraft(store.settings), [store.settings])
 
-  const patchSeries = (key: string, patch: Partial<NumberingSeries>) =>
-    set('numbering', settings.numbering.map((n) => (n.key === key ? { ...n, ...patch } : n)))
-
-  const preview = (n: NumberingSeries) =>
-    `${n.prefix}-${n.includeYear ? `${new Date().getFullYear()}-` : ''}${String(n.nextNumber).padStart(n.padding, '0')}`
+  const expiring = store.company.licences.filter((l) => (relativeDays(l.expiresAt) ?? 999) < store.settings.certificateWarningDays)
 
   return (
-    <>
+    <div className="min-h-0">
       <PageHeader
-        title="Settings & Audit"
-        description="Who we are on paper — licences, branches, bank accounts and the cover behind our liability — and the knobs the rest of the system reads: exchange rates, tax, document numbering, approval thresholds and KPI targets, with a record of every change made here."
+        eyebrow={<Badge tone="primary" size="sm">Insight</Badge>}
+        title="Settings & audit"
+        description="The company's own licences, the thresholds the system enforces, the people who can sign in, and a record of what has been changed in this browser."
         actions={
-          <Button
-            variant="secondary"
-            onClick={() => {
-              updateSettings(structuredClone(defaultSettings))
-              toast.push({ tone: 'success', title: 'Settings restored to defaults' })
-            }}
-          >
-            <RotateCcw /> Restore defaults
-          </Button>
+          <Tabs
+            variant="pill"
+            value={view}
+            onChange={setView}
+            items={[
+              { value: 'company', label: 'Company' },
+              { value: 'thresholds', label: 'Thresholds' },
+              { value: 'people', label: 'People', count: auth.users.length },
+              { value: 'audit', label: 'Activity', count: store.activity.length },
+            ]}
+          />
         }
       />
 
-      <Tabs
-        value={tab}
-        onChange={setTab}
-        variant="pill"
-        className="mb-4"
-        items={[
-          { value: 'organisation', label: 'Our company', icon: <Building2 /> },
-          { value: 'users', label: 'Users & access', icon: <Users /> },
-          { value: 'company', label: 'Workspace', icon: <Cog /> },
-          { value: 'finance', label: 'Currency & tax', icon: <Coins /> },
-          { value: 'numbering', label: 'Numbering', icon: <Hash />, count: settings.numbering.length },
-          { value: 'targets', label: 'KPI targets', icon: <Target /> },
-          { value: 'audit', label: 'Audit trail', icon: <History />, count: activity.length },
-        ]}
-      />
+      {view === 'company' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard label="Founded" value={String(store.company.foundedYear)} sub={`${store.company.workshopCount} workshops · ${store.company.headcount} people`} icon={<Building2 />} accent="primary" />
+            <KpiCard label="Licences" value={String(store.company.licences.length)} sub="registrations and certifications" accent="accent" />
+            <KpiCard
+              label="Expiring soon"
+              value={String(expiring.length)}
+              sub={expiring.map((l) => l.kind.replace(/_/g, ' ').toLowerCase()).join(', ') || 'nothing inside the warning window'}
+              icon={<ShieldCheck />}
+              accent={expiring.length ? 'danger' : 'success'}
+            />
+            <KpiCard label="Bank accounts" value={String(store.company.bankAccounts.length)} sub={store.company.bankAccounts.map((b) => b.currency).join(', ')} accent="accent" />
+          </div>
 
-      {tab === 'organisation' && <CompanyPanel />}
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+            <Card>
+              <CardHeader icon={<Building2 />} title={store.company.legalName} description={`Trading as ${store.company.tradingName}`} />
+              <CardBody className="divide-y divide-border py-0">
+                <MetaRow label="Tax id">{store.company.taxId}</MetaRow>
+                <MetaRow label="Registration">{store.company.registrationNo}</MetaRow>
+                <MetaRow label="Exporter id">{store.company.exporterId}</MetaRow>
+                <MetaRow label="Address">{store.company.addressLine}</MetaRow>
+                <MetaRow label="City">{store.company.city}, {store.company.province}</MetaRow>
+                <MetaRow label="Phone">{store.company.phone}</MetaRow>
+                <MetaRow label="Email">{store.company.email}</MetaRow>
+                <MetaRow label="Website">{store.company.website}</MetaRow>
+              </CardBody>
+              <CardBody className="border-t border-border">
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">Bank accounts</p>
+                <div className="space-y-2">
+                  {store.company.bankAccounts.map((b) => (
+                    <div key={b.id} className="rounded-lg border border-border bg-surface-sunken px-3 py-2">
+                      <p className="text-[12.5px] font-medium text-fg">
+                        {b.bankName} <Badge size="sm" tone="neutral">{b.currency}</Badge>
+                        {b.primary && <Badge size="sm" tone="primary" className="ml-1">primary</Badge>}
+                      </p>
+                      <p className="tnum text-[11.5px] text-fg-muted">{b.accountNo}{b.swift ? ` · SWIFT ${b.swift}` : ''}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardBody>
+            </Card>
 
-      {tab === 'users' && <UsersPanel />}
-
-      {tab === 'company' && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
-            <CardHeader icon={<Cog />} title="Legal entity" description="Printed on quotations, invoices and customs declarations." />
-            <CardBody className="grid gap-4">
-              <Field label="Company name">
-                <Input value={settings.companyName} onChange={(e) => set('companyName', e.target.value)} />
-              </Field>
-              <Field label="Tax ID (NPWP)">
-                <Input value={settings.companyTaxId} onChange={(e) => set('companyTaxId', e.target.value)} className="font-mono" />
-              </Field>
-              <Field label="Base currency" help="Every report is presented in this currency after translation.">
-                <Input value={settings.baseCurrency} disabled />
-              </Field>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader icon={<ShieldCheck />} title="Approval thresholds" description="Above these values a second approver is required before a line can be locked." />
-            <CardBody className="grid gap-4">
-              <Field label="Charge approval threshold" hint="IDR" help="Sell-side lines above this need a supervisor.">
-                <Input type="number" value={settings.chargeApprovalThreshold} onChange={(e) => set('chargeApprovalThreshold', Number(e.target.value))} className="tnum" />
-              </Field>
-              <Field label="Vendor bill approval threshold" hint="IDR">
-                <Input type="number" value={settings.billApprovalThreshold} onChange={(e) => set('billApprovalThreshold', Number(e.target.value))} className="tnum" />
-              </Field>
-              <Separator />
-              <div className="rounded-lg border border-border bg-surface-sunken px-3.5 py-3 text-[12px] leading-relaxed text-fg-muted">
-                Currently a charge above{' '}
-                <span className="font-semibold text-fg">{fmtCurrency(settings.chargeApprovalThreshold, 'IDR')}</span> or a bill
-                above <span className="font-semibold text-fg">{fmtCurrency(settings.billApprovalThreshold, 'IDR')}</span> is
-                flagged for a second pair of eyes.
+            <Card>
+              <CardHeader
+                icon={<ShieldCheck />}
+                title="Licences and certifications"
+                description="Our own paperwork. A lapse here is worse than a supplier's: every export filed under an expired licence is challengeable."
+              />
+              <div className="divide-y divide-border">
+                {store.company.licences
+                  .slice()
+                  .sort((a, b) => (relativeDays(a.expiresAt) ?? 0) - (relativeDays(b.expiresAt) ?? 0))
+                  .map((l) => {
+                    const left = relativeDays(l.expiresAt) ?? 0
+                    return (
+                      <div key={l.id} className={cn('px-4 py-3', left < store.settings.certificateWarningDays && 'bg-warning-soft/25')}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-[13px] font-medium text-fg">{titleCase(l.kind)}</p>
+                            <p className="tnum truncate text-[11.5px] text-fg-muted">{l.reference} · {l.issuer}</p>
+                          </div>
+                          <Badge size="sm" tone={left < 0 ? 'danger' : left < 60 ? 'warning' : 'success'}>
+                            {left < 0 ? 'expired' : `${left}d`}
+                          </Badge>
+                        </div>
+                        <p className="mt-1 text-[11.5px] text-fg-subtle">
+                          Issued {fmtDate(l.issuedAt)} · expires {fmtDate(l.expiresAt)}
+                        </p>
+                        {l.note && <p className="mt-1 text-[12px] leading-relaxed text-fg-muted">{l.note}</p>}
+                      </div>
+                    )
+                  })}
               </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
+      {view === 'thresholds' && (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <Card>
+            <CardHeader icon={<SettingsIcon />} title="What the system enforces" description="Change one and the exception list changes with it — nothing here is decoration." />
+            <CardBody className="space-y-4">
+              <Field label="Target margin" help="The margin an estimator is expected to build into a budget before it goes for approval.">
+                <Input value={String(draft.targetMarginPct)} onChange={(e) => setDraft({ ...draft, targetMarginPct: Number(e.target.value) || 0 })} trailing={<span className="text-[12px] text-fg-subtle">%</span>} />
+              </Field>
+              <Field label="Purchase order approval threshold" help="Above this, an order needs a director's signature rather than the purchasing manager's.">
+                <Input value={String(draft.poApprovalThresholdIdr)} onChange={(e) => setDraft({ ...draft, poApprovalThresholdIdr: Number(e.target.value) || 0 })} trailing={<span className="text-[12px] text-fg-subtle">IDR</span>} />
+              </Field>
+              <Field label="Supplier invoice tolerance" help="How far a supplier invoice may exceed what was received before finance stops it as a variance.">
+                <Input value={String(draft.billVarianceTolerancePct)} onChange={(e) => setDraft({ ...draft, billVarianceTolerancePct: Number(e.target.value) || 0 })} trailing={<span className="text-[12px] text-fg-subtle">%</span>} />
+              </Field>
+              <Field label="Over-receipt tolerance" help="How much more than the ordered quantity the warehouse will still book in.">
+                <Input value={String(draft.defaultOverReceiptTolerancePct)} onChange={(e) => setDraft({ ...draft, defaultOverReceiptTolerancePct: Number(e.target.value) || 0 })} trailing={<span className="text-[12px] text-fg-subtle">%</span>} />
+              </Field>
+              <Field label="Default wastage" help="The allowance the estimator starts from, before adjusting per category.">
+                <Input value={String(draft.wastageDefaultPct)} onChange={(e) => setDraft({ ...draft, wastageDefaultPct: Number(e.target.value) || 0 })} trailing={<span className="text-[12px] text-fg-subtle">%</span>} />
+              </Field>
+              <Field label="Certificate warning window" help="How far ahead a lapsing SVLK, FSC or licence starts raising an exception.">
+                <Input value={String(draft.certificateWarningDays)} onChange={(e) => setDraft({ ...draft, certificateWarningDays: Number(e.target.value) || 0 })} trailing={<span className="text-[12px] text-fg-subtle">days</span>} />
+              </Field>
+              <Field label="Slow-moving threshold" help="Stock untouched for longer than this is called out as money standing still.">
+                <Input value={String(draft.slowMovingDays)} onChange={(e) => setDraft({ ...draft, slowMovingDays: Number(e.target.value) || 0 })} trailing={<span className="text-[12px] text-fg-subtle">days</span>} />
+              </Field>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  store.updateSettings(draft)
+                  toast.push({ tone: 'success', title: 'Thresholds saved', description: 'The exception list has been re-evaluated against them.' })
+                }}
+              >
+                Save thresholds
+              </Button>
             </CardBody>
           </Card>
 
-          <Card className="lg:col-span-2">
-            <CardHeader icon={<ShieldCheck />} title="Restricted commodities (LARTAS)" description="HS prefixes that require an export permit before the documentation gate opens." />
-            <CardBody>
-              <Field label="HS prefixes" help="Comma separated. A job whose HS codes start with any of these raises a compliance exception.">
-                <Input
-                  value={settings.restrictedHsPrefixes.join(', ')}
-                  onChange={(e) => set('restrictedHsPrefixes', e.target.value.split(',').map((s) => s.trim()).filter(Boolean))}
-                  className="font-mono"
-                />
-              </Field>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {settings.restrictedHsPrefixes.map((p) => (
-                  <Badge key={p} tone="warning" size="md">{p}</Badge>
+          <div className="space-y-4">
+            <Card>
+              <CardHeader title="Exchange rates" description="The rates orders are converted at. An order keeps the rate it was taken on." />
+              <CardBody className="divide-y divide-border py-0">
+                {Object.entries(store.settings.fxRates).map(([code, rate]) => (
+                  <MetaRow key={code} label={code}>{fmtNumber(rate)} IDR</MetaRow>
                 ))}
-              </div>
-            </CardBody>
-          </Card>
+              </CardBody>
+            </Card>
+
+            <Card>
+              <CardHeader title="Container capacity" description="Usable volume, not internal volume — nothing stacks perfectly." />
+              <CardBody className="divide-y divide-border py-0">
+                {Object.entries(store.settings.containerCbm)
+                  .filter(([, v]) => v > 0)
+                  .map(([size, cbm]) => (
+                    <MetaRow key={size} label={size}>{cbm} m³</MetaRow>
+                  ))}
+              </CardBody>
+            </Card>
+
+            <Card>
+              <CardHeader title="Document numbering" description="The patterns codes are generated from." />
+              <CardBody className="divide-y divide-border py-0">
+                {Object.entries(store.settings.numbering).map(([key, pattern]) => (
+                  <MetaRow key={key} label={titleCase(key)}>
+                    <span className="tnum">{pattern}</span>
+                  </MetaRow>
+                ))}
+              </CardBody>
+            </Card>
+          </div>
         </div>
       )}
 
-      {tab === 'finance' && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
-            <CardHeader icon={<Banknote />} title="Exchange rates" description="Used to translate charge lines into the ledger. One unit of the currency in IDR." />
-            <CardBody className="grid gap-3 sm:grid-cols-2">
-              {Object.entries(settings.fxRates).map(([code, rate]) => (
-                <Field key={code} label={code} hint={code === 'IDR' ? 'base' : undefined}>
-                  <Input
-                    type="number"
-                    value={rate}
-                    disabled={code === 'IDR'}
-                    onChange={(e) => set('fxRates', { ...settings.fxRates, [code]: Number(e.target.value) })}
-                    className="tnum"
-                  />
-                </Field>
-              ))}
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader icon={<Coins />} title="Tax rates" description="Indonesian VAT and withholding applied on charge lines." />
-            <CardBody className="grid gap-4">
-              <Field label="VAT — PPN (%)" help="Applied to taxable charge lines on the sell side.">
-                <Input type="number" value={settings.vatRate} onChange={(e) => set('vatRate', Number(e.target.value))} className="tnum" />
-              </Field>
-              <Field label="Withholding — PPh 23 (%)" help="Applied to service lines such as trucking and customs handling.">
-                <Input type="number" value={settings.whtRate} onChange={(e) => set('whtRate', Number(e.target.value))} className="tnum" />
-              </Field>
-              <Separator />
-              <div className="rounded-lg border border-border bg-surface-sunken px-3.5 py-3 text-[12px] leading-relaxed text-fg-muted">
-                An IDR 100,000,000 taxable line currently carries{' '}
-                <span className="font-semibold text-fg">{fmtCurrency((100_000_000 * settings.vatRate) / 100, 'IDR')}</span> of
-                output VAT and{' '}
-                <span className="font-semibold text-fg">{fmtCurrency((100_000_000 * settings.whtRate) / 100, 'IDR')}</span> of
-                withholding where PPh 23 applies.
-              </div>
-            </CardBody>
-          </Card>
-        </div>
-      )}
-
-      {tab === 'numbering' && (
+      {view === 'people' && (
         <Card>
-          <CardHeader icon={<Hash />} title="Document numbering" description="Prefix, year segment and padding per document type. The preview shows the next number that will be issued." />
+          <CardHeader icon={<Users />} title="Accounts" description="Sign-in is demonstrated against this list. Three accounts deliberately fail so the unverified, locked and suspended paths can be walked." />
           <div className="scrollbar-thin overflow-x-auto">
-            <table className="w-full text-[12.5px]">
-              <thead className="bg-surface-sunken text-[10.5px] uppercase tracking-[0.06em] text-fg-subtle">
-                <tr>
-                  <th className="px-4 py-2 text-left font-semibold">Document</th>
-                  <th className="px-4 py-2 text-left font-semibold">Prefix</th>
-                  <th className="px-4 py-2 text-center font-semibold">Year</th>
-                  <th className="px-4 py-2 text-right font-semibold">Padding</th>
-                  <th className="px-4 py-2 text-right font-semibold">Next</th>
-                  <th className="px-4 py-2 text-left font-semibold">Preview</th>
+            <table className="w-full min-w-[820px] text-[12.5px]">
+              <thead>
+                <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
+                  <th className="px-4 py-2 font-medium">Name</th>
+                  <th className="px-4 py-2 font-medium">Email</th>
+                  <th className="px-4 py-2 font-medium">Role</th>
+                  <th className="px-4 py-2 font-medium">Department</th>
+                  <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-4 py-2 font-medium">Last signed in</th>
+                  <th className="px-4 py-2" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {settings.numbering.map((n) => (
-                  <tr key={n.key}>
-                    <td className="px-4 py-2 font-medium text-fg">{n.label}</td>
-                    <td className="px-4 py-2">
-                      <Input value={n.prefix} onChange={(e) => patchSeries(n.key, { prefix: e.target.value })} className="h-8 w-28 font-mono text-[12.5px]" />
+                {auth.users.map((u) => (
+                  <tr key={u.id} className="hover:bg-bg-muted/50">
+                    <td className="px-4 py-2.5">
+                      <p className="font-medium text-fg">{u.fullName}</p>
+                      <p className="text-[11.5px] text-fg-muted">{u.jobTitle}</p>
                     </td>
-                    <td className="px-4 py-2 text-center">
-                      <Switch checked={n.includeYear} onChange={(v) => patchSeries(n.key, { includeYear: v })} size="sm" />
+                    <td className="px-4 py-2.5 text-fg-muted">{u.email}</td>
+                    <td className="px-4 py-2.5">
+                      <Badge size="sm" tone="neutral">{roleLabel(u.role)}</Badge>
                     </td>
-                    <td className="px-4 py-2 text-right">
-                      <Input type="number" value={n.padding} onChange={(e) => patchSeries(n.key, { padding: Number(e.target.value) })} className="tnum h-8 w-20 text-right text-[12.5px]" />
+                    <td className="px-4 py-2.5 text-fg-muted">{u.department}</td>
+                    <td className="px-4 py-2.5">
+                      <StatusBadge value={u.status} size="sm" />
+                      <p className="mt-0.5 text-[11px] text-fg-subtle">
+                        {ACCOUNT_STATUSES.find((s) => s.value === u.status)?.hint}
+                      </p>
                     </td>
-                    <td className="px-4 py-2 text-right">
-                      <Input type="number" value={n.nextNumber} onChange={(e) => patchSeries(n.key, { nextNumber: Number(e.target.value) })} className="tnum h-8 w-24 text-right text-[12.5px]" />
-                    </td>
-                    <td className="px-4 py-2">
-                      <span className="rounded bg-surface-sunken px-2 py-1 font-mono text-[12px] text-fg">{preview(n)}</span>
+                    <td className="px-4 py-2.5 text-fg-muted">{u.lastLoginAt ? fmtDateTime(u.lastLoginAt) : 'never'}</td>
+                    <td className="px-4 py-2.5 text-right">
+                      {u.status === 'LOCKED' && (
+                        <Button size="xs" onClick={() => auth.unlock(u.id)}>Unlock</Button>
+                      )}
+                      {u.status === 'PENDING_VERIFICATION' && (
+                        <Button size="xs" onClick={() => auth.verifyEmail(u.email)}>Verify</Button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -213,128 +252,59 @@ export function SettingsPage() {
         </Card>
       )}
 
-      {tab === 'targets' && (
-        <Card>
-          <CardHeader icon={<Target />} title="KPI targets" description="The operations analytics scorecard measures variance against these." />
-          <CardBody className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="Milestone punctuality (%)" help="Share of events landing on or before plan.">
-              <Input type="number" value={settings.kpiTargets.onTimePct} onChange={(e) => set('kpiTargets', { ...settings.kpiTargets, onTimePct: Number(e.target.value) })} className="tnum" />
-            </Field>
-            <Field label="Quote win rate (%)">
-              <Input type="number" value={settings.kpiTargets.winRatePct} onChange={(e) => set('kpiTargets', { ...settings.kpiTargets, winRatePct: Number(e.target.value) })} className="tnum" />
-            </Field>
-            <Field label="Gross margin (%)">
-              <Input type="number" value={settings.kpiTargets.grossMarginPct} onChange={(e) => set('kpiTargets', { ...settings.kpiTargets, grossMarginPct: Number(e.target.value) })} className="tnum" />
-            </Field>
-            <Field label="Days sales outstanding" help="Lower is better.">
-              <Input type="number" value={settings.kpiTargets.dsoDays} onChange={(e) => set('kpiTargets', { ...settings.kpiTargets, dsoDays: Number(e.target.value) })} className="tnum" />
-            </Field>
-            <Field label="Container utilisation (%)">
-              <Input type="number" value={settings.kpiTargets.utilisationPct} onChange={(e) => set('kpiTargets', { ...settings.kpiTargets, utilisationPct: Number(e.target.value) })} className="tnum" />
-            </Field>
-            <Field label="Document accuracy (%)">
-              <Input type="number" value={settings.kpiTargets.docAccuracyPct} onChange={(e) => set('kpiTargets', { ...settings.kpiTargets, docAccuracyPct: Number(e.target.value) })} className="tnum" />
-            </Field>
-          </CardBody>
-        </Card>
-      )}
-
-      {tab === 'audit' && (
+      {view === 'audit' && (
         <Card>
           <CardHeader
             icon={<History />}
-            title="Audit trail"
-            description="Every create, update, delete and import made in this workspace, newest first."
+            title="Activity"
+            description="What has been changed in this browser's copy of the data. There is no backend, so this is the whole audit trail."
             actions={
-              <>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={!activity.length}
-                  onClick={() => {
-                    exportCsv(
-                      'audit-trail',
-                      activity.map((a) => ({ at: a.at, actor: a.actor, action: a.action, entity: a.entity, detail: a.detail })),
-                      [
-                        { key: 'at', header: 'Timestamp' }, { key: 'actor', header: 'Actor' },
-                        { key: 'action', header: 'Action' }, { key: 'entity', header: 'Entity' },
-                        { key: 'detail', header: 'Detail' },
-                      ],
-                    )
-                    toast.push({ tone: 'success', title: 'Audit trail exported' })
-                  }}
-                >
-                  <Download /> Export
-                </Button>
-                <Button variant="dangerGhost" size="sm" disabled={!activity.length} onClick={() => setClearOpen(true)}>
-                  <Trash2 /> Clear
-                </Button>
-              </>
+              store.activity.length > 0 ? (
+                <Button size="sm" variant="ghost" onClick={() => store.clearActivity()}>Clear</Button>
+              ) : null
             }
           />
-          {activity.length === 0 ? (
-            <EmptyState
-              icon={<History />}
-              title="Nothing recorded yet"
-              description="Create, edit, import or delete something and it will appear here with who did it and when."
-            />
-          ) : (
-            <div className="scrollbar-thin max-h-[560px] divide-y divide-border overflow-y-auto">
-              {activity.map((a) => (
-                <div key={a.id} className="flex items-start gap-3 px-4 py-2.5">
-                  <Badge
-                    tone={a.action === 'delete' ? 'danger' : a.action === 'import' ? 'accent' : a.action === 'convert' ? 'purple' : 'neutral'}
-                    size="sm"
-                    className="mt-0.5 w-[68px] justify-center"
-                  >
-                    {titleCase(a.action)}
-                  </Badge>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[12.5px] text-fg">
-                      <span className="font-medium">{a.entity}</span>
-                      <span className="text-fg-muted"> — {a.detail}</span>
-                    </p>
-                    <p className="tnum mt-0.5 text-[11px] text-fg-subtle">{fmtDateTime(a.at)} · {a.actor}</p>
-                  </div>
+          <div className="divide-y divide-border">
+            {store.activity.length === 0 && (
+              <EmptyState
+                title="Nothing has been changed yet"
+                description="Approve a budget, book in a delivery or post a stock count and it will appear here."
+              />
+            )}
+            {store.activity.map((a) => (
+              <div key={a.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-[12.5px] text-fg">
+                    <span className="font-medium">{titleCase(a.action)}</span> · {a.entity} — {a.detail}
+                  </p>
+                  <p className="text-[11.5px] text-fg-muted">{a.actor}</p>
                 </div>
-              ))}
+                <span className="shrink-0 text-[11.5px] text-fg-subtle">{fmtDateTime(a.at)}</span>
+              </div>
+            ))}
+          </div>
+          <CardBody className="border-t border-border">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-[12.5px] leading-relaxed text-fg-muted">
+                Everything lives in this browser. Resetting puts the seeded operating book back exactly as it shipped —{' '}
+                {store.projects.length} orders, {store.budgets.length} budgets, {store.orders.length} purchase orders,{' '}
+                {store.receipts.length} deliveries, {fmtNumber(store.movements.length)} stock movements and{' '}
+                {store.journal.length} journal entries, across {store.items.length} items and {store.warehouses.length}{' '}
+                warehouses.
+              </p>
+              <Button
+                variant="outlineDanger"
+                onClick={() => {
+                  store.resetDemoData()
+                  toast.push({ tone: 'success', title: 'Demo data reset', description: 'The seeded book is back as it shipped.' })
+                }}
+              >
+                Reset demo data
+              </Button>
             </div>
-          )}
+          </CardBody>
         </Card>
       )}
-
-      <Card className="mt-4 border-danger/25">
-        <CardHeader
-          icon={<RotateCcw />}
-          title="Demo workspace"
-          description="This build keeps everything in the browser. Resetting restores the seeded dataset, including the deliberate faults that make the guards worth watching."
-          className="bg-danger-soft/25"
-        />
-        <CardBody>
-          <Button
-            variant="outlineDanger"
-            onClick={() => {
-              resetDemoData()
-              toast.push({ tone: 'success', title: 'Workspace reset', description: 'All modules restored to the seeded dataset.' })
-            }}
-          >
-            <RotateCcw /> Reset all demo data
-          </Button>
-        </CardBody>
-      </Card>
-
-      <ConfirmDelete
-        open={clearOpen}
-        onOpenChange={setClearOpen}
-        entityLabel="audit entry"
-        items={[`${activity.length} entries`]}
-        destructiveNote="An audit trail exists to be kept. Export it before clearing."
-        requireTypedConfirmation
-        onConfirm={() => {
-          clearActivity()
-          toast.push({ tone: 'success', title: 'Audit trail cleared' })
-        }}
-      />
-    </>
+    </div>
   )
 }

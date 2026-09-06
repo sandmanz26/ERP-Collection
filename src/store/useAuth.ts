@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { PasswordResetToken, UserAccount, UserRole } from '@/data/types'
 import { AUTH_POLICY, passwordProblems } from '@/data/reference'
-import { resetTokens as seedTokens, users as seedUsers } from '@/data/seed3'
+import { resetTokens as seedTokens, users as seedUsers } from '@/data/seed-master'
 
 /**
  * DEMO AUTHENTICATION.
@@ -300,7 +300,7 @@ export const useAuth = create<AuthState>()(
 
       resetAuthDemo: () => set({ ...seedState() }),
     }),
-    { name: 'meridian-freight-auth', version: 1 },
+    { name: 'kriyanusa-auth', version: 1 },
   ),
 )
 

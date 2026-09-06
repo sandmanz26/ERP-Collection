@@ -5,119 +5,120 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ------------------------------------------------------------------
-   Meridian Freight — design tokens
-   A maritime navy system. Light = "harbour paper", Dark = "night deck".
+   Kriyanusa Furniture — design tokens
+   A timber system. Light = "workshop paper"; dark = "night workshop".
+   Primary is burnt teak, accent is the green of a plantation lot.
    ------------------------------------------------------------------ */
 :root {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
 
   /* surfaces */
-  --bg: 210 44% 97%;
-  --bg-muted: 213 38% 94%;
+  --bg: 36 30% 97%;
+  --bg-muted: 34 26% 93%;
   --surface: 0 0% 100%;
   --surface-raised: 0 0% 100%;
-  --surface-sunken: 213 40% 96%;
-  --overlay: 214 60% 8%;
+  --surface-sunken: 36 28% 96%;
+  --overlay: 26 40% 8%;
 
   /* ink */
-  --fg: 215 52% 12%;
-  --fg-muted: 215 18% 42%;
-  --fg-subtle: 214 15% 56%;
-  --fg-inverse: 210 40% 98%;
+  --fg: 26 28% 13%;
+  --fg-muted: 28 12% 40%;
+  --fg-subtle: 30 10% 54%;
+  --fg-inverse: 40 30% 98%;
 
   /* lines */
-  --border: 214 32% 88%;
-  --border-strong: 214 28% 78%;
-  --ring: 216 88% 52%;
+  --border: 32 20% 87%;
+  --border-strong: 30 18% 77%;
+  --ring: 24 82% 46%;
 
-  /* brand — harbour blue */
-  --primary: 217 89% 46%;
-  --primary-hover: 217 89% 40%;
+  /* brand — burnt teak */
+  --primary: 22 82% 42%;
+  --primary-hover: 22 84% 36%;
   --primary-fg: 0 0% 100%;
-  --primary-soft: 217 92% 95%;
-  --primary-soft-fg: 217 76% 34%;
+  --primary-soft: 28 88% 94%;
+  --primary-soft-fg: 20 76% 32%;
 
-  /* accent — container teal */
-  --accent: 184 78% 36%;
-  --accent-soft: 183 70% 94%;
-  --accent-soft-fg: 185 82% 24%;
+  /* accent — plantation green */
+  --accent: 158 54% 30%;
+  --accent-soft: 152 46% 92%;
+  --accent-soft-fg: 160 62% 20%;
 
   /* status */
-  --success: 152 62% 34%;
-  --success-soft: 150 62% 94%;
-  --success-soft-fg: 154 70% 22%;
-  --warning: 33 92% 46%;
-  --warning-soft: 40 96% 92%;
-  --warning-soft-fg: 26 84% 30%;
-  --danger: 356 72% 48%;
-  --danger-soft: 355 92% 96%;
-  --danger-soft-fg: 356 72% 36%;
-  --info: 221 83% 53%;
-  --info-soft: 214 95% 95%;
-  --info-soft-fg: 224 76% 38%;
-  --neutral-soft: 214 30% 94%;
-  --neutral-soft-fg: 215 22% 34%;
-  --purple: 264 62% 52%;
-  --purple-soft: 268 84% 96%;
-  --purple-soft-fg: 265 60% 40%;
+  --success: 152 62% 32%;
+  --success-soft: 150 58% 93%;
+  --success-soft-fg: 154 68% 20%;
+  --warning: 38 92% 44%;
+  --warning-soft: 44 94% 91%;
+  --warning-soft-fg: 28 82% 28%;
+  --danger: 358 66% 47%;
+  --danger-soft: 356 88% 96%;
+  --danger-soft-fg: 358 68% 35%;
+  --info: 210 78% 46%;
+  --info-soft: 208 92% 94%;
+  --info-soft-fg: 212 72% 34%;
+  --neutral-soft: 32 20% 92%;
+  --neutral-soft-fg: 28 14% 32%;
+  --purple: 280 48% 48%;
+  --purple-soft: 282 70% 95%;
+  --purple-soft-fg: 281 50% 36%;
 
-  /* the sign-in brand panel — deep enough to sit beside the form in both themes */
-  --auth-panel: 217 89% 46%;
-  --auth-panel-fg: 0 0% 100%;
+  /* the sign-in brand panel — dark walnut in both themes */
+  --auth-panel: 24 46% 18%;
+  --auth-panel-fg: 38 40% 96%;
 
-  --shadow-color: 215 45% 22%;
+  --shadow-color: 26 40% 20%;
   --radius: 0.625rem;
 }
 
 .dark {
-  --bg: 216 52% 7%;
-  --bg-muted: 216 46% 10%;
-  --surface: 215 44% 11%;
-  --surface-raised: 214 40% 14%;
-  --surface-sunken: 216 50% 9%;
-  --overlay: 216 60% 3%;
+  --bg: 26 22% 7%;
+  --bg-muted: 26 20% 10%;
+  --surface: 26 18% 11%;
+  --surface-raised: 26 16% 14%;
+  --surface-sunken: 26 22% 9%;
+  --overlay: 26 30% 3%;
 
-  --fg: 210 40% 96%;
-  --fg-muted: 213 20% 68%;
-  --fg-subtle: 214 16% 54%;
-  --fg-inverse: 215 52% 10%;
+  --fg: 38 28% 95%;
+  --fg-muted: 32 12% 66%;
+  --fg-subtle: 32 10% 52%;
+  --fg-inverse: 26 28% 10%;
 
-  --border: 214 33% 20%;
-  --border-strong: 214 30% 28%;
-  --ring: 210 100% 62%;
+  --border: 28 14% 20%;
+  --border-strong: 28 13% 28%;
+  --ring: 28 92% 58%;
 
-  --primary: 213 94% 60%;
-  --primary-hover: 213 94% 68%;
-  --primary-fg: 216 60% 8%;
-  --primary-soft: 214 60% 18%;
-  --primary-soft-fg: 211 96% 78%;
-  --auth-panel: 216 58% 12%;
-  --auth-panel-fg: 210 40% 96%;
+  --primary: 28 92% 56%;
+  --primary-hover: 30 94% 64%;
+  --primary-fg: 26 40% 8%;
+  --primary-soft: 24 44% 18%;
+  --primary-soft-fg: 32 92% 74%;
+  --auth-panel: 26 26% 10%;
+  --auth-panel-fg: 38 28% 95%;
 
-  --accent: 183 72% 48%;
-  --accent-soft: 187 60% 15%;
-  --accent-soft-fg: 184 78% 66%;
+  --accent: 158 52% 46%;
+  --accent-soft: 160 40% 14%;
+  --accent-soft-fg: 156 60% 64%;
 
-  --success: 151 62% 46%;
-  --success-soft: 155 50% 14%;
-  --success-soft-fg: 150 68% 66%;
-  --warning: 38 94% 56%;
-  --warning-soft: 33 60% 15%;
-  --warning-soft-fg: 40 94% 66%;
-  --danger: 356 84% 62%;
-  --danger-soft: 356 52% 17%;
-  --danger-soft-fg: 356 92% 78%;
-  --info: 214 94% 64%;
-  --info-soft: 216 60% 18%;
-  --info-soft-fg: 213 94% 78%;
-  --neutral-soft: 215 32% 18%;
-  --neutral-soft-fg: 213 22% 72%;
-  --purple: 264 82% 68%;
-  --purple-soft: 265 44% 20%;
-  --purple-soft-fg: 267 88% 80%;
+  --success: 151 56% 46%;
+  --success-soft: 155 42% 13%;
+  --success-soft-fg: 150 62% 64%;
+  --warning: 40 92% 56%;
+  --warning-soft: 34 52% 14%;
+  --warning-soft-fg: 42 92% 66%;
+  --danger: 358 78% 62%;
+  --danger-soft: 358 46% 16%;
+  --danger-soft-fg: 356 88% 78%;
+  --info: 208 88% 62%;
+  --info-soft: 210 46% 17%;
+  --info-soft-fg: 208 90% 76%;
+  --neutral-soft: 28 14% 18%;
+  --neutral-soft-fg: 32 14% 70%;
+  --purple: 282 70% 70%;
+  --purple-soft: 282 36% 20%;
+  --purple-soft-fg: 283 80% 80%;
 
-  --shadow-color: 216 80% 2%;
+  --shadow-color: 26 60% 2%;
 }
 
 @theme inline {
@@ -223,6 +224,15 @@
   }
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
+  }
+  .surface-grain {
+    background-image: repeating-linear-gradient(
+      90deg,
+      hsl(var(--border) / 0.55) 0px,
+      hsl(var(--border) / 0.55) 1px,
+      transparent 1px,
+      transparent 7px
+    );
   }
   .surface-grid {
     background-image:

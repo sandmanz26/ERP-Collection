@@ -65,7 +65,7 @@ export function ForgotPasswordPage() {
             autoComplete="username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@meridianfreight.com"
+            placeholder="you@kriyanusa.co.id"
           />
         </Field>
 

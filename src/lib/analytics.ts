@@ -1,444 +1,234 @@
+/**
+ * Roll-ups for the control tower and the analytics page. Every figure is folded
+ * out of the records; none of them is stored.
+ */
 import type {
-  Account, Container, Customer, Invoice, JournalEntry, Project, ProjectCharge, ServicePackage, ShipmentDocument,
+  Budget, Buyer, GoodsReceipt, Item, Project, ProjectStage, PurchaseOrder, SalesInvoice, Supplier,
+  SupplierBill, WorkOrder,
 } from '@/data/types'
-import { COUNTRY_DOC_RULES, STAGES, stageIndex } from '@/data/reference'
-import { pluralDays, relativeDays } from './format'
-import { utilisation } from './shipping'
+import { PROJECT_STAGES, isCommercialStage, stageIndex } from '@/data/reference'
+import { budgetTotal, revenueIdr } from './costing'
+import { orderProgress, orderValue } from './procurement'
 
-/* ---------------- job financials ---------------- */
-export interface JobFinancials {
-  revenue: number
-  cost: number
-  margin: number
-  marginPct: number
-  vat: number
-  wht: number
-  invoiced: number
-  disputed: number
-  unapproved: number
-}
+const DAY = 86_400_000
+const daysUntil = (iso?: string) => (iso ? Math.ceil((new Date(iso).getTime() - Date.now()) / DAY) : 0)
 
-export function chargeTotals(c: ProjectCharge) {
-  const revenue = c.quantity * c.sellRate * c.fxRate
-  const cost = c.quantity * c.buyRate * c.fxRate
-  return {
-    revenue,
-    cost,
-    margin: revenue - cost,
-    vat: c.vatApplicable ? revenue * 0.11 : 0,
-    wht: c.whtApplicable ? revenue * 0.02 : 0,
-  }
-}
-
-export function jobFinancials(charges: ProjectCharge[]): JobFinancials {
-  let revenue = 0, cost = 0, vat = 0, wht = 0, invoiced = 0, disputed = 0, unapproved = 0
-  for (const c of charges) {
-    const t = chargeTotals(c)
-    if (c.billable) revenue += t.revenue
-    cost += t.cost
-    vat += t.vat
-    wht += t.wht
-    if (c.status === 'INVOICED' || c.status === 'PAID') invoiced += t.revenue
-    if (c.status === 'DISPUTED') disputed += t.revenue
-    if (c.status === 'DRAFT' || c.status === 'PENDING_APPROVAL') unapproved += t.revenue
-  }
-  const margin = revenue - cost
-  return { revenue, cost, margin, marginPct: revenue ? (margin / revenue) * 100 : 0, vat, wht, invoiced, disputed, unapproved }
-}
-
-/* ---------------- stage gating ---------------- */
-export interface GateResult {
-  canAdvance: boolean
-  blockers: string[]
-  warnings: string[]
-  progressPct: number
-}
-
-export function evaluateStageGate(
-  project: Project,
-  containers: Container[],
-  documents: ShipmentDocument[],
-  customer?: Customer,
-  extra?: {
-    filings?: { type: string; status: string; channel: string; supportingDocs: { mandatory: boolean; uploaded: boolean; label: string }[] }[]
-    /** mandatory additional services that are missing, refused or failed */
-    serviceBlockers?: string[]
-    /** stuffing booked past a cut-off, short against the tally, or sealed without a seal */
-    stuffingBlockers?: string[]
-  },
-): GateResult {
-  const stage = project.stages.find((s) => s.key === project.stage)
-  const blockers: string[] = []
-  const warnings: string[] = []
-  const tasks = stage?.tasks ?? []
-  const openBlocking = tasks.filter((t) => t.blocking && !t.done)
-  openBlocking.forEach((t) => blockers.push(t.label))
-
-  /* A treatment or inspection the destination requires is a hard stop from the
-     cargo plan onwards — the cargo is refused at the border, not at our desk. */
-  if (stageIndex(project.stage) >= stageIndex('CARGO_PLAN')) {
-    ;(extra?.serviceBlockers ?? []).forEach((b) => blockers.push(b))
-  }
-
-  /* From stuffing onwards the yard is the constraint: a slot booked past the
-     terminal cut-off, or a tally short of the packing list, stops the job. */
-  if (stageIndex(project.stage) >= stageIndex('STUFFING')) {
-    ;(extra?.stuffingBlockers ?? []).forEach((b) => blockers.push(b))
-  }
-
-  if (project.stage === 'INQUIRY' && customer) {
-    if (customer.status === 'ON_HOLD' || customer.status === 'BLACKLISTED')
-      blockers.push(`Client is ${customer.status.replace('_', ' ').toLowerCase()} — a director release is required`)
-    if (customer.outstandingAr > customer.creditLimit && customer.creditLimit > 0)
-      blockers.push(
-        `Outstanding AR exceeds the credit limit by IDR ${Math.round((customer.outstandingAr - customer.creditLimit) / 1e6)} M`,
-      )
-    if (!project.packageId) warnings.push('No service package applied — charges will have to be keyed by hand')
-  }
-
-  if (project.stage === 'BOOKING') {
-    if (!project.bookingNo) blockers.push('Carrier booking number not recorded')
-    if (!project.etd) blockers.push('ETD not confirmed')
-    if (!project.siCutoff || !project.vgmCutoff) warnings.push('Cut-off calendar is incomplete — alerts cannot be raised')
-  }
-
-  if (project.stage === 'CARGO_PLAN') {
-    if (containers.length === 0) blockers.push('No containers planned for this job')
-    containers.forEach((c) => {
-      const u = utilisation(c.type, c.items, c.tareKg)
-      if (u.status === 'OVERLOADED')
-        blockers.push(`Unit #${c.seq} exceeds capacity (${u.volumePct.toFixed(0)}% volume, ${u.weightPct.toFixed(0)}% payload)`)
-      else if (u.status === 'LIGHT' && c.type !== 'LCL')
-        warnings.push(`Unit #${c.seq} is only ${Math.max(u.volumePct, u.weightPct).toFixed(0)}% used — consider downsizing`)
-    })
-  }
-
-  if (project.stage === 'DOCUMENTATION' || stageIndex(project.stage) > 3) {
-    const missing = documents.filter((d) => d.mandatory && ['REQUIRED', 'REJECTED'].includes(d.status))
-    missing.forEach((d) => blockers.push(`${d.title} is ${d.status === 'REJECTED' ? 'rejected' : 'still outstanding'}`))
-  }
-
-  if (project.stage === 'DOCUMENTATION') {
-    const peb = extra?.filings?.find((f) => f.type === 'PEB')
-    if (peb) {
-      const missing = peb.supportingDocs.filter((d) => d.mandatory && !d.uploaded)
-      if (peb.status === 'DRAFT' && missing.length)
-        blockers.push(`PEB cannot be submitted — CEISA 4.0 is missing ${missing.map((d) => d.label).join(', ')}`)
-      if (peb.channel === 'MERAH' && peb.status !== 'APPROVED')
-        blockers.push('PEB drew Jalur Merah — the physical inspection must clear before the cargo can gate in')
-      if (peb.channel === 'KUNING' && peb.status === 'UNDER_REVIEW')
-        warnings.push('PEB is in Jalur Kuning — answer the document query before the cut-off')
-    } else {
-      warnings.push('No PEB filing recorded for this job')
+/** The order book by stage, which is the shape of the pipeline. */
+export function pipeline(projects: Project[]) {
+  return PROJECT_STAGES.map((s) => {
+    const rows = projects.filter((p) => p.stage === s.key && p.status !== 'LOST' && p.status !== 'CANCELLED')
+    return {
+      stage: s,
+      count: rows.length,
+      valueIdr: rows.reduce((a, p) => a + revenueIdr(p), 0),
+      projects: rows,
     }
-  }
-
-  if (project.stage === 'STUFFING') {
-    containers
-      .filter((c) => c.type !== 'LCL' && !c.vgmSubmittedAt)
-      .forEach((c) => blockers.push(`VGM not submitted for unit #${c.seq} — SOLAS blocks loading`))
-    const gateIn = relativeDays(project.gateInCutoff)
-    if (gateIn !== null && gateIn < 0) blockers.push('Gate-in cut-off has already passed')
-  }
-
-  if (project.stage === 'SETTLEMENT') {
-    if (project.type === 'CONSIGNMENT' && project.consignment && project.consignment.reportedUnitsSold === 0)
-      warnings.push('No consignment sales reported yet — settlement cannot be reconciled')
-  }
-
-  const done = tasks.filter((t) => t.done).length
-  return {
-    canAdvance: blockers.length === 0 && stageIndex(project.stage) < STAGES.length - 1,
-    blockers,
-    warnings,
-    progressPct: tasks.length ? (done / tasks.length) * 100 : 0,
-  }
-}
-
-/* ---------------- document compliance ---------------- */
-export function documentCompliance(project: Project, documents: ShipmentDocument[]) {
-  const rule = COUNTRY_DOC_RULES[project.destCountry]
-  const required = documents.filter((d) => d.mandatory)
-  const satisfied = required.filter((d) => ['APPROVED', 'ISSUED', 'SURRENDERED'].includes(d.status))
-  const missingCountryDocs = (rule?.required ?? []).filter((t) => !documents.some((d) => d.type === t && d.status !== 'REQUIRED'))
-  const expiring = documents.filter((d) => {
-    const days = relativeDays(d.expiresAt)
-    return days !== null && days <= 30 && days >= 0
   })
-  const rejected = documents.filter((d) => d.status === 'REJECTED')
+}
+
+/** Won, lost and still open, with the money attached. */
+export function winLoss(projects: Project[]) {
+  const decided = projects.filter((p) => p.status === 'WON' || p.status === 'LOST' || p.status === 'CLOSED')
+  const won = decided.filter((p) => p.status !== 'LOST')
+  const lost = decided.filter((p) => p.status === 'LOST')
+  const open = projects.filter((p) => p.status === 'OPEN')
   return {
-    pct: required.length ? (satisfied.length / required.length) * 100 : 100,
-    requiredCount: required.length,
-    satisfiedCount: satisfied.length,
-    missingCountryDocs,
-    countryNote: rule?.note,
-    expiring,
-    rejected,
+    won: won.length,
+    lost: lost.length,
+    open: open.length,
+    winRatePct: decided.length ? (won.length / decided.length) * 100 : 0,
+    wonValue: won.reduce((a, p) => a + revenueIdr(p), 0),
+    lostValue: lost.reduce((a, p) => a + revenueIdr(p), 0),
+    openValue: open.reduce((a, p) => a + revenueIdr(p), 0),
+    lossReasons: lost.reduce<Record<string, number>>((acc, p) => {
+      const key = p.lossReason ?? 'OTHER'
+      acc[key] = (acc[key] ?? 0) + 1
+      return acc
+    }, {}),
   }
 }
 
-/* ---------------- exception engine ---------------- */
-export type ExceptionSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM'
-export interface Exception {
-  id: string
-  severity: ExceptionSeverity
-  category: 'CUT_OFF' | 'DOCUMENT' | 'CAPACITY' | 'CREDIT' | 'FINANCE' | 'CONSIGNMENT' | 'COMPLIANCE'
-  title: string
-  detail: string
-  projectId?: string
-  projectCode?: string
-  link: string
-  action: string
+/** Order book by destination country — where the money actually comes from. */
+export function byCountry(projects: Project[], buyers: Buyer[]) {
+  const map = new Map<string, { code: string; name: string; count: number; valueIdr: number }>()
+  projects
+    .filter((p) => p.status === 'WON' || p.status === 'CLOSED')
+    .forEach((p) => {
+      const buyer = buyers.find((b) => b.id === p.buyerId)
+      const key = p.destinationCountry
+      const row = map.get(key) ?? { code: key, name: buyer?.countryName ?? key, count: 0, valueIdr: 0 }
+      row.count += 1
+      row.valueIdr += revenueIdr(p)
+      map.set(key, row)
+    })
+  return Array.from(map.values()).sort((a, b) => b.valueIdr - a.valueIdr)
 }
 
-export function buildExceptions(input: {
-  projects: Project[]
-  containers: Container[]
-  documents: ShipmentDocument[]
-  charges: ProjectCharge[]
-  customers: Customer[]
-  invoices: Invoice[]
-}): Exception[] {
-  const out: Exception[] = []
-  const { projects, containers, documents, charges, customers, invoices } = input
-
-  for (const p of projects) {
-    if (p.status === 'COMPLETED' || p.status === 'CANCELLED') continue
-    const boxes = containers.filter((c) => c.projectId === p.id)
-    const docs = documents.filter((d) => d.projectId === p.id)
-
-    /* cut-off risk */
-    const cutoffs: [string, string | undefined][] = [
-      ['SI cut-off', p.siCutoff],
-      ['VGM cut-off', p.vgmCutoff],
-      ['Gate-in cut-off', p.gateInCutoff],
-    ]
-    for (const [label, iso] of cutoffs) {
-      const days = relativeDays(iso)
-      if (days === null) continue
-      const stageDone = stageIndex(p.stage) >= 5
-      if (days < 0 && !stageDone) {
-        out.push({
-          id: `${p.id}_${label}_missed`, severity: 'CRITICAL', category: 'CUT_OFF',
-          title: `${label} missed on ${p.code}`,
-          detail: `${label} passed ${pluralDays(days)} ago and the job is still at ${p.stage.replace(/_/g, ' ').toLowerCase()}. Space may be rolled to the next sailing.`,
-          projectId: p.id, projectCode: p.code, link: `/projects/${p.id}`, action: 'Contact the carrier and re-plan',
-        })
-      } else if (days !== null && days >= 0 && days <= 2 && !stageDone) {
-        out.push({
-          id: `${p.id}_${label}_near`, severity: days === 0 ? 'CRITICAL' : 'HIGH', category: 'CUT_OFF',
-          title: `${label} in ${days === 0 ? 'under a day' : pluralDays(days)} — ${p.code}`,
-          detail: `${p.name}. Everything the cut-off depends on must be filed before it closes.`,
-          projectId: p.id, projectCode: p.code, link: `/projects/${p.id}`, action: 'Chase the outstanding filing',
-        })
+/** Every won order, with the margin its budget promises. */
+export function marginByProject(projects: Project[], budgets: Budget[]) {
+  return projects
+    .filter((p) => p.status === 'WON' || p.status === 'CLOSED')
+    .map((p) => {
+      const budget = budgets.find((b) => b.projectId === p.id && (b.status === 'APPROVED' || b.status === 'CLOSED'))
+      const revenue = revenueIdr(p)
+      const cost = budgetTotal(budget)
+      return {
+        project: p,
+        budget,
+        revenue,
+        cost,
+        margin: revenue - cost,
+        marginPct: revenue && cost ? ((revenue - cost) / revenue) * 100 : 0,
+        targetPct: budget?.targetMarginPct ?? 0,
       }
-    }
-
-    /* rejected or missing mandatory documents */
-    docs.filter((d) => d.status === 'REJECTED').forEach((d) =>
-      out.push({
-        id: `${d.id}_rejected`, severity: 'CRITICAL', category: 'DOCUMENT',
-        title: `${d.title} rejected on ${p.code}`,
-        detail: d.remarks ?? 'The issuing authority rejected this document. A corrected version is required.',
-        projectId: p.id, projectCode: p.code, link: `/projects/${p.id}?tab=documents`, action: 'Re-issue the document',
-      }),
-    )
-    const comp = documentCompliance(p, docs)
-    if (comp.missingCountryDocs.length && stageIndex(p.stage) >= 3) {
-      out.push({
-        id: `${p.id}_country_docs`, severity: 'HIGH', category: 'COMPLIANCE',
-        title: `Destination rules unmet for ${p.destCountry} — ${p.code}`,
-        detail: `${comp.countryNote ?? 'Destination customs requires additional documents.'} Missing: ${comp.missingCountryDocs.join(', ')}.`,
-        projectId: p.id, projectCode: p.code, link: `/projects/${p.id}?tab=documents`, action: 'Raise the missing certificates',
-      })
-    }
-
-    /* capacity */
-    boxes.forEach((c) => {
-      const u = utilisation(c.type, c.items, c.tareKg)
-      if (u.status === 'OVERLOADED')
-        out.push({
-          id: `${c.id}_overload`, severity: 'CRITICAL', category: 'CAPACITY',
-          title: `Unit #${c.seq} over capacity on ${p.code}`,
-          detail: `${u.volumePct.toFixed(0)}% of volume and ${u.weightPct.toFixed(0)}% of payload. The terminal will refuse the gate-in.`,
-          projectId: p.id, projectCode: p.code, link: `/projects/${p.id}?tab=containers`, action: 'Re-plan the stuffing',
-        })
-      if (u.status === 'LIGHT' && c.type !== 'LCL' && ['PLANNED', 'BOOKED'].includes(c.status))
-        out.push({
-          id: `${c.id}_light`, severity: 'MEDIUM', category: 'CAPACITY',
-          title: `Unit #${c.seq} only ${Math.max(u.volumePct, u.weightPct).toFixed(0)}% used — ${p.code}`,
-          detail: `A ${c.type} is being paid for at partial load. Consolidating or downsizing recovers margin.`,
-          projectId: p.id, projectCode: p.code, link: `/projects/${p.id}?tab=containers`, action: 'Review the load plan',
-        })
     })
+    .sort((a, b) => a.marginPct - b.marginPct)
+}
 
-    /* margin erosion */
-    const jc = charges.filter((c) => c.projectId === p.id)
-    const fin = jobFinancials(jc)
-    if (fin.revenue > 0 && fin.marginPct < 8) {
-      out.push({
-        id: `${p.id}_margin`, severity: fin.marginPct < 0 ? 'CRITICAL' : 'HIGH', category: 'FINANCE',
-        title: `Margin at ${fin.marginPct.toFixed(1)}% on ${p.code}`,
-        detail: `Cost is running at IDR ${Math.round(fin.cost / 1e6)} M against IDR ${Math.round(fin.revenue / 1e6)} M of revenue. Unbudgeted charges are the usual cause.`,
-        projectId: p.id, projectCode: p.code, link: `/projects/${p.id}?tab=charges`, action: 'Review the charge sheet',
-      })
-    }
-    if (fin.disputed > 0) {
-      out.push({
-        id: `${p.id}_disputed`, severity: 'HIGH', category: 'FINANCE',
-        title: `Disputed charges on ${p.code}`,
-        detail: `IDR ${Math.round(fin.disputed / 1e6)} M is in dispute with the client. Unresolved disputes age into write-offs.`,
-        projectId: p.id, projectCode: p.code, link: `/projects/${p.id}?tab=charges`, action: 'Settle or write off',
-      })
-    }
+/** Spend by supplier, on what has actually been received. */
+export function spendBySupplier(orders: PurchaseOrder[], receipts: GoodsReceipt[], suppliers: Supplier[]) {
+  return suppliers
+    .map((s) => {
+      const mine = orders.filter((o) => o.supplierId === s.id)
+      const received = mine.reduce((a, o) => a + orderProgress(o, receipts).receivedValue, 0)
+      const open = mine.reduce((a, o) => a + orderProgress(o, receipts).openValue, 0)
+      return { supplier: s, orders: mine.length, ordered: mine.reduce((a, o) => a + orderValue(o), 0), received, open }
+    })
+    .filter((r) => r.orders > 0)
+    .sort((a, b) => b.received - a.received)
+}
 
-    /* consignment ageing */
-    if (p.consignment) {
-      const cns = p.consignment
-      const unsold = cns.totalUnitsShipped - cns.reportedUnitsSold
-      const daysSinceReport = relativeDays(cns.lastSalesReportAt)
-      if (daysSinceReport !== null && Math.abs(daysSinceReport) > cns.settlementCycleDays) {
-        out.push({
-          id: `${p.id}_cns_report`, severity: 'HIGH', category: 'CONSIGNMENT',
-          title: `Consignment sales report overdue — ${p.code}`,
-          detail: `Last report was ${pluralDays(daysSinceReport)} ago against a ${cns.settlementCycleDays}-day cycle. ${unsold} units remain unsold.`,
-          projectId: p.id, projectCode: p.code, link: `/projects/${p.id}`, action: 'Request the sales report',
-        })
-      }
-      if (cns.minimumGuaranteedUnits && cns.reportedUnitsSold < cns.minimumGuaranteedUnits && stageIndex(p.stage) >= 6) {
-        out.push({
-          id: `${p.id}_cns_min`, severity: 'MEDIUM', category: 'CONSIGNMENT',
-          title: `Minimum guarantee not met — ${p.code}`,
-          detail: `${cns.reportedUnitsSold} of ${cns.minimumGuaranteedUnits} guaranteed units sold. The shortfall is billable under the agreement.`,
-          projectId: p.id, projectCode: p.code, link: `/projects/${p.id}`, action: 'Invoice the shortfall',
-        })
-      }
-    }
-  }
-
-  /* credit exposure */
-  customers.forEach((c) => {
-    if (c.creditLimit > 0 && c.outstandingAr > c.creditLimit) {
-      out.push({
-        id: `${c.id}_credit`, severity: 'HIGH', category: 'CREDIT',
-        title: `${c.tradeName ?? c.legalName} is over their credit limit`,
-        detail: `Outstanding IDR ${Math.round(c.outstandingAr / 1e6)} M against a limit of IDR ${Math.round(c.creditLimit / 1e6)} M. New bookings should be blocked.`,
-        link: `/customers/${c.id}`, action: 'Escalate to collections',
+/** Spend by cost category, from the budget lines the orders were raised against. */
+export function spendByCategory(orders: PurchaseOrder[], budgets: Budget[], itemOf: (id: string) => Item | undefined) {
+  const map = new Map<string, { category: string; ordered: number; received: number }>()
+  orders
+    .filter((o) => !['DRAFT', 'CANCELLED'].includes(o.status))
+    .forEach((o) => {
+      o.lines.forEach((l) => {
+        const budgetLine = budgets.flatMap((b) => b.lines).find((b) => b.id === l.budgetLineId)
+        const category = budgetLine?.category ?? itemOf(l.itemId)?.category ?? 'OTHER'
+        const net = l.unitPrice * (1 - l.discountPct / 100)
+        const row = map.get(category) ?? { category, ordered: 0, received: 0 }
+        row.ordered += l.qty * net
+        row.received += l.receivedQty * net
+        map.set(category, row)
       })
-    }
+    })
+  return Array.from(map.values()).sort((a, b) => b.ordered - a.ordered)
+}
+
+/** Deliveries that arrived on or before the date the order promised. */
+export function deliveryPunctuality(orders: PurchaseOrder[], receipts: GoodsReceipt[]) {
+  const rows = receipts.map((r) => {
+    const po = orders.find((o) => o.id === r.poId)
+    const late = po ? Math.floor((new Date(r.receivedAt).getTime() - new Date(po.expectedAt).getTime()) / DAY) : 0
+    return { receipt: r, po, daysLate: late, onTime: late <= 0 }
   })
-
-  /* overdue AR */
-  invoices
-    .filter((i) => i.kind === 'AR' && i.status === 'OVERDUE')
-    .forEach((i) => {
-      const days = Math.abs(relativeDays(i.dueDate) ?? 0)
-      out.push({
-        id: `${i.id}_overdue`, severity: days > 45 ? 'CRITICAL' : 'HIGH', category: 'FINANCE',
-        title: `${i.number} is ${pluralDays(days)} overdue`,
-        detail: `${i.partyName} owes IDR ${Math.round(i.total / 1e6)} M. Recovery rates fall sharply past 60 days.`,
-        link: '/finance/invoices', action: 'Chase payment',
-      })
-    })
-
-  const order: Record<ExceptionSeverity, number> = { CRITICAL: 0, HIGH: 1, MEDIUM: 2 }
-  return out.sort((a, b) => order[a.severity] - order[b.severity])
-}
-
-/* ---------------- finance reporting ---------------- */
-export interface LedgerBalance {
-  account: Account
-  debit: number
-  credit: number
-  balance: number
-}
-
-export function trialBalance(accounts: Account[], journal: JournalEntry[], onlyPosted = true): LedgerBalance[] {
-  const map = new Map<string, { debit: number; credit: number }>()
-  journal
-    .filter((j) => (onlyPosted ? j.status === 'POSTED' : j.status !== 'VOID'))
-    .forEach((j) =>
-      j.lines.forEach((l) => {
-        const cur = map.get(l.accountCode) ?? { debit: 0, credit: 0 }
-        cur.debit += l.debit
-        cur.credit += l.credit
-        map.set(l.accountCode, cur)
-      }),
-    )
-  return accounts
-    .map((a) => {
-      const m = map.get(a.code) ?? { debit: 0, credit: 0 }
-      const balance = a.normalBalance === 'DEBIT' ? m.debit - m.credit : m.credit - m.debit
-      return { account: a, debit: m.debit, credit: m.credit, balance }
-    })
-    .filter((r) => r.debit !== 0 || r.credit !== 0)
-}
-
-export function incomeStatement(balances: LedgerBalance[]) {
-  const pick = (t: Account['type']) => balances.filter((b) => b.account.type === t)
-  const revenue = pick('REVENUE')
-  const cogs = pick('COGS')
-  const expense = pick('EXPENSE')
-  const totalRevenue = revenue.reduce((a, b) => a + b.balance, 0)
-  const totalCogs = cogs.reduce((a, b) => a + b.balance, 0)
-  const totalExpense = expense.reduce((a, b) => a + b.balance, 0)
-  const gross = totalRevenue - totalCogs
+  const onTime = rows.filter((r) => r.onTime).length
   return {
-    revenue, cogs, expense, totalRevenue, totalCogs, totalExpense,
-    grossProfit: gross,
-    grossMarginPct: totalRevenue ? (gross / totalRevenue) * 100 : 0,
-    operatingProfit: gross - totalExpense,
-    netMarginPct: totalRevenue ? ((gross - totalExpense) / totalRevenue) * 100 : 0,
+    rows,
+    total: rows.length,
+    onTime,
+    onTimePct: rows.length ? (onTime / rows.length) * 100 : 0,
+    averageDaysLate: rows.length ? rows.reduce((a, r) => a + Math.max(0, r.daysLate), 0) / rows.length : 0,
   }
 }
 
-export function balanceSheet(balances: LedgerBalance[], netProfit: number) {
-  const assets = balances.filter((b) => b.account.type === 'ASSET')
-  const liabilities = balances.filter((b) => b.account.type === 'LIABILITY')
-  const equity = balances.filter((b) => b.account.type === 'EQUITY')
-  const totalAssets = assets.reduce((a, b) => a + b.balance, 0)
-  const totalLiabilities = liabilities.reduce((a, b) => a + b.balance, 0)
-  const totalEquity = equity.reduce((a, b) => a + b.balance, 0) + netProfit
+/** Orders whose ship date is close, ordered by how close. */
+export function shipCalendar(projects: Project[], withinDays = 60) {
+  return projects
+    .filter((p) => p.status === 'WON' && p.stage !== 'CLOSED' && !p.actualShipAt)
+    .map((p) => ({ project: p, daysToShip: daysUntil(p.targetShipAt) }))
+    .filter((r) => r.daysToShip <= withinDays)
+    .sort((a, b) => a.daysToShip - b.daysToShip)
+}
+
+/** What the factory is holding right now, and how much of it is late. */
+export function productionLoad(workOrders: WorkOrder[]) {
+  const live = workOrders.filter((w) => !['COMPLETED', 'CANCELLED'].includes(w.status))
   return {
-    assets, liabilities, equity, totalAssets, totalLiabilities, totalEquity,
-    difference: totalAssets - (totalLiabilities + totalEquity),
+    open: live.length,
+    onHold: live.filter((w) => w.status === 'ON_HOLD').length,
+    late: live.filter((w) => new Date(w.dueAt) < new Date()).length,
+    pieces: live.reduce((a, w) => a + w.qty, 0),
+    produced: live.reduce((a, w) => a + w.producedQty, 0),
+    completionPct: (() => {
+      const q = live.reduce((a, w) => a + w.qty, 0)
+      return q ? (live.reduce((a, w) => a + w.producedQty, 0) / q) * 100 : 0
+    })(),
   }
 }
 
-export function arAging(invoices: Invoice[]) {
-  const buckets = [
-    { label: 'Current', min: -9999, max: 0 },
-    { label: '1–30 days', min: 1, max: 30 },
-    { label: '31–60 days', min: 31, max: 60 },
-    { label: '61–90 days', min: 61, max: 90 },
-    { label: '90+ days', min: 91, max: 99999 },
-  ]
-  return buckets.map((b) => {
-    const rows = invoices.filter((i) => {
-      if (i.kind !== 'AR' || i.status === 'PAID' || i.status === 'VOID') return false
-      const overdue = -(relativeDays(i.dueDate) ?? 0)
-      return overdue >= b.min && overdue <= b.max
+/** Cash position: what is owed to us, what we owe, and the gap. */
+export function cashPosition(invoices: SalesInvoice[], bills: SupplierBill[]) {
+  const receivable = invoices
+    .filter((i) => ['ISSUED', 'PARTIALLY_PAID', 'OVERDUE'].includes(i.status))
+    .reduce((a, i) => a + (i.amount - i.paidAmount) * i.exchangeRate, 0)
+  const overdueIn = invoices
+    .filter((i) => i.status === 'OVERDUE')
+    .reduce((a, i) => a + (i.amount - i.paidAmount) * i.exchangeRate, 0)
+  const payable = bills
+    .filter((b) => ['APPROVED', 'AWAITING_APPROVAL', 'PARTIALLY_PAID', 'OVERDUE', 'DISPUTED'].includes(b.status))
+    .reduce((a, b) => a + (b.subtotal + b.taxAmount - b.paidAmount), 0)
+  const overdueOut = bills
+    .filter((b) => b.status === 'OVERDUE')
+    .reduce((a, b) => a + (b.subtotal + b.taxAmount - b.paidAmount), 0)
+  return { receivable, overdueIn, payable, overdueOut, net: receivable - payable }
+}
+
+/** Value of orders by month of target ship date, for the next half year. */
+export function shipmentForecast(projects: Project[], months = 6) {
+  const out: { key: string; label: string; valueIdr: number; count: number }[] = []
+  const now = new Date()
+  for (let i = 0; i < months; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    out.push({ key, label: d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }), valueIdr: 0, count: 0 })
+  }
+  projects
+    .filter((p) => p.status === 'WON' && p.stage !== 'CLOSED')
+    .forEach((p) => {
+      const d = new Date(p.targetShipAt)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const row = out.find((x) => x.key === key)
+      if (row) {
+        row.valueIdr += revenueIdr(p)
+        row.count += 1
+      }
     })
-    return { ...b, count: rows.length, amount: rows.reduce((a, i) => a + (i.total - i.paid), 0) }
-  })
+  return out
 }
 
-export function journalIsBalanced(j: JournalEntry) {
-  const d = j.lines.reduce((a, l) => a + l.debit, 0)
-  const c = j.lines.reduce((a, l) => a + l.credit, 0)
-  return { debit: d, credit: c, balanced: Math.abs(d - c) < 0.5, difference: d - c }
+/** How long an order spends being argued about before it becomes an order. */
+export function negotiationEffort(projects: Project[]) {
+  return projects
+    .filter((p) => p.negotiations.length > 0)
+    .map((p) => {
+      const first = p.negotiations[0]
+      const last = p.negotiations[p.negotiations.length - 1]
+      const days = Math.round((new Date(last.at).getTime() - new Date(first.at).getTime()) / DAY)
+      const opened = p.negotiations.find((n) => n.subject === 'PRICE' && n.ourValue)
+      const closed = [...p.negotiations].reverse().find((n) => n.subject === 'PRICE' && n.ourValue)
+      const movement = opened && closed && opened.ourValue ? ((closed.ourValue! - opened.ourValue) / opened.ourValue) * 100 : 0
+      return {
+        project: p,
+        rounds: p.negotiations.length,
+        days,
+        priceMovementPct: movement,
+        samples: p.samples.length,
+        drawingRevisions: p.drawings.reduce((a, d) => a + (d.revision.charCodeAt(0) - 65), 0),
+      }
+    })
+    .sort((a, b) => b.rounds - a.rounds)
 }
 
-/* ---------------- package usage ---------------- */
-export function packageMargin(pkg: ServicePackage) {
-  const buy = pkg.rateLines.reduce((a, l) => a + l.buyRate, 0)
-  const sell = pkg.rateLines.reduce((a, l) => a + l.sellRate, 0)
-  return { buy, sell, margin: sell - buy, marginPct: sell ? ((sell - buy) / sell) * 100 : 0 }
-}
+export const openProjects = (projects: Project[]) =>
+  projects.filter((p) => p.status === 'OPEN' || (p.status === 'WON' && p.stage !== 'CLOSED'))
 
-export function pipelineByStage(projects: Project[]) {
-  return STAGES.map((s) => {
-    const rows = projects.filter((p) => p.stage === s.key && p.status !== 'CANCELLED')
-    return { stage: s, count: rows.length, value: rows.reduce((a, p) => a + p.quotedRevenue * p.fxRate, 0) }
-  })
-}
+export const commercialProjects = (projects: Project[]) =>
+  projects.filter((p) => isCommercialStage(p.stage) && p.status === 'OPEN')
+
+export const inFactory = (projects: Project[]) =>
+  projects.filter((p) => stageIndex(p.stage) >= stageIndex('PRODUCTION') && stageIndex(p.stage) < stageIndex('SHIPPED'))
+
+export const stageGroupOf = (stage: ProjectStage) => PROJECT_STAGES.find((s) => s.key === stage)?.group ?? 'COMMERCIAL'

@@ -13,20 +13,22 @@ import { fmtDateTime } from '@/lib/format'
 
 /** Sign-ins the demo can reproduce on demand, including the ones that fail. */
 const DEMO_ACCOUNTS = [
-  { email: 'rizky.pratama@meridianfreight.com', label: 'Operator', tone: 'accent' as const },
-  { email: 'elena.marchetti@meridianfreight.com', label: 'Administrator', tone: 'primary' as const },
-  { email: 'marcus.bell@meridianfreight.com', label: 'Operations', tone: 'info' as const },
-  { email: 'david.chen@meridianfreight.com', label: 'Finance', tone: 'accent' as const },
-  { email: 'hana.suzuki@meridianfreight.com', label: 'Unverified', tone: 'warning' as const },
-  { email: 'liam.okoro@meridianfreight.com', label: 'Locked', tone: 'danger' as const },
-  { email: 'nadia.haddad@meridianfreight.com', label: 'Suspended', tone: 'danger' as const },
+  { email: 'rahmat.nugroho@kriyanusa.co.id', label: 'Administrator', tone: 'primary' as const },
+  { email: 'sari.wulandari@kriyanusa.co.id', label: 'Export sales', tone: 'info' as const },
+  { email: 'ika.puspitasari@kriyanusa.co.id', label: 'Estimator', tone: 'purple' as const },
+  { email: 'bagas.setiawan@kriyanusa.co.id', label: 'Purchasing', tone: 'accent' as const },
+  { email: 'yusuf.maulana@kriyanusa.co.id', label: 'Warehouse', tone: 'accent' as const },
+  { email: 'lestari.wijaya@kriyanusa.co.id', label: 'Finance', tone: 'info' as const },
+  { email: 'anita.kusuma@kriyanusa.co.id', label: 'Unverified', tone: 'warning' as const },
+  { email: 'gilang.saputra@kriyanusa.co.id', label: 'Locked', tone: 'danger' as const },
+  { email: 'bambang.riyadi@kriyanusa.co.id', label: 'Suspended', tone: 'danger' as const },
 ]
 
 export function LoginPage() {
   const navigate = useNavigate()
   const { signIn, verifyEmail, unlock, users, lastEmail } = useAuth()
   const [email, setEmail] = React.useState(lastEmail || DEMO_ACCOUNTS[0].email)
-  const [password, setPassword] = React.useState('Meridian#2026')
+  const [password, setPassword] = React.useState('Kriyanusa#2026')
   const [remember, setRemember] = React.useState(true)
   const [reveal, setReveal] = React.useState(false)
   const [result, setResult] = React.useState<AuthResult | null>(null)
@@ -96,7 +98,7 @@ export function LoginPage() {
   return (
     <AuthLayout
       title="Sign in"
-      subtitle="Use your Meridian Freight work account. Sessions are per browser in this demo build."
+      subtitle="Use your Kriyanusa Furniture work account. Sessions are per browser in this demo build."
       footer={
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span>
@@ -105,7 +107,7 @@ export function LoginPage() {
               Register
             </Link>
           </span>
-          <span className="text-fg-subtle">Demo password: Meridian#2026</span>
+          <span className="text-fg-subtle">Demo password: Kriyanusa#2026</span>
         </div>
       }
     >
@@ -134,7 +136,7 @@ export function LoginPage() {
             value={email}
             invalid={result?.failure === 'UNKNOWN_EMAIL'}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@meridianfreight.com"
+            placeholder="you@kriyanusa.co.id"
           />
         </Field>
 
@@ -192,7 +194,7 @@ export function LoginPage() {
               type="button"
               onClick={() => {
                 setEmail(a.email)
-                setPassword('Meridian#2026')
+                setPassword('Kriyanusa#2026')
                 setResult(null)
               }}
               className="rounded-md border border-border-strong/70 bg-surface px-2 py-1 text-left transition-colors hover:border-primary/50 hover:bg-primary-soft/40"
