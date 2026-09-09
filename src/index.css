@@ -5,119 +5,129 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ------------------------------------------------------------------
-   Meridian Freight — design tokens
-   A maritime navy system. Light = "harbour paper", Dark = "night deck".
+   Wanakarya — design tokens
+
+   A timber system rather than a corporate one. Light is "kiln paper": a warm
+   off-white ground with brown-grey ink, the colour of the sample boards pinned
+   up in a furniture works. Dark is "night workshop" — warm charcoal, never blue.
+
+   The brand colour is walnut. That is a deliberate choice, not a decorative
+   one: this application uses green, amber, red, blue and purple to *mean*
+   something — passed, warning, blocked, informational, cure time — so the
+   brand cannot live in any of those hues without making a badge ambiguous.
+   Brown is outside the status set entirely, and happens to be what the company
+   makes furniture out of.
    ------------------------------------------------------------------ */
 :root {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
 
-  /* surfaces */
-  --bg: 210 44% 97%;
-  --bg-muted: 213 38% 94%;
-  --surface: 0 0% 100%;
-  --surface-raised: 0 0% 100%;
-  --surface-sunken: 213 40% 96%;
-  --overlay: 214 60% 8%;
+  /* surfaces — warm paper */
+  --bg: 38 40% 97%;
+  --bg-muted: 36 32% 93%;
+  --surface: 42 56% 99%;
+  --surface-raised: 42 60% 100%;
+  --surface-sunken: 36 34% 96%;
+  --overlay: 24 26% 10%;
 
-  /* ink */
-  --fg: 215 52% 12%;
-  --fg-muted: 215 18% 42%;
-  --fg-subtle: 214 15% 56%;
-  --fg-inverse: 210 40% 98%;
+  /* ink — brown-grey, not blue-grey */
+  --fg: 24 28% 14%;
+  --fg-muted: 26 12% 40%;
+  --fg-subtle: 28 10% 54%;
+  --fg-inverse: 40 40% 98%;
 
   /* lines */
-  --border: 214 32% 88%;
-  --border-strong: 214 28% 78%;
-  --ring: 216 88% 52%;
+  --border: 34 24% 87%;
+  --border-strong: 32 19% 76%;
+  --ring: 22 60% 44%;
 
-  /* brand — harbour blue */
-  --primary: 217 89% 46%;
-  --primary-hover: 217 89% 40%;
-  --primary-fg: 0 0% 100%;
-  --primary-soft: 217 92% 95%;
-  --primary-soft-fg: 217 76% 34%;
+  /* brand — walnut */
+  --primary: 20 52% 36%;
+  --primary-hover: 20 54% 29%;
+  --primary-fg: 42 56% 99%;
+  --primary-soft: 28 46% 92%;
+  --primary-soft-fg: 20 50% 28%;
 
-  /* accent — container teal */
-  --accent: 184 78% 36%;
-  --accent-soft: 183 70% 94%;
-  --accent-soft-fg: 185 82% 24%;
+  /* accent — verdigris, for secondary emphasis */
+  --accent: 186 46% 32%;
+  --accent-soft: 184 40% 92%;
+  --accent-soft-fg: 188 52% 22%;
 
-  /* status */
-  --success: 152 62% 34%;
-  --success-soft: 150 62% 94%;
-  --success-soft-fg: 154 70% 22%;
-  --warning: 33 92% 46%;
-  --warning-soft: 40 96% 92%;
-  --warning-soft-fg: 26 84% 30%;
-  --danger: 356 72% 48%;
-  --danger-soft: 355 92% 96%;
-  --danger-soft-fg: 356 72% 36%;
-  --info: 221 83% 53%;
-  --info-soft: 214 95% 95%;
-  --info-soft-fg: 224 76% 38%;
-  --neutral-soft: 214 30% 94%;
-  --neutral-soft-fg: 215 22% 34%;
-  --purple: 264 62% 52%;
-  --purple-soft: 268 84% 96%;
-  --purple-soft-fg: 265 60% 40%;
+  /* status — each one still means exactly what it meant */
+  --success: 142 55% 32%;
+  --success-soft: 140 48% 93%;
+  --success-soft-fg: 144 60% 21%;
+  --warning: 35 88% 44%;
+  --warning-soft: 40 90% 91%;
+  --warning-soft-fg: 28 78% 28%;
+  --danger: 358 66% 47%;
+  --danger-soft: 356 82% 95%;
+  --danger-soft-fg: 358 64% 35%;
+  --info: 212 72% 45%;
+  --info-soft: 210 86% 94%;
+  --info-soft-fg: 214 68% 34%;
+  --neutral-soft: 34 22% 92%;
+  --neutral-soft-fg: 28 14% 34%;
+  --purple: 280 46% 48%;
+  --purple-soft: 284 56% 95%;
+  --purple-soft-fg: 281 44% 38%;
 
-  /* the sign-in brand panel — deep enough to sit beside the form in both themes */
-  --auth-panel: 217 89% 46%;
-  --auth-panel-fg: 0 0% 100%;
+  /* the sign-in brand panel — deep walnut in both themes */
+  --auth-panel: 20 40% 22%;
+  --auth-panel-fg: 40 40% 97%;
 
-  --shadow-color: 215 45% 22%;
+  --shadow-color: 24 32% 20%;
   --radius: 0.625rem;
 }
 
 .dark {
-  --bg: 216 52% 7%;
-  --bg-muted: 216 46% 10%;
-  --surface: 215 44% 11%;
-  --surface-raised: 214 40% 14%;
-  --surface-sunken: 216 50% 9%;
-  --overlay: 216 60% 3%;
+  --bg: 24 14% 7%;
+  --bg-muted: 24 12% 10%;
+  --surface: 24 12% 11%;
+  --surface-raised: 24 11% 14%;
+  --surface-sunken: 24 14% 9%;
+  --overlay: 24 22% 3%;
 
-  --fg: 210 40% 96%;
-  --fg-muted: 213 20% 68%;
-  --fg-subtle: 214 16% 54%;
-  --fg-inverse: 215 52% 10%;
+  --fg: 36 30% 94%;
+  --fg-muted: 32 12% 68%;
+  --fg-subtle: 30 10% 52%;
+  --fg-inverse: 24 14% 8%;
 
-  --border: 214 33% 20%;
-  --border-strong: 214 30% 28%;
-  --ring: 210 100% 62%;
+  --border: 26 12% 20%;
+  --border-strong: 26 11% 29%;
+  --ring: 28 70% 55%;
 
-  --primary: 213 94% 60%;
-  --primary-hover: 213 94% 68%;
-  --primary-fg: 216 60% 8%;
-  --primary-soft: 214 60% 18%;
-  --primary-soft-fg: 211 96% 78%;
-  --auth-panel: 216 58% 12%;
-  --auth-panel-fg: 210 40% 96%;
+  --primary: 26 62% 56%;
+  --primary-hover: 26 66% 64%;
+  --primary-fg: 24 30% 10%;
+  --primary-soft: 22 34% 19%;
+  --primary-soft-fg: 28 72% 72%;
+  --auth-panel: 22 30% 13%;
+  --auth-panel-fg: 36 30% 94%;
 
-  --accent: 183 72% 48%;
-  --accent-soft: 187 60% 15%;
-  --accent-soft-fg: 184 78% 66%;
+  --accent: 186 54% 46%;
+  --accent-soft: 188 44% 15%;
+  --accent-soft-fg: 186 62% 64%;
 
-  --success: 151 62% 46%;
-  --success-soft: 155 50% 14%;
-  --success-soft-fg: 150 68% 66%;
-  --warning: 38 94% 56%;
-  --warning-soft: 33 60% 15%;
-  --warning-soft-fg: 40 94% 66%;
-  --danger: 356 84% 62%;
-  --danger-soft: 356 52% 17%;
-  --danger-soft-fg: 356 92% 78%;
-  --info: 214 94% 64%;
-  --info-soft: 216 60% 18%;
-  --info-soft-fg: 213 94% 78%;
-  --neutral-soft: 215 32% 18%;
-  --neutral-soft-fg: 213 22% 72%;
-  --purple: 264 82% 68%;
-  --purple-soft: 265 44% 20%;
-  --purple-soft-fg: 267 88% 80%;
+  --success: 142 50% 45%;
+  --success-soft: 145 40% 13%;
+  --success-soft-fg: 140 55% 64%;
+  --warning: 38 88% 56%;
+  --warning-soft: 32 50% 15%;
+  --warning-soft-fg: 40 90% 66%;
+  --danger: 358 76% 62%;
+  --danger-soft: 358 46% 17%;
+  --danger-soft-fg: 358 88% 78%;
+  --info: 212 82% 62%;
+  --info-soft: 214 50% 18%;
+  --info-soft-fg: 211 88% 76%;
+  --neutral-soft: 26 12% 18%;
+  --neutral-soft-fg: 32 14% 72%;
+  --purple: 282 70% 68%;
+  --purple-soft: 282 38% 20%;
+  --purple-soft-fg: 284 80% 80%;
 
-  --shadow-color: 216 80% 2%;
+  --shadow-color: 24 40% 2%;
 }
 
 @theme inline {
