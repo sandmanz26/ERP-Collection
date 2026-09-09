@@ -1,0 +1,20 @@
+import { chromium } from 'playwright'
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' })
+const p = await b.newPage({ viewport: { width: 1440, height: 900 } })
+await p.addInitScript(() => localStorage.setItem('wanakarya-tours', JSON.stringify({ state: { seen: ['tower-v1','mrp-v1','imports-v1'] }, version: 1 })))
+await p.goto('http://localhost:5173/login', { waitUntil: 'networkidle' })
+await p.fill('input[type="email"]', 'rizky.pratama@wanakarya.co.id')
+await p.fill('input[type="password"]', 'Wanakarya#2026')
+await p.click('button[type="submit"]')
+await p.waitForURL(u => !u.pathname.includes('login'))
+await p.waitForTimeout(1000)
+await p.screenshot({ path: '/tmp/s-tower.png' })
+for (const [r, f] of [['/mrp','s-mrp'],['/imports','s-imports'],['/kiln','s-kiln'],['/bom','s-bom']]) {
+  await p.goto('http://localhost:5173' + r, { waitUntil: 'networkidle' }); await p.waitForTimeout(700)
+  await p.screenshot({ path: `/tmp/${f}.png` })
+}
+await p.goto('http://localhost:5173/imports', { waitUntil: 'networkidle' })
+await p.waitForTimeout(600)
+await p.locator('table tbody tr').first().click(); await p.waitForTimeout(800)
+await p.screenshot({ path: '/tmp/s-importdetail.png', fullPage: false })
+await b.close()

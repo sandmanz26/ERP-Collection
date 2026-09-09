@@ -1,9 +1,9 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
 import * as D from '@radix-ui/react-dialog'
-import { ArrowRight, Building2, Container, CornerDownLeft, FileStack, Search, Ship, Tags } from 'lucide-react'
+import { ArrowRight, Boxes, Building2, CornerDownLeft, Factory, Search, Ship, ShoppingCart } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useErp } from '@/store/useErp'
+import { useMfg } from '@/store/useMfg'
 import { NAV } from './nav'
 import { Kbd } from '@/components/ui/misc'
 
@@ -20,7 +20,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   const nav = useNavigate()
   const [q, setQ] = React.useState('')
   const [active, setActive] = React.useState(0)
-  const { projects, customers, packages, containers } = useErp()
+  const { salesOrders, customers, items, workOrders, shipments, products } = useMfg()
 
   const commands = React.useMemo<Cmd[]>(() => {
     const list: Cmd[] = []
@@ -29,25 +29,28 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
         list.push({ id: `nav_${it.to}`, label: it.label, hint: it.description, group: 'Navigate', to: it.to, icon: <it.icon /> }),
       ),
     )
-    projects.forEach((p) =>
-      list.push({ id: p.id, label: `${p.code} · ${p.name}`, hint: `${p.polName} → ${p.podName}`, group: 'Projects', to: `/projects/${p.id}`, icon: <Ship /> }),
+    salesOrders.forEach((o) => {
+      const customer = customers.find((c) => c.id === o.customerId)
+      list.push({ id: o.id, label: `${o.code} · ${customer?.name ?? ''}`, hint: `${o.lines.length} lines · ${o.status.replace(/_/g, ' ').toLowerCase()}`, group: 'Sales orders', to: `/orders/${o.id}`, icon: <ShoppingCart /> })
+    })
+    workOrders.forEach((w) => {
+      const product = products.find((p) => p.id === w.productId)
+      list.push({ id: w.id, label: `${w.code} · ${product?.name ?? ''}`, hint: `${w.quantity} × ${w.status.replace(/_/g, ' ').toLowerCase()}`, group: 'Work orders', to: `/work-orders/${w.id}`, icon: <Factory /> })
+    })
+    shipments.forEach((sh) =>
+      list.push({ id: sh.id, label: `${sh.code}${sh.containerNo ? ` · ${sh.containerNo}` : ''}`, hint: `${sh.status.replace(/_/g, ' ').toLowerCase()} · ${sh.vessel ?? 'not booked'}`, group: 'Import shipments', to: `/imports/${sh.id}`, icon: <Ship /> }),
     )
     customers.forEach((c) =>
-      list.push({ id: c.id, label: `${c.code} · ${c.legalName}`, hint: `${c.offices.length} offices`, group: 'Customers', to: `/customers/${c.id}`, icon: <Building2 /> }),
+      list.push({ id: c.id, label: `${c.code} · ${c.name}`, hint: c.city, group: 'Customers', to: `/customers`, icon: <Building2 /> }),
     )
-    packages.forEach((p) =>
-      list.push({ id: p.id, label: `${p.code} · ${p.name}`, hint: `${p.originPortName} → ${p.destPortName}`, group: 'Packages', to: `/packages`, icon: <Tags /> }),
+    items.forEach((i) =>
+      list.push({ id: i.id, label: `${i.code} · ${i.name}`, hint: i.imported ? `imported · HS ${i.hsCode}` : 'local', group: 'Items', to: `/items`, icon: <Boxes /> }),
     )
-    containers
-      .filter((c) => c.containerNo)
-      .forEach((c) =>
-        list.push({ id: c.id, label: c.containerNo!, hint: `${c.type} · ${c.status}`, group: 'Containers', to: `/projects/${c.projectId}?tab=containers`, icon: <Container /> }),
-      )
     return list
-  }, [projects, customers, packages, containers])
+  }, [salesOrders, customers, items, workOrders, shipments, products])
 
   const filtered = React.useMemo(() => {
-    if (!q.trim()) return commands.filter((c) => c.group === 'Navigate').concat(commands.filter((c) => c.group === 'Projects').slice(0, 5))
+    if (!q.trim()) return commands.filter((c) => c.group === 'Navigate').concat(commands.filter((c) => c.group === 'Sales orders').slice(0, 5))
     const s = q.toLowerCase()
     return commands.filter((c) => c.label.toLowerCase().includes(s) || c.hint?.toLowerCase().includes(s)).slice(0, 40)
   }, [q, commands])
@@ -152,7 +155,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               <Kbd>↵</Kbd> open
             </span>
             <span className="ml-auto flex items-center gap-1">
-              <FileStack className="size-3" /> {commands.length} records indexed
+              <Boxes className="size-3" /> {commands.length} records indexed
             </span>
           </div>
         </D.Content>

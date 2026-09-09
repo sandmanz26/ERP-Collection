@@ -3,27 +3,51 @@ import { Badge, type BadgeTone } from '@/components/ui/badge'
 import { titleCase } from '@/lib/format'
 
 const TONES: Record<string, BadgeTone> = {
-  /* customer */
+  /* generic */
   ACTIVE: 'success', PROSPECT: 'info', ON_HOLD: 'warning', BLACKLISTED: 'danger',
-  LOW: 'success', MEDIUM: 'warning', HIGH: 'danger',
-  /* package */
-  DRAFT: 'neutral', EXPIRING: 'warning', EXPIRED: 'danger', ARCHIVED: 'neutral',
-  /* project */
-  COMPLETED: 'success', CANCELLED: 'danger',
-  STANDARD: 'neutral', CRITICAL: 'danger',
-  /* container */
-  PLANNED: 'neutral', BOOKED: 'info', AT_DEPOT: 'info', STUFFING: 'warning', STUFFED: 'accent',
-  GATE_IN: 'accent', LOADED: 'primary', IN_TRANSIT: 'primary', DISCHARGED: 'accent',
-  DELIVERED: 'success', RETURNED: 'success',
+  DRAFT: 'neutral', CANCELLED: 'danger', CLOSED: 'success', COMPLETED: 'success',
+  STANDARD: 'neutral', HIGH: 'warning', CRITICAL: 'danger', LOW: 'success', MEDIUM: 'warning',
+
+  /* sales orders */
+  PENDING_CONFIRMATION: 'warning', CONFIRMED: 'info', IN_PRODUCTION: 'primary',
+  PARTIALLY_SHIPPED: 'accent', SHIPPED: 'accent',
+
+  /* work orders */
+  PLANNED: 'neutral', FIRM: 'info', RELEASED: 'primary', IN_PROGRESS: 'accent',
+
+  /* operations */
+  PENDING: 'neutral', READY: 'info', RUNNING: 'accent', CURING: 'purple', DONE: 'success', BLOCKED: 'danger',
+
+  /* purchase orders */
+  PENDING_APPROVAL: 'warning', APPROVED: 'info', PARTIALLY_RECEIVED: 'accent', RECEIVED: 'success',
+
+  /* import shipment states */
+  PERMIT_PENDING: 'danger', ORDERED: 'info', BOOKED: 'info', ON_WATER: 'primary',
+  ARRIVED: 'warning', PIB_SUBMITTED: 'warning', LANE_ASSIGNED: 'warning', CLEARED: 'accent',
+
+  /* customs lanes */
+  GREEN: 'success', YELLOW: 'warning', RED: 'danger',
+
   /* documents */
-  REQUIRED: 'neutral', PENDING_REVIEW: 'warning', APPROVED: 'success', ISSUED: 'primary',
-  SURRENDERED: 'accent', REJECTED: 'danger',
-  /* charges */
-  PENDING_APPROVAL: 'warning', INVOICED: 'primary', PAID: 'success', DISPUTED: 'danger',
+  REQUIRED: 'danger', VERIFIED: 'success', REJECTED: 'danger', NOT_APPLICABLE: 'neutral',
+
+  /* lots */
+  QUARANTINE: 'warning', AVAILABLE: 'success', BLOCKED_KILN: 'danger', BLOCKED_QC: 'danger',
+  CONSUMED: 'neutral', RETURNED: 'neutral',
+
+  /* kiln */
+  LOADING: 'info', DRYING: 'primary', CONDITIONING: 'accent', FAILED: 'danger',
+
+  /* quality */
+  PASS: 'success', FAIL: 'danger', CONDITIONAL: 'warning',
+  ACCEPT: 'success', REWORK: 'warning', DOWNGRADE: 'warning', SCRAP: 'danger', RETURN_TO_SUPPLIER: 'danger',
+
   /* finance */
-  POSTED: 'success', VOID: 'danger', PARTIALLY_PAID: 'warning', OVERDUE: 'danger',
-  /* bl */
-  NOT_ISSUED: 'neutral', APPROVED_BY_SHIPPER: 'info', RELEASED: 'success',
+  ISSUED: 'primary', PARTIALLY_PAID: 'warning', PAID: 'success', OVERDUE: 'danger',
+  POSTED: 'success', VOID: 'danger',
+
+  /* bom / routing */
+  SUPERSEDED: 'neutral',
 }
 
 export function StatusBadge({ value, size = 'md' }: { value: string; size?: 'sm' | 'md' | 'lg' }) {
@@ -49,4 +73,24 @@ export function MetaRow({ label, children, className }: { label: string; childre
       <span className="min-w-0 text-right text-[12.5px] font-medium text-fg">{children}</span>
     </div>
   )
+}
+
+/** A number that reads as good or bad on sight — negative slack, a variance, a margin. */
+export function Delta({
+  value, suffix = '', invert = false, digits = 0, zeroLabel = '—',
+}: { value: number | undefined | null; suffix?: string; invert?: boolean; digits?: number; zeroLabel?: string }) {
+  if (value === undefined || value === null || Number.isNaN(value)) return <span className="text-fg-subtle">{zeroLabel}</span>
+  const good = invert ? value <= 0 : value >= 0
+  return (
+    <span className={`tnum font-semibold ${value === 0 ? 'text-fg-muted' : good ? 'text-success' : 'text-danger'}`}>
+      {value > 0 ? '+' : ''}
+      {value.toFixed(digits)}
+      {suffix}
+    </span>
+  )
+}
+
+/** A short line of prose that explains a number, in the voice the shop floor uses. */
+export function Because({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <p className={`text-[12px] leading-relaxed text-fg-muted ${className ?? ''}`}>{children}</p>
 }

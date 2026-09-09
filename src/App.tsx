@@ -3,34 +3,34 @@ import { AppShell } from '@/components/layout/AppShell'
 import { ThemeProvider } from '@/hooks/useTheme'
 import { ToastProvider } from '@/components/ui/toast'
 import { TooltipProvider } from '@/components/ui/tooltip'
+
 import { DashboardPage } from '@/pages/DashboardPage'
-import { CustomersPage } from '@/pages/customers/CustomersPage'
-import { CustomerDetailPage } from '@/pages/customers/CustomerDetailPage'
-import { OfficesPage } from '@/pages/customers/OfficesPage'
-import { PackagesPage } from '@/pages/packages/PackagesPage'
-import { ProjectsPage } from '@/pages/projects/ProjectsPage'
-import { ProjectDetailPage } from '@/pages/projects/ProjectDetailPage'
-import { ChargesPage, ContainersPage, DocumentsPage } from '@/pages/ops/GlobalPages'
-import { LedgerPage } from '@/pages/finance/LedgerPage'
-import { AccountsPage } from '@/pages/finance/AccountsPage'
-import { InvoicesPage } from '@/pages/finance/InvoicesPage'
-import { ReportsPage } from '@/pages/finance/ReportsPage'
-import { ProfitabilityPage } from '@/pages/finance/ProfitabilityPage'
-import { QuotationsPage } from '@/pages/quotations/QuotationsPage'
-import { PartnersPage } from '@/pages/partners/PartnersPage'
-import { TrackingPage } from '@/pages/tracking/TrackingPage'
-import { WarehousePage } from '@/pages/warehouse/WarehousePage'
-import { CustomsPage } from '@/pages/customs/CustomsPage'
-import { AnalyticsPage } from '@/pages/analytics/AnalyticsPage'
-import { SettingsPage } from '@/pages/settings/SettingsPage'
-import { ServicesPage } from '@/pages/services/ServicesPage'
-import { IncidentsPage } from '@/pages/incidents/IncidentsPage'
-import { StuffingPage } from '@/pages/stuffing/StuffingPage'
-import { MyWorkPage } from '@/pages/my/MyWorkPage'
-import { IntakePage } from '@/pages/my/IntakePage'
-import { ExecutePage } from '@/pages/my/ExecutePage'
-import { MyDocumentsPage } from '@/pages/my/DocumentsPage'
-import { ClosingPage } from '@/pages/my/ClosingPage'
+import { OrdersPage } from '@/pages/sales/OrdersPage'
+import { OrderDetailPage } from '@/pages/sales/OrderDetailPage'
+import { CustomersPage } from '@/pages/sales/CustomersPage'
+import { ProductsPage } from '@/pages/engineering/ProductsPage'
+import { BomPage } from '@/pages/engineering/BomPage'
+import { RoutingsPage } from '@/pages/engineering/RoutingsPage'
+import { PlanningPage } from '@/pages/planning/PlanningPage'
+import { MrpPage } from '@/pages/planning/MrpPage'
+import { CapacityPage } from '@/pages/planning/CapacityPage'
+import { WorkOrdersPage } from '@/pages/production/WorkOrdersPage'
+import { WorkOrderDetailPage } from '@/pages/production/WorkOrderDetailPage'
+import { ShopFloorPage } from '@/pages/production/ShopFloorPage'
+import { KilnPage } from '@/pages/production/KilnPage'
+import { QualityPage } from '@/pages/production/QualityPage'
+import { ItemsPage } from '@/pages/materials/ItemsPage'
+import { InventoryPage } from '@/pages/materials/InventoryPage'
+import { SuppliersPage } from '@/pages/materials/SuppliersPage'
+import { PurchasingPage } from '@/pages/materials/PurchasingPage'
+import { ImportsPage } from '@/pages/imports/ImportsPage'
+import { ImportDetailPage } from '@/pages/imports/ImportDetailPage'
+import { CustomsPage } from '@/pages/imports/CustomsPage'
+import { LandedCostPage } from '@/pages/imports/LandedCostPage'
+import { AccountsPage, CostingPage, InvoicesPage, LedgerPage, ReportsPage } from '@/pages/finance/FinancePages'
+import { AnalyticsPage } from '@/pages/AnalyticsPage'
+import { SettingsPage } from '@/pages/SettingsPage'
+
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
@@ -51,39 +51,54 @@ export default function App() {
                 <Route path="/reset-password" element={<ResetPasswordPage />} />
               </Route>
               <Route element={<RequireAuth />}>
-              <Route element={<AppShell />}>
-                <Route path="/" element={<DashboardPage />} />
-                <Route path="/my" element={<MyWorkPage />} />
-                <Route path="/my/intake" element={<IntakePage />} />
-                <Route path="/my/execute" element={<ExecutePage />} />
-                <Route path="/my/documents" element={<MyDocumentsPage />} />
-                <Route path="/my/closing" element={<ClosingPage />} />
-                <Route path="/projects" element={<ProjectsPage />} />
-                <Route path="/projects/:id" element={<ProjectDetailPage />} />
-                <Route path="/containers" element={<ContainersPage />} />
-                <Route path="/documents" element={<DocumentsPage />} />
-                <Route path="/charges" element={<ChargesPage />} />
-                <Route path="/quotations" element={<QuotationsPage />} />
-                <Route path="/partners" element={<PartnersPage />} />
-                <Route path="/tracking" element={<TrackingPage />} />
-                <Route path="/warehouse" element={<WarehousePage />} />
-                <Route path="/customs" element={<CustomsPage />} />
-                <Route path="/services" element={<ServicesPage />} />
-                <Route path="/incidents" element={<IncidentsPage />} />
-                <Route path="/stuffing" element={<StuffingPage />} />
-                <Route path="/analytics" element={<AnalyticsPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/customers" element={<CustomersPage />} />
-                <Route path="/customers/:id" element={<CustomerDetailPage />} />
-                <Route path="/offices" element={<OfficesPage />} />
-                <Route path="/packages" element={<PackagesPage />} />
-                <Route path="/finance/ledger" element={<LedgerPage />} />
-                <Route path="/finance/accounts" element={<AccountsPage />} />
-                <Route path="/finance/invoices" element={<InvoicesPage />} />
-                <Route path="/finance/reports" element={<ReportsPage />} />
-                <Route path="/finance/profitability" element={<ProfitabilityPage />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Route>
+                <Route element={<AppShell />}>
+                  <Route path="/" element={<DashboardPage />} />
+
+                  {/* sales */}
+                  <Route path="/orders" element={<OrdersPage />} />
+                  <Route path="/orders/:id" element={<OrderDetailPage />} />
+                  <Route path="/customers" element={<CustomersPage />} />
+
+                  {/* engineering */}
+                  <Route path="/products" element={<ProductsPage />} />
+                  <Route path="/bom" element={<BomPage />} />
+                  <Route path="/routings" element={<RoutingsPage />} />
+
+                  {/* planning */}
+                  <Route path="/planning" element={<PlanningPage />} />
+                  <Route path="/mrp" element={<MrpPage />} />
+                  <Route path="/capacity" element={<CapacityPage />} />
+
+                  {/* production */}
+                  <Route path="/work-orders" element={<WorkOrdersPage />} />
+                  <Route path="/work-orders/:id" element={<WorkOrderDetailPage />} />
+                  <Route path="/shopfloor" element={<ShopFloorPage />} />
+                  <Route path="/kiln" element={<KilnPage />} />
+                  <Route path="/quality" element={<QualityPage />} />
+
+                  {/* materials & import */}
+                  <Route path="/items" element={<ItemsPage />} />
+                  <Route path="/inventory" element={<InventoryPage />} />
+                  <Route path="/suppliers" element={<SuppliersPage />} />
+                  <Route path="/purchasing" element={<PurchasingPage />} />
+                  <Route path="/imports" element={<ImportsPage />} />
+                  <Route path="/imports/:id" element={<ImportDetailPage />} />
+                  <Route path="/customs" element={<CustomsPage />} />
+                  <Route path="/landed-cost" element={<LandedCostPage />} />
+
+                  {/* finance */}
+                  <Route path="/finance/costing" element={<CostingPage />} />
+                  <Route path="/finance/invoices" element={<InvoicesPage />} />
+                  <Route path="/finance/ledger" element={<LedgerPage />} />
+                  <Route path="/finance/accounts" element={<AccountsPage />} />
+                  <Route path="/finance/reports" element={<ReportsPage />} />
+
+                  {/* insight */}
+                  <Route path="/analytics" element={<AnalyticsPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Route>
               </Route>
             </Routes>
           </BrowserRouter>

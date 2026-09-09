@@ -1,12 +1,12 @@
 import * as React from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Anchor, Bell, ChevronsLeft, Clock3, Command, Gauge, LayoutList, Lightbulb, LogOut, Monitor, Moon,
-  PanelLeftClose, PanelLeftOpen, RotateCcw, Search, ShieldCheck, Sun, TriangleAlert,
+  Bell, ChevronsLeft, Clock3, Command, Lightbulb, LogOut, Monitor, Moon,
+  PanelLeftClose, PanelLeftOpen, RotateCcw, Search, ShieldCheck, Sun, TreePine, TriangleAlert,
   UserRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { NAV, OPERATOR_NAV } from './nav'
+import { NAV } from './nav'
 import { CommandPalette } from './CommandPalette'
 import { TourGuide, startTour, useTourState } from '@/components/onboarding/Tour'
 import { Button } from '@/components/ui/button'
@@ -16,14 +16,12 @@ import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } fr
 import { Badge } from '@/components/ui/badge'
 import { Segmented } from '@/components/ui/checkbox'
 import { useTheme } from '@/hooks/useTheme'
-import { useErp } from '@/store/useErp'
+import { useMfg } from '@/store/useMfg'
 import { useAuth, useCurrentUser } from '@/store/useAuth'
-import { incidentStatusOpen, roleLabel, stuffingIsOpen } from '@/data/reference'
-import { buildExceptions } from '@/lib/analytics'
-import { buildPhase2Exceptions, filingReadiness, isQuoteOpen } from '@/lib/analytics2'
-import { buildPhase3Exceptions } from '@/lib/services'
-import { buildStuffingExceptions, checkStuffing } from '@/lib/stuffing'
-import { operatorBoard, operatorJobs } from '@/lib/operator'
+import { roleLabel, workOrderIsOpen } from '@/data/reference'
+import { useCapacityLoad, useExceptions, useMrpLines } from '@/hooks/useDerived'
+import { shipmentIsOpen } from '@/data/reference'
+import { pibGate } from '@/lib/importing'
 import { fmtDateTime } from '@/lib/format'
 import { useToast } from '@/components/ui/toast'
 
@@ -32,13 +30,13 @@ export function AppShell() {
   const [paletteOpen, setPaletteOpen] = React.useState(false)
   const { mode, setMode } = useTheme()
   const location = useLocation()
-  const store = useErp()
+  const store = useMfg()
   const toast = useToast()
   const navigate = useNavigate()
   const signOut = useAuth((s) => s.signOut)
   const resetTours = useTourState((s) => s.reset)
   const user = useCurrentUser()
-  const initials = (user?.fullName ?? 'Meridian User')
+  const initials = (user?.fullName ?? 'Wanakarya User')
     .split(' ')
     .slice(0, 2)
     .map((w) => w[0])
@@ -64,71 +62,22 @@ export function AppShell() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const exceptions = React.useMemo(() => {
-    const core = buildExceptions({
-      projects: store.projects, containers: store.containers, documents: store.documents,
-      charges: store.charges, customers: store.customers, invoices: store.invoices,
-    })
-    const extra = buildPhase2Exceptions({
-      quotations: store.quotations, partners: store.partners, milestones: store.milestones,
-      receipts: store.receipts, filings: store.filings, projects: store.projects, settings: store.settings,
-    })
-    const phase3 = buildPhase3Exceptions({
-      projects: store.projects, containers: store.containers, documents: store.documents,
-      jobServices: store.jobServices, services: store.services, incidents: store.incidents,
-      company: store.company,
-    })
-    const yard = buildStuffingExceptions({
-      projects: store.projects, charges: store.charges, stuffingJobs: store.stuffingJobs,
-    })
-    const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2 } as const
-    return [...core, ...extra, ...phase3, ...yard].sort((a, b) => order[a.severity] - order[b.severity])
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    store.projects, store.containers, store.documents, store.charges, store.customers, store.invoices,
-    store.quotations, store.partners, store.milestones, store.receipts, store.filings, store.settings,
-    store.jobServices, store.services, store.incidents, store.company, store.stuffingJobs,
-  ])
+  const exceptions = useExceptions()
+  const mrpLines = useMrpLines()
+  const loads = useCapacityLoad()
   const critical = exceptions.filter((e) => e.severity === 'CRITICAL').length
 
-  /* An operator gets the four-phase workspace; everyone else gets the suite.
-     Anyone can switch, because a supervisor needs to see what their operators see. */
-  const [workspace, setWorkspace] = React.useState<'suite' | 'operator'>(() =>
-    (localStorage.getItem('mf-workspace') as 'suite' | 'operator') ?? 'suite',
-  )
-  React.useEffect(() => {
-    if (user?.role === 'OPERATOR') setWorkspace('operator')
-  }, [user?.role])
-  React.useEffect(() => {
-    localStorage.setItem('mf-workspace', workspace)
-  }, [workspace])
-
-  const myBoard = React.useMemo(() => {
-    const assigned = operatorJobs(store.projects, user)
-    const jobs = assigned.length > 0 || user?.role === 'OPERATOR' ? assigned : store.projects.filter((p) => p.status !== 'CANCELLED')
-    return operatorBoard(jobs, {
-      containers: store.containers, documents: store.documents, charges: store.charges,
-      stuffingJobs: store.stuffingJobs, milestones: store.milestones, filings: store.filings,
-      jobServices: store.jobServices,
-    })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store.projects, store.containers, store.documents, store.charges, store.stuffingJobs, store.milestones, store.filings, store.jobServices, user])
-
-  const phaseCount = (key: string) => myBoard.byPhase.find((p) => p.phase.key === key)?.jobs.length ?? 0
-
   const badges: Record<string, number> = {
-    projects: store.projects.filter((p) => p.status === 'ACTIVE').length,
-    overdue: store.invoices.filter((i) => i.status === 'OVERDUE').length,
     exceptions: critical,
-    quotes: store.quotations.filter(isQuoteOpen).length,
-    customs: store.filings.filter((f) => f.status === 'DRAFT' && !filingReadiness(f).canSubmit).length,
-    incidents: store.incidents.filter((i) => incidentStatusOpen(i.status)).length,
-    stuffing: store.stuffingJobs.filter((j) => stuffingIsOpen(j.status) && checkStuffing(j).blockers.length > 0).length,
-    myBlocking: myBoard.blocking,
-    myIntake: myBoard.awaitingAcceptance,
-    myExecute: phaseCount('EXECUTION'),
-    myDocs: myBoard.needsPaperwork.length,
-    myClosing: phaseCount('CLOSING'),
+    shortages: mrpLines.filter((l) => l.slackDays < 0 && l.grossRequirement > 0).length,
+    workOrders: store.workOrders.filter((w) => workOrderIsOpen(w.status)).length,
+    imports: store.shipments.filter((s) => shipmentIsOpen(s.status)).length,
+    customs: store.shipments.filter((s) => ['ARRIVED', 'PIB_SUBMITTED', 'LANE_ASSIGNED'].includes(s.status) && !pibGate(s, store.items).ok).length,
+    qc: store.qcRecords.filter((q) => q.disposition === 'PENDING').length,
+    kiln: store.kilnBatches.filter((b) => b.status === 'FAILED' || b.status === 'DRYING').length,
+    orders: store.salesOrders.filter((o) => o.status === 'PENDING_CONFIRMATION' || o.status === 'CONFIRMED').length,
+    overdue: store.invoices.filter((i) => i.status === 'OVERDUE').length,
+    capacity: loads.filter((l) => l.utilisation > 100).length,
   }
 
   return (
@@ -142,18 +91,18 @@ export function AppShell() {
       >
         <div className={cn('flex h-14 items-center gap-2.5 border-b border-border px-3.5', collapsed && 'justify-center px-0')}>
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-fg shadow-[inset_0_1px_0_0_rgb(255_255_255/0.2)]">
-            <Anchor className="size-[17px]" />
+            <TreePine className="size-[17px]" />
           </span>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="truncate text-[13.5px] font-semibold leading-tight tracking-[-0.01em] text-fg">Meridian Freight</p>
-              <p className="truncate text-[11px] leading-tight text-fg-subtle">Export Operations Suite</p>
+              <p className="truncate text-[13.5px] font-semibold leading-tight tracking-[-0.01em] text-fg">Wanakarya</p>
+              <p className="truncate text-[11px] leading-tight text-fg-subtle">Production &amp; Import Suite</p>
             </div>
           )}
         </div>
 
         <nav className="scrollbar-thin flex-1 overflow-y-auto px-2 py-3">
-          {(workspace === 'operator' ? OPERATOR_NAV : NAV).map((group) => (
+          {NAV.map((group) => (
             <div key={group.label} className="mb-4 last:mb-0">
               {!collapsed && (
                 <p className="mb-1 px-2.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-fg-subtle">{group.label}</p>
@@ -240,7 +189,7 @@ export function AppShell() {
             className="group flex h-9 w-full max-w-sm items-center gap-2.5 rounded-lg border border-border-strong/70 bg-bg-muted/60 px-3 text-left text-[13px] text-fg-subtle transition-colors hover:border-border-strong hover:bg-bg-muted"
           >
             <Search className="size-4" />
-            <span className="flex-1 truncate">Search jobs, containers, customers…</span>
+            <span className="flex-1 truncate">Search orders, items, shipments, work orders…</span>
             <Kbd className="bg-surface">⌘K</Kbd>
           </button>
 
@@ -264,7 +213,7 @@ export function AppShell() {
                 {exceptions.slice(0, 12).map((e) => (
                   <Link
                     key={e.id}
-                    to={e.link}
+                    to={e.link ?? '/'}
                     className="flex gap-2.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-bg-muted"
                   >
                     <TriangleAlert
@@ -314,7 +263,7 @@ export function AppShell() {
               <MenuItem
                 icon={<RotateCcw />}
                 onSelect={() => {
-                  store.resetDemoData()
+                  store.reseed()
                   toast.push({ tone: 'success', title: 'Demo data restored', description: 'All modules reset to the seeded dataset.' })
                 }}
               >
@@ -347,7 +296,6 @@ export function AppShell() {
                 <p className="truncate text-[11.5px] text-fg-subtle">{user?.email}</p>
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                   <Badge tone="primary" size="sm">{user ? roleLabel(user.role) : '—'}</Badge>
-                  {user?.branchCode && <Badge tone="outline" size="sm">{user.branchCode}</Badge>}
                   {user?.twoFactorEnabled && (
                     <Badge tone="success" size="sm">
                       <ShieldCheck className="size-3" />
@@ -373,27 +321,6 @@ export function AppShell() {
               >
                 Replay every tour
               </MenuItem>
-              <MenuSeparator />
-              <MenuLabel>Workspace view</MenuLabel>
-              <div className="px-1.5 py-1">
-                <Segmented
-                  value={workspace}
-                  onChange={(v) => {
-                    setWorkspace(v as 'suite' | 'operator')
-                    navigate(v === 'operator' ? '/my' : '/')
-                  }}
-                  options={[
-                    { value: 'operator', label: 'Operator', icon: <LayoutList /> },
-                    { value: 'suite', label: 'Full suite', icon: <Gauge /> },
-                  ]}
-                  className="w-full [&>button]:flex-1"
-                />
-              </div>
-              <p className="px-3 pb-1.5 text-[11px] leading-relaxed text-fg-subtle">
-                {workspace === 'operator'
-                  ? 'Four phases, only your jobs — the view an operator works in.'
-                  : 'Every module in the suite, for supervisors and back office.'}
-              </p>
               <MenuSeparator />
               <MenuItem icon={<UserRound />} onSelect={() => navigate('/settings')}>
                 Company & account settings

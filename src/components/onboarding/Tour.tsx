@@ -22,7 +22,7 @@ export const useTourState = create<TourState>()(
       markSeen: (id) => set((s) => (s.seen.includes(id) ? s : { seen: [...s.seen, id] })),
       reset: () => set({ seen: [] }),
     }),
-    { name: 'meridian-freight-tours', version: 1 },
+    { name: 'wanakarya-tours', version: 1 },
   ),
 )
 

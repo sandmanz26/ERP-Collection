@@ -24,119 +24,73 @@ export interface Tour {
 
 export const TOURS: Tour[] = [
   {
-    id: 'projects-v1',
-    name: 'Projects',
-    path: '/projects',
+    id: 'tower-v1',
+    name: 'Control Tower',
+    path: '/',
     steps: [
       {
         placement: 'center',
-        title: 'This is where a shipment lives',
-        body: 'Every export job is one row. It carries the parties, the route, the cut-off dates, the containers, the documents and the money — so nothing about a shipment lives in somebody’s inbox.',
-        because: 'Takes about a minute. You can leave at any point with Esc.',
+        title: 'Three clocks, on one page',
+        body: 'A customer promise, a container on the water and a kiln that has not finished drying all run at different speeds. Everything below is the reconciliation between them.',
+        because: 'Takes about a minute. Leave at any point with Esc.',
       },
       {
-        target: 'projects-stage',
-        title: 'The stage says how far along it is',
-        body: 'A job moves through eight stages, from inquiry to settlement. The bar fills as it goes, and the label tells you what is happening right now.',
-        because: 'Sort by this column to see everything sitting at the same step.',
+        target: 'tower-clocks',
+        title: 'The clocks themselves',
+        body: 'What is promised, what is in the import pipeline, and what is blocked at the kiln gate. Each one links to the screen that can do something about it.',
       },
       {
-        target: 'projects-cutoff',
-        title: 'The next deadline, counting down',
-        body: 'Shipping lines set three or four cut-offs per shipment, days apart. This shows the nearest one and how long is left — amber inside three days, red inside one.',
-        because: 'Miss a cut-off and the container waits for the next vessel. This is the single most expensive mistake in the job.',
-      },
-      {
-        target: 'projects-margin',
-        title: 'What the job is actually making',
-        body: 'Buy and sell are held per charge line, so the margin here is calculated, not typed in. It moves as costs land.',
-        because: 'A quote at 20% that closes at 4% usually did so through charges nobody was watching.',
-      },
-      {
-        target: 'table-search',
-        title: 'Find anything by typing',
-        body: 'Search matches the job number, the customer, the vessel, the ports and the commodity at once. Filters sit next to it for narrowing by status, type or destination.',
-      },
-      {
-        target: 'table-export',
-        title: 'Import and export live here',
-        body: 'Export gives you the filtered view, your selection, or everything — and a re-importable file whose columns match the importer exactly, so a round trip loses nothing.',
-        because: 'Every module in the suite works the same way.',
-      },
-      {
-        target: 'table-actions',
-        title: 'Actions stay pinned',
-        body: 'However wide the table gets, the action column stays on the right and the identity column stays on the left. Deleting always asks first, and says what else it would remove.',
-      },
-      {
-        placement: 'center',
-        title: 'Open a job to see the stepper',
-        body: 'Inside a job the eight stages become a checklist with gates: the system will not let a job advance while something genuinely blocks it — an overloaded container, a rejected document, a customer over their credit limit.',
-        because: 'You can replay this tour any time from the account menu.',
+        target: 'tower-exceptions',
+        title: 'Every exception says what it costs',
+        body: 'Not a red flag — a sentence: what it is, what it means, what to do, and what happens in money if nobody does. That last part is what makes the list rank.',
+        because: 'A list without a cost is a list nobody works.',
       },
     ],
   },
   {
-    id: 'project-detail-v1',
-    name: 'Inside a job',
-    path: '/projects/',
+    id: 'mrp-v1',
+    name: 'MRP run',
+    path: '/mrp',
     steps: [
       {
         placement: 'center',
-        title: 'One job, end to end',
-        body: 'Everything about this shipment is on this page, split across tabs. The header keeps the route, the vessel and the owner in view wherever you are.',
+        title: 'A shortage is never a quantity',
+        body: 'It is a date. Every line here answers with the day the covering supply becomes issuable and the reason it is not sooner.',
       },
       {
-        target: 'job-stepper',
-        title: 'The eight stages, with gates',
-        body: 'Each stage has a checklist. The number on a stage is how many tasks are done. A stage will not open while a blocking task is outstanding.',
-        because: 'This is the difference between a system that records what happened and one that stops it happening wrong.',
+        target: 'mrp-slack',
+        title: 'Slack is the whole column',
+        body: 'Negative slack means the material lands after the operation that needs it. Five days late on a hardware line is five days late on the order.',
       },
       {
-        target: 'job-blockers',
-        title: 'What is stopping this job',
-        body: 'Blockers come from the rules, not from a checklist somebody remembered to tick: an overloaded container, a missing VGM, a rejected certificate, a customs filing short of its uploads.',
-      },
-      {
-        target: 'job-tabs',
-        title: 'Containers, documents, charges and the rest',
-        body: 'Containers hold the cargo plan and the weights. Documents is the register with each one checked against its own standard. Charges is buy and sell per line. Job sheet is the recap finance receives.',
+        target: 'mrp-coverage',
+        title: 'And the cause, in a sentence',
+        body: '“Berths on the eleventh, clears in two on this supplier’s own record, two days inland.” That is a plan you can argue with. “Short 340 pairs” is not.',
       },
     ],
   },
   {
-    id: 'operator-v1',
-    name: 'Your workspace',
-    path: '/my',
+    id: 'imports-v1',
+    name: 'Import shipments',
+    path: '/imports',
     steps: [
       {
         placement: 'center',
-        title: 'Your desk, in four phases',
-        body: 'Take the job on, run it, paper it, close it. Every shipment you own sits in one of them, and each one tells you what it needs next.',
-        because: 'Takes under a minute. Esc leaves at any point.',
+        title: 'Eleven states, and none of them skippable',
+        body: 'Permit, order, production, booking, sailing, arrival, PIB, lane, SPPB, gate-out, receipt. Each one has a gate that has to be true before the next.',
       },
       {
-        target: 'my-blocking',
-        title: 'What will stop a shipment',
-        body: 'These are not reminders. Each one means a container, a document or an invoice genuinely does not move until it is dealt with — and the line underneath says what it costs to leave it.',
-      },
-      {
-        target: 'my-phases',
-        title: 'The four phases',
-        body: 'A count and how many are blocked. Click any of them to work that phase on its own.',
-        because: 'Documents span every phase, because a certificate can be rejected while the box is still loading.',
-      },
-      {
-        target: 'my-jobs',
-        title: 'Your jobs, grouped by phase',
-        body: 'Each card shows where the job is, the nearest deadline, and the single most urgent thing on it. A job with nothing outstanding says so.',
+        target: 'imports-freetime',
+        title: 'Free time runs from discharge',
+        body: 'Not from arrival notice, not from the PIB. From the day the box came off the ship — and demurrage after that is shown accruing now, not billed later.',
+        because: 'Demurrage is always somebody’s decision, and it is always cheaper to make it early.',
       },
     ],
   },
 ]
 
-export const tourFor = (pathname: string) => {
-  /* the most specific matching path wins, so /projects/prj_1 gets the detail tour */
-  const matches = TOURS.filter((t) => pathname.startsWith(t.path) && (t.path !== '/projects' || pathname === '/projects'))
+/** The tour registered for a route, if any. The longest matching path wins. */
+export function tourFor(pathname: string): Tour | undefined {
+  const matches = TOURS.filter((t) => (t.path === '/' ? pathname === '/' : pathname.startsWith(t.path)))
   return matches.sort((a, b) => b.path.length - a.path.length)[0]
 }
