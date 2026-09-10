@@ -391,6 +391,49 @@ export const items: Item[] = [
   item({ id: 'it_carton', code: 'PKG-CTN-5L', name: 'Corrugated carton, 5-ply, made to size', type: 'PACKAGING', uom: 'pc', primarySupplierId: 'sup_kemasan', supplierLeadDays: 7, safetyStock: 800, reorderPoint: 1600, minOrderQuantity: 2000, standardCost: 38_500 }),
   item({ id: 'it_epe', code: 'PKG-EPE-05', name: 'EPE foam sheet, 5 mm', type: 'PACKAGING', uom: 'm2', primarySupplierId: 'sup_kemasan', supplierLeadDays: 7, safetyStock: 1200, reorderPoint: 2400, minOrderQuantity: 3000, standardCost: 6_400 }),
   item({ id: 'it_corner', code: 'PKG-COR-EG', name: 'Edge corner protector, 50 × 50 × 5 mm', type: 'PACKAGING', uom: 'm', primarySupplierId: 'sup_kemasan', supplierLeadDays: 7, safetyStock: 2000, reorderPoint: 4000, minOrderQuantity: 5000, standardCost: 3_900 }),
+
+  /* ---------- semi-finished: what conversion produces, not what purchasing buys ---------- */
+  item({
+    id: 'it_sf_oakblank', code: 'SFG-BLK-OAK', name: 'Oak component blank, ripped & docked, S4S', type: 'SEMI_FINISHED', uom: 'pc',
+    species: 'American white oak', targetMoistureMin: 8, targetMoistureMax: 12,
+    supplierLeadDays: 3, safetyStock: 400, reorderPoint: 900, standardCost: 96_000,
+    note: 'Made on our own rough mill from TMB-OAK-26. Nobody sells this — it comes out of a conversion order or it does not exist.',
+  }),
+  item({
+    id: 'it_sf_walblank', code: 'SFG-BLK-WAL', name: 'Walnut component blank, ripped & docked, S4S', type: 'SEMI_FINISHED', uom: 'pc',
+    species: 'American black walnut', targetMoistureMin: 8, targetMoistureMax: 12,
+    supplierLeadDays: 3, safetyStock: 200, reorderPoint: 450, standardCost: 214_000,
+  }),
+  item({
+    id: 'it_sf_teakblank', code: 'SFG-BLK-JAT', name: 'Jati component blank, ripped & docked, S4S', type: 'SEMI_FINISHED', uom: 'pc',
+    species: 'Jati', targetMoistureMin: 8, targetMoistureMax: 12,
+    supplierLeadDays: 3, safetyStock: 250, reorderPoint: 500, standardCost: 168_000,
+  }),
+  item({
+    id: 'it_sf_venpanel', code: 'SFG-PNL-VEN', name: 'Oak-veneered MDF panel, 18 mm, both faces', type: 'SEMI_FINISHED', uom: 'sheet',
+    supplierLeadDays: 2, safetyStock: 60, reorderPoint: 140, standardCost: 612_000,
+    note: 'MDF plus sliced veneer plus a press cycle. Buying it ready-made costs 40% more and loses the flitch traceability an export desk asks for.',
+  }),
+  item({
+    id: 'it_sf_nested', code: 'SFG-PRT-NST', name: 'Nested panel parts, cut & edge-banded', type: 'SEMI_FINISHED', uom: 'pc',
+    supplierLeadDays: 2, safetyStock: 800, reorderPoint: 1800, standardCost: 78_000,
+  }),
+  item({
+    id: 'it_sf_glued', code: 'SFG-PNL-GLU', name: 'Edge-glued solid panel, 26 mm', type: 'SEMI_FINISHED', uom: 'm2',
+    supplierLeadDays: 4, safetyStock: 40, reorderPoint: 90, standardCost: 1_180_000,
+    note: 'The panel that lets a short offcut stop being an offcut — narrow stock edge-glued into a table top.',
+  }),
+
+  /* ---------- offcuts: the leftover that is still worth something ---------- */
+  item({
+    id: 'it_oc_solid', code: 'OFC-SLD-MIX', name: 'Solid timber offcut, racked by species and length', type: 'OFFCUT', uom: 'm3',
+    supplierLeadDays: 0, standardCost: 0,
+    note: 'Not bought and not sold. Carried at a fraction of the board it came off, and worth exactly as much as somebody remembers to look at the rack.',
+  }),
+  item({
+    id: 'it_oc_sheet', code: 'OFC-SHT-MIX', name: 'Sheet drop, racked by size', type: 'OFFCUT', uom: 'm2',
+    supplierLeadDays: 0, standardCost: 0,
+  }),
 ]
 
 /* ==================================================================

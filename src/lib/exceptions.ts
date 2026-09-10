@@ -12,9 +12,10 @@ import type {
   Quotation, SalesOrder, SubcontractOrder, Supplier, SystemException, WorkOrder,
 } from '@/data/types'
 import {
-  CLAIM_AGEING_DAYS, CONTAINER_FILL_FLOOR, EXCEPTION_META, LICENCE_WARNING_DAYS,
-  REQUISITION_SLA_DAYS, SEVERITY_ORDER,
+  CLAIM_AGEING_DAYS, CONTAINER_FILL_FLOOR, deliveryCountsAgainstOrder, EXCEPTION_META,
+  LICENCE_WARNING_DAYS, REMNANT_AGEING_DAYS, REQUISITION_SLA_DAYS, SEVERITY_ORDER,
 } from '@/data/reference'
+import { conversionIsOpen, conversionYield, remnantState, remnantSummary } from './conversion'
 import {
   claimCost, claimIsOpen, deliveryDocGate, deliveryIsOpen, invoiceOutstanding, loadPlan,
   quoteClock, quoteValue,
@@ -52,6 +53,8 @@ export interface ExceptionInput {
   requisitions: PurchaseRequisition[]
   maintenanceOrders: MaintenanceOrder[]
   subcontractOrders: SubcontractOrder[]
+  conversionOrders: import('@/data/types').ConversionOrder[]
+  remnants: import('@/data/types').Remnant[]
 }
 
 export function buildExceptions(x: ExceptionInput): SystemException[] {
@@ -467,6 +470,70 @@ export function buildExceptions(x: ExceptionInput): SystemException[] {
       link: '/subcontract', entityLabel: o.code,
     })
   })
+
+
+  /* ---------------- conversion and the rack ---------------- */
+  x.conversionOrders.forEach((o) => {
+    if (o.status === 'COMPLETED') {
+      const y = conversionYield(o)
+      if (!y.short) return
+      push({
+        id: `ex_cvy_${o.id}`, kind: 'CONVERSION_YIELD', severity: y.costOfShortfall > 20_000_000 ? 'HIGH' : 'MEDIUM',
+        title: `${o.code} came in at ${(y.attainment * 100).toFixed(1)}% of its standard yield`,
+        detail: `${o.inputs.map((i) => i.description).join(', ')} → ${o.outputs.find((z) => z.role === 'PRIMARY')?.description ?? ''}. ${o.note ?? ''}`,
+        remedy: y.recoveryPercent < 8
+          ? 'Check the cutting list and the grade before the next run, and rack what comes off it — less than half the loss on this one came back as anything usable.'
+          : 'Check the cutting list and the grade before the next run of the same recipe.',
+        moneyAtRisk: y.costOfShortfall,
+        link: '/conversion', entityLabel: o.code,
+      })
+      return
+    }
+    if (conversionIsOpen(o.status) && o.dueDate < TODAY) {
+      const late = daysBetween(o.dueDate, TODAY)
+      push({
+        id: `ex_cvd_${o.id}`, kind: 'CONVERSION_OVERDUE', severity: o.status === 'AT_SUBCONTRACTOR' ? 'HIGH' : 'MEDIUM',
+        title: `${o.code} is ${late} day${late === 1 ? '' : 's'} past due`,
+        detail: o.status === 'AT_SUBCONTRACTOR'
+          ? `Out at ${x.suppliers.find((sp) => sp.id === o.supplierId)?.name ?? 'a third party'}. The material is ours the whole time it is on their floor.`
+          : `Running on ${o.workCentreId ? 'our own floor' : 'no centre'}. ${o.note ?? ''}`,
+        remedy: 'The work order behind this cannot start without the output. Chase it or re-sequence what is waiting on it.',
+        daysLate: late,
+        link: '/conversion', entityLabel: o.code,
+      })
+    }
+  })
+
+  {
+    const rack = remnantSummary(x.remnants)
+    if (rack.ageing > 0) {
+      push({
+        id: 'ex_rmn_ageing', kind: 'REMNANT_AGEING', severity: rack.ageingValue > 15_000_000 ? 'MEDIUM' : 'LOW',
+        title: `${rack.ageing} offcut${rack.ageing === 1 ? '' : 's'} past ${REMNANT_AGEING_DAYS} days on the rack`,
+        detail: rack.oldest
+          ? `The oldest has been there ${remnantState(rack.oldest).ageDays} days. ${remnantState(rack.oldest).usableFor}`
+          : '',
+        remedy: 'Put them into a glue-up now or write them off. A rack nobody clears stops being inventory and becomes a place things go to be forgotten.',
+        moneyAtRisk: rack.ageingValue,
+        link: '/remnants', entityLabel: `${rack.ageing} pieces`,
+      })
+    }
+  }
+
+  /* ---------------- part-delivered orders ---------------- */
+  x.deliveries
+    .filter((dv) => deliveryCountsAgainstOrder(dv.purpose) && dv.status !== 'CANCELLED')
+    .forEach((dv) => {
+      const short = dv.lines.filter((l) => l.shortQuantity > 0)
+      if (!short.length) return
+      push({
+        id: `ex_bo_${dv.id}`, kind: 'ORDER_BACKORDER', severity: 'MEDIUM',
+        title: `${dv.code} goes out ${short.reduce((a, l) => a + l.shortQuantity, 0)} units short`,
+        detail: short.map((l) => `${l.description}: ${l.quantity} of ${l.orderedQuantity}. ${l.shortReason ?? ''}`).join(' '),
+        remedy: 'Tell the customer what is following and on which sailing. A short delivery nobody warned them about is a claim waiting to be raised.',
+        link: '/deliveries', entityLabel: dv.code,
+      })
+    })
 
   /* ---------------- compliance ---------------- */
   x.company.licences.forEach((l) => {

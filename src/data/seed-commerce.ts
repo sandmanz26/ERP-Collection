@@ -233,7 +233,7 @@ const DOC = (
 export const deliveries: Delivery[] = [
   {
     id: 'dv_0311', code: 'DO-2026-0311', suratJalanNo: 'SJ/2026/IX/0311',
-    customerId: 'cus_informa', status: 'DELIVERED', mode: 'LOCAL_TRUCK', containerType: 'NONE',
+    customerId: 'cus_informa', status: 'DELIVERED', purpose: 'ORDER_PARTIAL', chargeable: true, mode: 'LOCAL_TRUCK', containerType: 'NONE',
     plannedDate: d(-9), dispatchedAt: d(-9), deliveredAt: d(-8), receivedBy: 'Suryanto — DC Cikarang',
     carrier: 'PT Lintas Jawa Logistik', vehicleOrVessel: 'H 9184 KZ', driver: 'Wahyudi',
     destination: 'Informa DC, Cikarang', freightCost: 6_400_000,
@@ -244,7 +244,7 @@ export const deliveries: Delivery[] = [
   },
   {
     id: 'dv_0318', code: 'DO-2026-0318', suratJalanNo: 'SJ/2026/IX/0318',
-    customerId: 'cus_nordiska', status: 'LOADED', mode: 'EXPORT_FCL', containerType: 'FORTY_GP',
+    customerId: 'cus_nordiska', status: 'LOADED', purpose: 'ORDER_PARTIAL', chargeable: true, mode: 'EXPORT_FCL', containerType: 'FORTY_GP',
     containerNo: 'MSKU 7719420', sealNo: 'ID-SEG-448170',
     plannedDate: d(1), carrier: 'Maersk / PT Samudera Agencies', vehicleOrVessel: 'MV Maersk Cabo Verde',
     destination: 'Rotterdam', incoterm: 'FOB', freightCost: 0,
@@ -264,7 +264,7 @@ export const deliveries: Delivery[] = [
   },
   {
     id: 'dv_0319', code: 'DO-2026-0319', suratJalanNo: 'SJ/2026/IX/0319',
-    customerId: 'cus_wovn', status: 'PACKED', mode: 'EXPORT_FCL', containerType: 'FORTY_HC',
+    customerId: 'cus_wovn', status: 'PACKED', purpose: 'ORDER_PARTIAL', chargeable: true, mode: 'EXPORT_FCL', containerType: 'FORTY_HC',
     plannedDate: d(4), carrier: 'ONE / PT Jasa Kirim Semarang', destination: 'Melbourne', incoterm: 'FOB',
     freightCost: 0,
     lines: [DL('so_0035', 'pr_outdoor', 34, 'Six sets are still at the carver. At 1.94 m³ a set the fortieth would not have fitted in this box in any case.')],
@@ -283,7 +283,7 @@ export const deliveries: Delivery[] = [
   },
   {
     id: 'dv_0316', code: 'DO-2026-0316', suratJalanNo: 'SJ/2026/IX/0316',
-    customerId: 'cus_vivere', status: 'PARTIALLY_ACCEPTED', mode: 'LOCAL_TRUCK', containerType: 'NONE',
+    customerId: 'cus_vivere', status: 'PARTIALLY_ACCEPTED', purpose: 'ORDER_PARTIAL', chargeable: true, mode: 'LOCAL_TRUCK', containerType: 'NONE',
     plannedDate: d(-5), dispatchedAt: d(-5), deliveredAt: d(-4), receivedBy: 'Rahmawati — Vivere Alam Sutera',
     carrier: 'PT Lintas Jawa Logistik', vehicleOrVessel: 'B 9702 SFU', driver: 'Kurniawan',
     destination: 'Vivere, Alam Sutera', freightCost: 4_100_000,
@@ -294,7 +294,7 @@ export const deliveries: Delivery[] = [
   },
   {
     id: 'dv_0320', code: 'DO-2026-0320', suratJalanNo: 'SJ/2026/IX/0320',
-    customerId: 'cus_alila', status: 'PLANNED', mode: 'DOMESTIC_LCL', containerType: 'TWENTY_GP',
+    customerId: 'cus_alila', status: 'PLANNED', purpose: 'ORDER_PARTIAL', chargeable: true, mode: 'DOMESTIC_LCL', containerType: 'TWENTY_GP',
     plannedDate: d(12), carrier: 'PT Meratus Line', destination: 'Benoa, Bali', freightCost: 21_800_000,
     lines: [
       DL('so_0031', 'pr_wardrobe', 40, 'First of three loads. The runners for the rest are still on the water.'),
@@ -306,7 +306,7 @@ export const deliveries: Delivery[] = [
   },
   {
     id: 'dv_0305', code: 'DO-2026-0305', suratJalanNo: 'SJ/2026/VIII/0305',
-    customerId: 'cus_nordiska', status: 'DELIVERED', mode: 'EXPORT_FCL', containerType: 'FORTY_HC',
+    customerId: 'cus_nordiska', status: 'DELIVERED', purpose: 'ORDER_FULL', chargeable: true, mode: 'EXPORT_FCL', containerType: 'FORTY_HC',
     containerNo: 'HLXU 4418073', sealNo: 'ID-SEG-441088',
     plannedDate: d(-63), dispatchedAt: d(-62), deliveredAt: d(-31), receivedBy: 'Nordiska Hem, Rotterdam DC',
     carrier: 'Hapag-Lloyd', vehicleOrVessel: 'MV Vienna Express', destination: 'Rotterdam', incoterm: 'FOB',
@@ -322,13 +322,58 @@ export const deliveries: Delivery[] = [
   },
   {
     id: 'dv_0308', code: 'DO-2026-0308', suratJalanNo: 'SJ/2026/VIII/0308',
-    customerId: 'cus_informa', status: 'DELIVERED', mode: 'LOCAL_TRUCK', containerType: 'NONE',
+    customerId: 'cus_informa', status: 'DELIVERED', purpose: 'ORDER_FULL', chargeable: true, mode: 'LOCAL_TRUCK', containerType: 'NONE',
     plannedDate: d(-44), dispatchedAt: d(-44), deliveredAt: d(-43), receivedBy: 'Suryanto — DC Cikarang',
     carrier: 'PT Lintas Jawa Logistik', vehicleOrVessel: 'H 9184 KZ', driver: 'Wahyudi',
     destination: 'Informa DC, Cikarang', freightCost: 7_900_000,
     lines: [DL('so_0025', 'pr_sideboard', 60)],
     units: [PU('WNK/INF/0308/1-60', 'pr_sideboard', 60, 60, [])],
     documents: [DOC('DELIVERY_NOTE', 'VERIFIED'), DOC('PACKING_LIST', 'VERIFIED')],
+  },
+
+  /* ---- loads that are not against an order at all ---- */
+  {
+    id: 'dv_0321', code: 'DO-2026-0321', suratJalanNo: 'SJ/2026/IX/0321',
+    customerId: 'cus_nordiska', status: 'IN_TRANSIT', purpose: 'SAMPLE', chargeable: false,
+    quotationId: 'qt_0091', mode: 'EXPORT_LCL', containerType: 'NONE',
+    plannedDate: d(-3), dispatchedAt: d(-3),
+    carrier: 'DHL Express', vehicleOrVessel: 'AWB 4718 9920 33',
+    destination: 'Nordiska Hem AB, Rotterdam', incoterm: 'DAP', freightCost: 14_800_000,
+    lines: [],
+    units: [PU('WNK/SMP/0321/1-3', 'pr_desk', 1, 3, ['lot_oak_b'], 'One desk plus two finish panels on certified oak.')],
+    documents: [
+      DOC('DELIVERY_NOTE', 'VERIFIED', 'SJ/2026/IX/0321'),
+      DOC('PACKING_LIST', 'VERIFIED'),
+      DOC('COMMERCIAL_INVOICE', 'VERIFIED', 'Pro-forma, value for customs only — no charge'),
+      DOC('PEB', 'VERIFIED', 'BC30-2026-119004'),
+      DOC('BL_AWB', 'VERIFIED', '4718 9920 33'),
+      DOC('COO_FORM', 'NOT_APPLICABLE'),
+      DOC('FUMIGATION', 'VERIFIED'),
+      DOC('INSURANCE', 'NOT_APPLICABLE'),
+    ],
+    note: 'A tester against QT-2026-0091 — they will not price the programme without seeing the water-based finish on FSC oak. Free of charge, and it must not come off what any order is owed. The freight alone is Rp 14,8 juta, which is what a sample actually costs.',
+  },
+  {
+    id: 'dv_0322', code: 'DO-2026-0322', suratJalanNo: 'SJ/2026/IX/0322',
+    customerId: 'cus_alila', status: 'PLANNED', purpose: 'REPLACEMENT', chargeable: false,
+    claimId: 'cl_0038', mode: 'DOMESTIC_LCL', containerType: 'NONE',
+    plannedDate: d(5), carrier: 'PT Meratus Line', destination: 'Alila Ubud, Bali', freightCost: 3_200_000,
+    lines: [],
+    units: [PU('WNK/RPL/0322/1-2', 'pr_wardrobe', 2, 2, [], 'Two runner sets replaced under the Hettich batch claim.')],
+    documents: [DOC('DELIVERY_NOTE', 'REQUIRED'), DOC('PACKING_LIST', 'REQUIRED')],
+    note: 'Against CLM-2026-0038, recovered in full from Hettich. It costs us twice all the same — the piece and the freight to Bali — and none of it is revenue.',
+  },
+  {
+    id: 'dv_0317', code: 'DO-2026-0317', suratJalanNo: 'SJ/2026/IX/0317',
+    customerId: 'cus_dekoruma', status: 'DELIVERED', purpose: 'SAMPLE', chargeable: false,
+    quotationId: 'qt_0097', mode: 'LOCAL_TRUCK', containerType: 'NONE',
+    plannedDate: d(-12), dispatchedAt: d(-12), deliveredAt: d(-11), receivedBy: 'Merchandising, Dekoruma',
+    carrier: 'PT Lintas Jawa Logistik', vehicleOrVessel: 'B 9702 SFU',
+    destination: 'Dekoruma studio, Jakarta Selatan', freightCost: 1_900_000,
+    lines: [],
+    units: [PU('WNK/SMP/0317/1', 'pr_coffee', 1, 1, [], 'Showroom piece, oil & wax on jati.')],
+    documents: [DOC('DELIVERY_NOTE', 'VERIFIED'), DOC('PACKING_LIST', 'VERIFIED')],
+    note: 'A showroom piece that turned into the QT-2026-0097 enquiry a fortnight later. Samples are a cost until they are not.',
   },
 ]
 

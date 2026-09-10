@@ -13,7 +13,7 @@ import type {
   KilnBatch, Lot, MrpRun, Permit, Product, PurchaseOrder, QcRecord, Routing, SalesOrder, StockMovement,
   Supplier, Warehouse, WorkCentre, WorkOrder,
   BankAccount, Claim, Delivery, MaintenanceOrder, Payment, PurchaseRequisition, Quotation,
-  SubcontractOrder,
+  SubcontractOrder, ConversionOrder, Remnant,
 } from '@/data/types'
 import { company as seedCompany, customers as seedCustomers, defaultSettings, items as seedItems, products as seedProducts, suppliers as seedSuppliers, warehouses as seedWarehouses, workCentres as seedWorkCentres } from '@/data/seed-master'
 import { boms as seedBoms, routings as seedRoutings } from '@/data/seed-engineering'
@@ -22,6 +22,8 @@ import { kilnBatches as seedKiln, lots as seedLots, qcRecords as seedQc, salesOr
 import { accounts as seedAccounts, invoices as seedInvoices, journal as seedJournal } from '@/data/seed-finance'
 import { bankAccounts as seedBankAccounts, claims as seedClaims, deliveries as seedDeliveries, payments as seedPayments, quotations as seedQuotations } from '@/data/seed-commerce'
 import { maintenanceOrders as seedMaintenance, requisitions as seedRequisitions, subcontractOrders as seedSubcontract } from '@/data/seed-operations'
+import { conversionOrders as seedConversions, remnants as seedRemnants, semiFinishedLots as seedSemiLots } from '@/data/seed-conversion'
+import { deliveryCountsAgainstOrder } from '@/data/reference'
 import { buildApprovals, requisitionValue } from '@/lib/operations'
 import { nextCode, uid } from '@/lib/utils'
 import { addDays, TODAY } from '@/data/clock'
@@ -47,7 +49,7 @@ export type EntityKey =
   | 'warehouses' | 'lots' | 'movements' | 'purchaseOrders' | 'shipments' | 'permits'
   | 'salesOrders' | 'workOrders' | 'kilnBatches' | 'qcRecords' | 'accounts' | 'journal' | 'invoices'
   | 'quotations' | 'deliveries' | 'claims' | 'payments' | 'bankAccounts' | 'requisitions'
-  | 'maintenanceOrders' | 'subcontractOrders'
+  | 'maintenanceOrders' | 'subcontractOrders' | 'conversionOrders' | 'remnants'
 
 interface MfgState {
   customers: Customer[]
@@ -78,6 +80,8 @@ interface MfgState {
   requisitions: PurchaseRequisition[]
   maintenanceOrders: MaintenanceOrder[]
   subcontractOrders: SubcontractOrder[]
+  conversionOrders: ConversionOrder[]
+  remnants: Remnant[]
   mrpRuns: MrpRun[]
   company: CompanyProfile
   settings: AppSettings
@@ -123,6 +127,15 @@ interface MfgState {
   startMaintenance: (id: string) => void
   completeMaintenance: (id: string, actualDowntimeHours: number, rootCause?: string) => void
   sendSubcontract: (id: string) => void
+
+  /* conversion and the rack */
+  releaseConversion: (id: string) => void
+  issueConversionMaterial: (id: string) => void
+  completeConversion: (id: string, produced: Record<string, number>) => void
+  reserveRemnant: (id: string, forWorkOrderId?: string, forConversionId?: string) => void
+  consumeRemnant: (id: string) => void
+  writeOffRemnant: (id: string, reason: string) => void
+  releaseRemnant: (id: string) => void
   receiveSubcontract: (id: string, returned: Record<string, number>, loss: Record<string, number>) => void
   updateSettings: (patch: Partial<AppSettings>) => void
   updateCompany: (patch: Partial<CompanyProfile>) => void
@@ -131,6 +144,8 @@ interface MfgState {
 
 /** The collections a version-1 book predates. */
 const newCollections = () => ({
+  conversionOrders: seedConversions,
+  remnants: seedRemnants,
   quotations: seedQuotations,
   deliveries: seedDeliveries,
   claims: seedClaims,
@@ -150,7 +165,7 @@ const seed = () => ({
   items: seedItems,
   suppliers: seedSuppliers,
   warehouses: seedWarehouses,
-  lots: seedLots,
+  lots: [...seedLots, ...seedSemiLots],
   movements: seedMovements,
   purchaseOrders: seedPurchaseOrders,
   shipments: seedShipments,
@@ -514,8 +529,13 @@ export const useMfg = create<MfgState>()(
                   }
                 : x,
             ),
-            /* delivering is the only thing that legitimately moves a sales order line's shipped quantity */
-            salesOrders: to === 'DELIVERED' || to === 'PARTIALLY_ACCEPTED'
+            /*
+             * Delivering is the only thing that legitimately moves a sales order
+             * line's shipped quantity — and only when the load was actually
+             * against the order. A tester or a replacement goes out on the same
+             * lorry and must never reduce what the customer is still owed.
+             */
+            salesOrders: (to === 'DELIVERED' || to === 'PARTIALLY_ACCEPTED') && deliveryCountsAgainstOrder(dv.purpose)
               ? s.salesOrders.map((o) => {
                   const lines = dv.lines.filter((dl) => dl.salesOrderId === o.id)
                   if (!lines.length) return o
@@ -730,6 +750,158 @@ export const useMfg = create<MfgState>()(
             ),
           }
         }),
+
+
+      /* ---------------- conversion and the rack ---------------- */
+
+      releaseConversion: (id) =>
+        set((s) => {
+          const o = s.conversionOrders.find((x) => x.id === id)
+          if (o) get().log('Released', 'Conversion', `${o.code} cleared to run; the material is reserved but still on the rack.`)
+          return { conversionOrders: s.conversionOrders.map((x) => (x.id === id ? { ...x, status: 'RELEASED' as const } : x)) }
+        }),
+
+      /**
+       * Issuing draws the inputs out of stock — lots *and* any remnants the run
+       * picked off the rack, which is the only thing that turns an offcut back
+       * into material rather than a number in a register.
+       */
+      issueConversionMaterial: (id) =>
+        set((s) => {
+          const o = s.conversionOrders.find((x) => x.id === id)
+          if (!o) return {}
+          const remnantIds = o.inputs.flatMap((i) => i.remnantIds)
+          const movements = o.inputs.map((i) => ({
+            id: uid('mv'), at: TODAY, kind: 'CONVERSION_ISSUE' as const, itemId: i.itemId,
+            warehouseId: 'wh_raw', quantity: -(i.issuedQuantity || i.plannedQuantity),
+            unitCost: i.unitCost, reference: o.code, conversionOrderId: o.id, actor: actor(),
+            note: i.remnantIds.length ? `${i.remnantIds.length} remnant(s) drawn off the rack against this run.` : undefined,
+          }))
+          get().log('Issued', 'Conversion', `${o.code} — material out of the store${remnantIds.length ? `, including ${remnantIds.length} remnant(s)` : ''}.`)
+          return {
+            conversionOrders: s.conversionOrders.map((x) =>
+              x.id === id ? { ...x, status: 'MATERIAL_ISSUED' as const, actualStart: TODAY } : x,
+            ),
+            remnants: s.remnants.map((r) =>
+              remnantIds.includes(r.id) ? { ...r, status: 'CONSUMED' as const, consumedAt: TODAY } : r,
+            ),
+            lots: s.lots.map((l) => {
+              const input = o.inputs.find((i) => i.lotIds.includes(l.id))
+              if (!input) return l
+              const draw = Math.min(l.quantity, input.issuedQuantity || input.plannedQuantity)
+              return { ...l, quantity: Math.max(0, l.quantity - draw) }
+            }),
+            movements: [...movements, ...s.movements],
+          }
+        }),
+
+      /**
+       * Completing books the primary output in as a lot of its own and racks every
+       * by-product as a remnant. A conversion that does not create the offcut has
+       * simply lost the material, whatever the yield report says.
+       */
+      completeConversion: (id, produced) =>
+        set((s) => {
+          const o = s.conversionOrders.find((x) => x.id === id)
+          if (!o) return {}
+          const outputs = o.outputs.map((out) => ({ ...out, producedQuantity: produced[out.id] ?? out.plannedQuantity }))
+          const inputValue = o.inputs.reduce((a, i) => a + (i.issuedQuantity || i.plannedQuantity) * i.unitCost, 0)
+          const centre = s.workCentres.find((w) => w.id === o.workCentreId)
+          const conversionCost = centre ? o.labourHours * (centre.labourRatePerHour + centre.overheadRatePerHour) : 0
+          const parentUnitCost = o.inputs[0]?.unitCost ?? 0
+          const credit = outputs
+            .filter((x) => x.role === 'BY_PRODUCT')
+            .reduce((a, x) => a + x.producedQuantity * parentUnitCost * x.valueFactor, 0)
+          const primary = outputs.find((x) => x.role === 'PRIMARY')
+          const unitCost = primary && primary.producedQuantity > 0
+            ? Math.max(0, inputValue + conversionCost + o.serviceCost - credit) / primary.producedQuantity
+            : 0
+
+          const newLots = primary && primary.producedQuantity > 0
+            ? [{
+                id: uid('lot'), code: `LOT-${o.code}`, itemId: primary.itemId, warehouseId: 'wh_wip',
+                quantity: primary.producedQuantity, reserved: 0, status: 'AVAILABLE' as const,
+                receivedAt: TODAY, unitCost, costIsProvisional: false,
+                species: o.inputs[0] ? s.items.find((i) => i.id === o.inputs[0].itemId)?.species : undefined,
+                note: `Produced by ${o.code}. The unit cost carries this run's yield, which is where it belongs.`,
+              }]
+            : []
+
+          const newRemnants: Remnant[] = outputs
+            .filter((x) => x.role === 'BY_PRODUCT' && x.producedQuantity > 0)
+            .map((x) => ({
+              id: uid('rmn'), code: `RMN-${o.code}-${x.id.slice(-2)}`,
+              itemId: o.inputs[0]?.itemId ?? x.itemId,
+              offcutItemId: x.itemId,
+              warehouseId: 'wh_raw', status: 'AVAILABLE' as const,
+              sourceConversionId: o.id, sourceLotId: o.inputs[0]?.lotIds[0],
+              createdAt: TODAY,
+              species: o.inputs[0] ? s.items.find((i) => i.id === o.inputs[0].itemId)?.species : undefined,
+              quantity: x.producedQuantity, uom: x.uom,
+              parentUnitCost, valueFactor: x.valueFactor,
+              note: `Racked off ${o.code}. Worth ${Math.round(x.valueFactor * 100)}% of the material it came from — and nothing at all if nobody looks at the rack.`,
+            }))
+
+          get().log('Completed', 'Conversion', `${o.code} — ${primary?.producedQuantity ?? 0} ${primary?.uom ?? ''} booked in, ${newRemnants.length} offcut(s) racked.`)
+          return {
+            conversionOrders: s.conversionOrders.map((x) =>
+              x.id === id ? { ...x, outputs, status: 'COMPLETED' as const, completedAt: TODAY } : x,
+            ),
+            lots: [...newLots, ...s.lots],
+            remnants: [...newRemnants, ...s.remnants],
+            movements: [
+              ...outputs.filter((x) => x.producedQuantity > 0).map((x) => ({
+                id: uid('mv'), at: TODAY,
+                kind: x.role === 'PRIMARY' ? ('CONVERSION_OUTPUT' as const) : ('REMNANT_RECOVERY' as const),
+                itemId: x.itemId, warehouseId: x.role === 'PRIMARY' ? 'wh_wip' : 'wh_raw',
+                quantity: x.producedQuantity,
+                unitCost: x.role === 'PRIMARY' ? unitCost : parentUnitCost * x.valueFactor,
+                reference: o.code, conversionOrderId: o.id, actor: actor(),
+              })),
+              ...s.movements,
+            ],
+          }
+        }),
+
+      reserveRemnant: (id, forWorkOrderId, forConversionId) =>
+        set((s) => {
+          const r = s.remnants.find((x) => x.id === id)
+          if (r) get().log('Reserved', 'Remnant', `${r.code} earmarked before a full board is opened.`)
+          return {
+            remnants: s.remnants.map((x) =>
+              x.id === id
+                ? { ...x, status: 'RESERVED' as const, reservedForWorkOrderId: forWorkOrderId, reservedForConversionId: forConversionId }
+                : x,
+            ),
+          }
+        }),
+
+      consumeRemnant: (id) =>
+        set((s) => {
+          const r = s.remnants.find((x) => x.id === id)
+          if (r) get().log('Used', 'Remnant', `${r.code} went into something rather than onto a skip.`)
+          return { remnants: s.remnants.map((x) => (x.id === id ? { ...x, status: 'CONSUMED' as const, consumedAt: TODAY } : x)) }
+        }),
+
+      writeOffRemnant: (id, reason) =>
+        set((s) => {
+          const r = s.remnants.find((x) => x.id === id)
+          if (r) get().log('Written off', 'Remnant', `${r.code} — ${reason}`)
+          return {
+            remnants: s.remnants.map((x) =>
+              x.id === id ? { ...x, status: 'WRITTEN_OFF' as const, writtenOffAt: TODAY, note: reason } : x,
+            ),
+          }
+        }),
+
+      releaseRemnant: (id) =>
+        set((s) => ({
+          remnants: s.remnants.map((x) =>
+            x.id === id
+              ? { ...x, status: 'AVAILABLE' as const, reservedForWorkOrderId: undefined, reservedForConversionId: undefined }
+              : x,
+          ),
+        })),
 
       recordMrpRun: (run) => set((s) => ({ mrpRuns: [run, ...s.mrpRuns].slice(0, 30) })),
 

@@ -8,7 +8,8 @@
  */
 
 import type {
-  Bom, ImportShipment, Item, KilnBatch, Lot, MrpLine, Product, PurchaseOrder, SalesOrder, Supplier, WorkOrder,
+  Bom, ImportShipment, Item, KilnBatch, Lot, MrpLine, Product, PurchaseOrder, Remnant, SalesOrder,
+  Supplier, WorkOrder,
 } from '@/data/types'
 import { addDays, daysBetween, TODAY } from '@/data/clock'
 import { availableDate } from './importing'
@@ -24,6 +25,8 @@ export interface MrpInput {
   shipments: ImportShipment[]
   suppliers: Supplier[]
   kilnBatches: KilnBatch[]
+  /** the rack. An offcut is stock that is already cut and already paid for */
+  remnants: Remnant[]
   horizonDays: number
 }
 
@@ -222,6 +225,20 @@ export function runMrp(input: MrpInput): MrpLine[] {
       })
     }
 
+    /*
+     * The rack counts. A remnant of this item is material that is already cut and
+     * already paid for, available today — so it nets before anything is bought.
+     * Netting without it is how a works ends up buying a board it already owns.
+     */
+    const rack = input.remnants.filter((r) => r.itemId === item.id && r.status === 'AVAILABLE')
+    const rackQuantity = rack.reduce((a, r) => a + r.quantity, 0)
+    if (rackQuantity > 0) {
+      supplies.push({
+        quantity: rackQuantity, date: TODAY, kind: 'REMNANT',
+        coverage: `${rack.length} offcut${rack.length === 1 ? '' : 's'} on the rack cover ${Number(rackQuantity.toFixed(2))} ${item.uom} — already cut, already paid for, available today.`,
+      })
+    }
+
     supplies.sort((a, b) => (a.date < b.date ? -1 : 1))
     const scheduledReceipts = supplies.reduce((a, s) => a + s.quantity, 0)
     const net = Math.max(0, gross + item.safetyStock - pos.available - scheduledReceipts)
@@ -267,6 +284,7 @@ export function runMrp(input: MrpInput): MrpLine[] {
       safetyStock: item.safetyStock,
       scheduledReceipts: Number(scheduledReceipts.toFixed(2)),
       netRequirement: Number(net.toFixed(2)),
+      remnantCover: rackQuantity > 0 ? Number(rackQuantity.toFixed(2)) : undefined,
       availableDate: availDate,
       requiredDate,
       slackDays: slackDays === -999 ? -999 : slackDays,

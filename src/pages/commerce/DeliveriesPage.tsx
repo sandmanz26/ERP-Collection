@@ -14,7 +14,8 @@ import { useMfg } from '@/store/useMfg'
 import type { Delivery } from '@/data/types'
 import { deliveryDocGate, deliveryIsOpen, loadPlan } from '@/lib/commerce'
 import {
-  CONTAINER_FILL_FLOOR, CONTAINER_SPECS, DELIVERY_DOC_TYPES, DELIVERY_MODES, DELIVERY_STATUSES,
+  CONTAINER_FILL_FLOOR, CONTAINER_SPECS, DELIVERY_DOC_TYPES, DELIVERY_MODES, DELIVERY_PURPOSES,
+  DELIVERY_STATUSES, deliveryCountsAgainstOrder, deliveryPurposeMeta,
 } from '@/data/reference'
 import { fmtCurrency, fmtDate, fmtNumber, fmtPercent } from '@/lib/format'
 
@@ -23,10 +24,11 @@ const NEXT: Partial<Record<Delivery['status'], Delivery['status']>> = {
 }
 
 export function DeliveriesPage() {
-  const { deliveries, customers, products, advanceDelivery } = useMfg()
+  const { deliveries, customers, products, salesOrders, quotations, advanceDelivery } = useMfg()
   const toast = useToast()
   const [mode, setMode] = React.useState<string[]>([])
   const [status, setStatus] = React.useState<string[]>([])
+  const [purpose, setPurpose] = React.useState<string[]>([])
   const [selectedId, setSelectedId] = React.useState<string>(deliveries.find((d) => deliveryIsOpen(d.status))?.id ?? deliveries[0]?.id ?? '')
 
   const selected = deliveries.find((d) => d.id === selectedId) ?? deliveries[0]
@@ -37,6 +39,11 @@ export function DeliveriesPage() {
   const underloaded = containerised.filter((d) => loadPlan(d).underloaded)
   const docsBlocked = open.filter((d) => !deliveryDocGate(d).ok && ['PACKED', 'LOADED'].includes(d.status))
   const cbmOut = open.reduce((a, d) => a + loadPlan(d).cbm, 0)
+  const freeOfCharge = deliveries.filter((d) => !d.chargeable)
+  const focCost = freeOfCharge.reduce((a, d) => a + d.freightCost, 0)
+  const backordered = deliveries
+    .filter((d) => deliveryCountsAgainstOrder(d.purpose))
+    .reduce((a, d) => a + d.lines.reduce((x, l) => x + l.shortQuantity, 0), 0)
 
   const columns: Column<Delivery>[] = [
     {
@@ -58,6 +65,37 @@ export function DeliveriesPage() {
         </div>
       ),
       exportValue: (d) => d.status,
+    },
+    {
+      key: 'purpose', header: 'What it is', width: 'w-[175px]', sortable: true, sortValue: (d) => d.purpose,
+      headerHint: 'A tester and a replacement go out on the same lorry as an order, and neither reduces what the customer is still owed. This column is what keeps that straight.',
+      cell: (d) => {
+        const meta = deliveryPurposeMeta(d.purpose)
+        return (
+          <Tooltip content={meta?.hint ?? ''}>
+            <div className="min-w-0">
+              <StatusBadge value={d.purpose} size="sm" />
+              {!d.chargeable && <p className="mt-0.5 text-[11px] text-fg-muted">free of charge</p>}
+            </div>
+          </Tooltip>
+        )
+      },
+      exportValue: (d) => d.purpose,
+    },
+    {
+      key: 'against', header: 'Against', width: 'min-w-[180px]',
+      cell: (d) => {
+        if (d.quotationId) {
+          const q = quotations.find((x) => x.id === d.quotationId)
+          return <span className="font-mono text-[11.5px] text-purple">{q?.code ?? 'quotation'}</span>
+        }
+        if (d.claimId) return <span className="font-mono text-[11.5px] text-warning">claim</span>
+        const codes = [...new Set(d.lines.map((l) => salesOrders.find((o) => o.id === l.salesOrderId)?.code).filter(Boolean))]
+        return codes.length
+          ? <span className="truncate font-mono text-[11.5px] text-fg-muted">{codes.join(', ')}</span>
+          : <span className="text-[12px] text-fg-subtle">—</span>
+      },
+      exportValue: (d) => d.lines.map((l) => l.salesOrderId).join(' '),
     },
     {
       key: 'destination', header: 'Destination', width: 'min-w-[190px]',
@@ -139,7 +177,12 @@ export function DeliveriesPage() {
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Open deliveries" value={fmtNumber(open.length)} icon={<Truck />} accent="primary" sub={`${fmtNumber(cbmOut, 1)} m³ waiting to leave`} />
+        <KpiCard
+          label="Open deliveries"
+          value={fmtNumber(open.length)}
+          icon={<Truck />} accent="primary"
+          sub={backordered > 0 ? `${fmtNumber(cbmOut, 1)} m³ to leave · ${fmtNumber(backordered)} units on backorder` : `${fmtNumber(cbmOut, 1)} m³ waiting to leave`}
+        />
         <KpiCard
           label="Containers under-filled"
           value={fmtNumber(underloaded.length)}
@@ -155,10 +198,10 @@ export function DeliveriesPage() {
           sub={docsBlocked.length ? docsBlocked[0].code : 'nothing waiting on paper'}
         />
         <KpiCard
-          label="Delivered, last 90 days"
-          value={fmtNumber(deliveries.filter((d) => d.status === 'DELIVERED' || d.status === 'PARTIALLY_ACCEPTED').length)}
-          icon={<Boxes />} accent="accent"
-          sub={`${fmtNumber(deliveries.filter((d) => d.status === 'PARTIALLY_ACCEPTED').length)} signed with something noted`}
+          label="Free of charge"
+          value={fmtNumber(freeOfCharge.length)}
+          icon={<Boxes />} accent="purple"
+          sub={`testers and replacements · ${fmtCurrency(focCost, 'IDR', { compact: true })} of freight alone`}
         />
       </div>
 
@@ -176,6 +219,11 @@ export function DeliveriesPage() {
           initialSort={{ key: 'date', dir: 'asc' }}
           rowTone={(d) => (loadPlan(d).underloaded ? 'bg-warning-soft/20' : undefined)}
           filters={[
+            {
+              key: 'purpose', label: 'What it is', values: purpose, onChange: setPurpose,
+              options: DELIVERY_PURPOSES.map((x) => ({ value: x.value, label: x.label })),
+              match: (d, v) => v.includes(d.purpose),
+            },
             {
               key: 'status', label: 'Status', values: status, onChange: setStatus,
               options: DELIVERY_STATUSES.map((x) => ({ value: x.value, label: x.label })),
@@ -201,6 +249,7 @@ export function DeliveriesPage() {
                   actions={<StatusBadge value={selected.status} size="sm" />}
                 />
                 <CardBody>
+                  <MetaRow label="What it is">{deliveryPurposeMeta(selected.purpose)?.label}</MetaRow>
                   <MetaRow label="Surat jalan">{selected.suratJalanNo}</MetaRow>
                   <MetaRow label="Carrier">{selected.carrier}</MetaRow>
                   {selected.vehicleOrVessel && <MetaRow label="Vehicle / vessel">{selected.vehicleOrVessel}</MetaRow>}
@@ -310,8 +359,23 @@ export function DeliveriesPage() {
               </Card>
 
               <Card>
-                <CardHeader icon={<Truck />} title="Against the order" description="What each line owes, and what this load takes off it." />
+                <CardHeader
+                  icon={<Truck />}
+                  title={deliveryCountsAgainstOrder(selected.purpose) ? 'Against the order' : 'Not against an order'}
+                  description={
+                    deliveryCountsAgainstOrder(selected.purpose)
+                      ? 'What each line owes, and what this load takes off it.'
+                      : deliveryPurposeMeta(selected.purpose)?.hint
+                  }
+                />
                 <CardBody className="space-y-2">
+                  {!deliveryCountsAgainstOrder(selected.purpose) && (
+                    <Because>
+                      {selected.quotationId
+                        ? `Sent against ${quotations.find((q) => q.id === selected.quotationId)?.code ?? 'a quotation'}. It costs ${fmtCurrency(selected.freightCost, 'IDR', { compact: true })} in freight and the pieces on top, and none of it is revenue — but it is what the enquiry turns on.`
+                        : 'Free of charge. It costs us the piece and the freight, and it must never reduce what any customer is still owed.'}
+                    </Because>
+                  )}
                   {selected.lines.map((l) => (
                     <div key={l.id} className="rounded-lg border border-border px-3 py-2">
                       <div className="flex items-start justify-between gap-3">

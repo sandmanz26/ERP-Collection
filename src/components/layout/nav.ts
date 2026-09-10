@@ -2,7 +2,7 @@ import {
   Banknote, BarChart3, BookOpen, Boxes, Building2, CalendarRange, ClipboardCheck, ClipboardList,
   Combine, Container, Factory, FileSpreadsheet, FileText, Flame, Gauge, GitBranch, HandCoins,
   Handshake, Layers, LineChart, Package, PackageSearch, Receipt, Route, Settings, ShieldCheck,
-  Ship, ShoppingCart, Stamp, Truck, Undo2, Warehouse, Wallet, Wrench,
+  Ship, ShoppingCart, Stamp, Truck, Undo2, Warehouse, Wallet, Workflow, Wrench, Recycle,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -13,7 +13,7 @@ export interface NavItem {
   badgeKey?:
     | 'exceptions' | 'shortages' | 'workOrders' | 'imports' | 'customs' | 'qc' | 'kiln'
     | 'orders' | 'overdue' | 'capacity' | 'quotations' | 'deliveries' | 'claims'
-    | 'requisitions' | 'maintenance' | 'subcontract' | 'payments'
+    | 'requisitions' | 'maintenance' | 'subcontract' | 'payments' | 'conversion' | 'remnants'
   description?: string
 }
 
@@ -25,7 +25,10 @@ export interface NavGroup {
 export const NAV: NavGroup[] = [
   {
     label: 'Control',
-    items: [{ to: '/', label: 'Control Tower', icon: Gauge, badgeKey: 'exceptions', description: 'Three clocks, every exception, ranked by money' }],
+    items: [
+      { to: '/', label: 'Control Tower', icon: Gauge, badgeKey: 'exceptions', description: 'Three clocks, every exception, ranked by money' },
+      { to: '/flow', label: 'Material Flow', icon: Workflow, description: 'Where the value is standing, from the water to the gate' },
+    ],
   },
   {
     label: 'Sales',
@@ -69,6 +72,8 @@ export const NAV: NavGroup[] = [
     items: [
       { to: '/items', label: 'Item Master', icon: Boxes, description: 'Every material with its import identity' },
       { to: '/inventory', label: 'Inventory & Lots', icon: Warehouse, description: 'On hand, reserved, blocked, traceability' },
+      { to: '/conversion', label: 'Material Conversion', icon: Layers, badgeKey: 'conversion', description: 'Raw into semi-finished, ours or theirs' },
+      { to: '/remnants', label: 'Offcuts & Remnants', icon: Recycle, badgeKey: 'remnants', description: 'Bahan sisa — already cut, already paid for' },
       { to: '/suppliers', label: 'Suppliers', icon: Truck, description: 'Scorecards and lane history' },
       { to: '/requisitions', label: 'Requisitions', icon: ClipboardList, badgeKey: 'requisitions', description: 'The ask, the ladder and the days it costs' },
       { to: '/purchasing', label: 'Purchase Orders', icon: PackageSearch, description: 'Local and import, with the LARTAS gate' },

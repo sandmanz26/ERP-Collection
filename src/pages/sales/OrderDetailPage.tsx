@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, CalendarCheck, CheckCircle2, Factory, TriangleAlert, Wallet } from 'lucide-react'
+import { ArrowLeft, CalendarCheck, CheckCircle2, Factory, Truck, TriangleAlert, Wallet } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Because, MetaRow, StatusBadge } from '@/components/shared/status'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
@@ -11,7 +11,8 @@ import { useMfg } from '@/store/useMfg'
 import { useMrpLines } from '@/hooks/useDerived'
 import { availableToPromise } from '@/lib/production'
 import { orderMargin } from '@/lib/analytics'
-import { customerSegmentLabel, paymentInstrumentLabel } from '@/data/reference'
+import { customerSegmentLabel, deliveryCountsAgainstOrder, deliveryPurposeMeta, paymentInstrumentLabel } from '@/data/reference'
+import { outstandingByLine } from '@/lib/commerce'
 import { fmtCurrency, fmtDate, fmtNumber, fmtPercent } from '@/lib/format'
 import { daysBetween } from '@/data/clock'
 
@@ -182,6 +183,93 @@ export function OrderDetailPage() {
               </div>
             </CardBody>
           </Card>
+
+          {/* ---------------- fulfilment ---------------- */}
+          {(() => {
+            const mine = s.deliveries.filter(
+              (dv) => dv.status !== 'CANCELLED' && dv.lines.some((l) => l.salesOrderId === order.id),
+            )
+            const rows = outstandingByLine(order, mine.filter((dv) => deliveryCountsAgainstOrder(dv.purpose)))
+            const ordered = rows.reduce((a, r) => a + r.line.quantity, 0)
+            const delivered = rows.reduce((a, r) => a + r.delivered, 0)
+            const outstanding = rows.reduce((a, r) => a + r.outstanding, 0)
+            const samples = s.deliveries.filter(
+              (dv) => !deliveryCountsAgainstOrder(dv.purpose) && dv.customerId === order.customerId,
+            )
+            return (
+              <Card>
+                <CardHeader
+                  icon={<Truck />}
+                  title="Fulfilment"
+                  description="What has actually gone out against this order, load by load. A line only moves when a surat jalan is signed for."
+                  actions={
+                    <Badge tone={outstanding === 0 ? 'success' : delivered > 0 ? 'accent' : 'neutral'} size="sm">
+                      {outstanding === 0 ? 'Complete' : delivered > 0 ? 'Part delivered' : 'Nothing out yet'}
+                    </Badge>
+                  }
+                />
+                <CardBody className="space-y-3">
+                  <div>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-[12px] text-fg-muted">
+                        {fmtNumber(delivered)} of {fmtNumber(ordered)} units signed for
+                      </span>
+                      <span className={`tnum text-[12.5px] font-semibold ${outstanding > 0 ? 'text-warning' : 'text-success'}`}>
+                        {outstanding > 0 ? `${fmtNumber(outstanding)} on backorder` : 'nothing outstanding'}
+                      </span>
+                    </div>
+                    <Progress
+                      className="mt-1.5"
+                      value={ordered > 0 ? (delivered / ordered) * 100 : 0}
+                      tone={outstanding === 0 ? 'success' : 'primary'}
+                      size="sm"
+                    />
+                  </div>
+                  <Separator />
+                  <div className="space-y-1.5">
+                    {rows.map((r) => (
+                      <div key={r.line.id} className="flex items-start justify-between gap-3">
+                        <p className="min-w-0 truncate text-[12.5px] text-fg">{r.line.description}</p>
+                        <p className="tnum shrink-0 text-[12px] text-fg-muted">
+                          {fmtNumber(r.delivered)} / {fmtNumber(r.line.quantity)}
+                          {r.outstanding > 0 && <span className="ml-1.5 text-warning">{fmtNumber(r.outstanding)} to go</span>}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  {mine.length > 0 && (
+                    <>
+                      <Separator />
+                      <div className="space-y-1.5">
+                        {mine.map((dv) => (
+                          <Link key={dv.id} to="/deliveries" className="flex items-start justify-between gap-3 rounded-md py-1 transition-colors hover:bg-bg-muted">
+                            <div className="min-w-0">
+                              <p className="truncate font-mono text-[11.5px] font-semibold text-fg">{dv.code}</p>
+                              <p className="truncate text-[11px] text-fg-muted">
+                                {deliveryPurposeMeta(dv.purpose)?.short} · {dv.destination}
+                              </p>
+                            </div>
+                            <div className="shrink-0 text-right">
+                              <StatusBadge value={dv.status} size="sm" />
+                              <p className="tnum mt-0.5 text-[11px] text-fg-muted">
+                                {fmtNumber(dv.lines.filter((l) => l.salesOrderId === order.id).reduce((a, l) => a + l.quantity, 0))} units
+                              </p>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  {mine.length === 0 && <Because>Nothing has been cut against this order yet.</Because>}
+                  {samples.length > 0 && (
+                    <Because className="border-t border-border pt-3">
+                      {samples.length} free-of-charge load{samples.length === 1 ? '' : 's'} went to this customer separately — a tester or a replacement. Neither counts against what they are still owed here.
+                    </Because>
+                  )}
+                </CardBody>
+              </Card>
+            )
+          })()}
 
           {/* ---------------- work orders ---------------- */}
           <Card>

@@ -21,9 +21,10 @@ export function useMrpLines() {
         items: s.items, boms: s.boms, products: s.products, lots: s.lots,
         workOrders: s.workOrders, salesOrders: s.salesOrders, purchaseOrders: s.purchaseOrders,
         shipments: s.shipments, suppliers: s.suppliers, kilnBatches: s.kilnBatches,
+        remnants: s.remnants,
         horizonDays: s.settings.mrpHorizonDays,
       }),
-    [s.items, s.boms, s.products, s.lots, s.workOrders, s.salesOrders, s.purchaseOrders, s.shipments, s.suppliers, s.kilnBatches, s.settings.mrpHorizonDays],
+    [s.items, s.boms, s.products, s.lots, s.workOrders, s.salesOrders, s.purchaseOrders, s.shipments, s.suppliers, s.kilnBatches, s.remnants, s.settings.mrpHorizonDays],
   )
 }
 
@@ -41,8 +42,9 @@ export function useExceptions() {
         quotations: s.quotations, deliveries: s.deliveries, claims: s.claims, payments: s.payments,
         requisitions: s.requisitions, maintenanceOrders: s.maintenanceOrders,
         subcontractOrders: s.subcontractOrders,
+        conversionOrders: s.conversionOrders, remnants: s.remnants,
       }),
-    [s.shipments, s.purchaseOrders, s.suppliers, s.permits, s.items, s.lots, s.kilnBatches, s.workOrders, s.workCentres, s.qcRecords, s.salesOrders, s.customers, s.invoices, s.company, s.settings, mrpLines, s.quotations, s.deliveries, s.claims, s.payments, s.requisitions, s.maintenanceOrders, s.subcontractOrders],
+    [s.shipments, s.purchaseOrders, s.suppliers, s.permits, s.items, s.lots, s.kilnBatches, s.workOrders, s.workCentres, s.qcRecords, s.salesOrders, s.customers, s.invoices, s.company, s.settings, mrpLines, s.quotations, s.deliveries, s.claims, s.payments, s.requisitions, s.maintenanceOrders, s.subcontractOrders, s.conversionOrders, s.remnants],
   )
 }
 

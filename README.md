@@ -79,13 +79,22 @@ in the store. There is no hand-typed dashboard figure anywhere in the applicatio
 
 ## Modules
 
+**Control** — Control Tower · **Material Flow** (the whole chain on one screen)
 **Sales** — **Quotations** (weighted pipeline, margin floor, validity clock, loss reasons) · Sales orders (with the ATP promise, credit and deposit gates) · **Deliveries & packing** (surat jalan, container fill, the export document gate) · **Returns & claims** · Customers
 **Engineering** — Products · Bills of material (multi-level, yield, alternates, where-used) · Routings & work centres
 **Planning** — Master schedule · MRP run · Capacity & load
 **Production** — Work orders · Shop floor · Kiln drying · **Subcontracting** · **Maintenance** · Quality
-**Materials & Import** — Item master · Inventory & lots · Suppliers · **Requisitions** (the approval ladder) · Purchase orders · **Import shipments** · **Customs & permits** · **Landed cost**
+**Materials & Import** — Item master · Inventory & lots · **Material conversion** (raw into semi-finished, ours or a third party's) · **Offcuts & remnants** (bahan sisa) · Suppliers · **Requisitions** (the approval ladder) · Purchase orders · **Import shipments** · **Customs & permits** · **Landed cost**
 **Finance** — Costing & variance · Invoices & bills · **Receipts & payments** · General ledger · Chart of accounts · Financial reports
 **Insight** — Operations analytics · Settings & audit
+
+Between buying a cubic metre and building a wardrobe the material changes shape — ripped, nested,
+pressed, resawn or dried — and it does so on our own floor or at somebody else's. **Conversion**
+gives that step orders of its own, consuming raw and semi-finished material together and producing
+three things rather than one: the output that was wanted, the offcut that is still worth money, and
+the waste that is not. The **offcut rack** is where the second of those lives, and the MRP run nets
+it before it suggests buying anything — because an offcut of oak is oak that is already cut, already
+dried and already paid for.
 
 Each of those closes a loop the core would otherwise leave open. A quotation carries the standard
 cost it was priced on, frozen, so a win can be judged afterwards. A delivery is the only thing that

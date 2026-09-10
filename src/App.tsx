@@ -35,6 +35,9 @@ import { PaymentsPage } from '@/pages/commerce/PaymentsPage'
 import { RequisitionsPage } from '@/pages/operations/RequisitionsPage'
 import { MaintenancePage } from '@/pages/operations/MaintenancePage'
 import { SubcontractPage } from '@/pages/operations/SubcontractPage'
+import { ConversionPage } from '@/pages/materials/ConversionPage'
+import { RemnantsPage } from '@/pages/materials/RemnantsPage'
+import { FlowPage } from '@/pages/flow/FlowPage'
 import { AnalyticsPage } from '@/pages/AnalyticsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 
@@ -60,6 +63,7 @@ export default function App() {
               <Route element={<RequireAuth />}>
                 <Route element={<AppShell />}>
                   <Route path="/" element={<DashboardPage />} />
+                  <Route path="/flow" element={<FlowPage />} />
 
                   {/* sales */}
                   <Route path="/orders" element={<OrdersPage />} />
@@ -91,6 +95,8 @@ export default function App() {
                   {/* materials & import */}
                   <Route path="/items" element={<ItemsPage />} />
                   <Route path="/inventory" element={<InventoryPage />} />
+                  <Route path="/conversion" element={<ConversionPage />} />
+                  <Route path="/remnants" element={<RemnantsPage />} />
                   <Route path="/suppliers" element={<SuppliersPage />} />
                   <Route path="/requisitions" element={<RequisitionsPage />} />
                   <Route path="/purchasing" element={<PurchasingPage />} />

@@ -12,6 +12,7 @@ import type {
   ClaimKind, ClaimLiability, ClaimRemedy, ContainerType, Delivery, DeliveryMode, DeliveryStatus,
   LostReason, MaintenanceKind, MaintenanceStatus, PaymentMethod, PaymentStatus, QuotationStatus,
   RequisitionOrigin, RequisitionStatus, SubcontractStatus,
+  ConversionKind, ConversionRoute, ConversionStatus, DeliveryPurpose, RemnantStatus,
 } from './types'
 
 /* ==================================================================
@@ -102,6 +103,8 @@ export const ITEM_TYPES: { value: ItemType; label: string; local: string; hint: 
   { value: 'PACKAGING', label: 'Packaging', local: 'kemasan', hint: 'Carton, corner board, EPE foam, stretch film, pallet.' },
   { value: 'CONSUMABLE', label: 'Consumable', local: 'bahan habis', hint: 'Abrasives, adhesive, screws, staples, masking.' },
   { value: 'GLASS_STONE', label: 'Glass & stone', local: 'kaca / batu', hint: 'Tempered glass, mirror, marble and sintered tops.' },
+  { value: 'SEMI_FINISHED', label: 'Semi-finished', local: 'barang setengah jadi', hint: 'Made, not bought: blanks, veneered panels, nested parts. It exists because a conversion order produced it, and its cost is what that conversion cost.' },
+  { value: 'OFFCUT', label: 'Offcut', local: 'bahan sisa', hint: 'The usable leftover. Carried at a fraction of the board it came off, and only worth anything while somebody still looks at the rack.' },
 ]
 
 export const itemTypeMeta = (t: ItemType) => ITEM_TYPES.find((x) => x.value === t)
@@ -505,6 +508,10 @@ export const EXCEPTION_META: Record<ExceptionKind, { label: string; group: strin
   REQUISITION_WAITING: { label: 'Requisition waiting for a signature', group: 'Planning' },
   MAINTENANCE_OVERDUE: { label: 'Maintenance overdue', group: 'Production' },
   SUBCONTRACT_OVERDUE: { label: 'Subcontract work overdue', group: 'Production' },
+  CONVERSION_YIELD: { label: 'Conversion yield under standard', group: 'Materials' },
+  CONVERSION_OVERDUE: { label: 'Conversion overdue', group: 'Materials' },
+  REMNANT_AGEING: { label: 'Offcuts ageing towards write-off', group: 'Materials' },
+  ORDER_BACKORDER: { label: 'Order part delivered', group: 'Logistics' },
 }
 
 export const SEVERITY_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 } as const
@@ -762,3 +769,127 @@ export const SUBCONTRACT_STATUSES: { value: SubcontractStatus; label: string; hi
 
 /** Loss beyond this at a subcontractor is a conversation, not a rounding difference. */
 export const SUBCONTRACT_LOSS_TOLERANCE = 0.02
+
+/* ==================================================================
+   Delivery purpose, conversion and remnants
+   ================================================================== */
+
+export const DELIVERY_PURPOSES: { value: DeliveryPurpose; label: string; short: string; chargeable: boolean; hint: string }[] = [
+  {
+    value: 'ORDER_FULL', label: 'Full against the order', short: 'Full', chargeable: true,
+    hint: 'The whole outstanding balance in one load. The order line closes when it is signed for.',
+  },
+  {
+    value: 'ORDER_PARTIAL', label: 'Part against the order', short: 'Partial', chargeable: true,
+    hint: 'Part of it, with the rest on backorder. Normal on contract work — three villas open in three weeks, not on the same Tuesday.',
+  },
+  {
+    value: 'SAMPLE', label: 'Sample / tester', short: 'Sample', chargeable: false,
+    hint: 'A tester, a signed sample or a showroom piece sent to win the order. Free of charge, and it must never reduce what a customer is owed.',
+  },
+  {
+    value: 'REPLACEMENT', label: 'Replacement on a claim', short: 'Replacement', chargeable: false,
+    hint: 'Free of charge, against a claim already settled. It costs us twice — the piece and the freight — and it is not revenue.',
+  },
+  {
+    value: 'RETURN_TO_SUPPLIER', label: 'Return to supplier', short: 'Return', chargeable: false,
+    hint: 'Material going back the way it came, usually after an incoming inspection failed.',
+  },
+]
+
+export const deliveryPurposeMeta = (p: DeliveryPurpose) => DELIVERY_PURPOSES.find((x) => x.value === p)
+/** A load that does not reduce what the customer is still owed. */
+export const deliveryCountsAgainstOrder = (p: DeliveryPurpose) => p === 'ORDER_FULL' || p === 'ORDER_PARTIAL'
+
+/**
+ * `typicalYield` is output per unit of the driving input, in that recipe's own
+ * units — a fraction where both sides are the same unit, a count where they are
+ * not. An order carries its own standard; this is only the fallback.
+ */
+export const CONVERSION_KINDS: { value: ConversionKind; label: string; indonesian: string; hint: string; typicalYield: number }[] = [
+  {
+    value: 'BREAKDOWN', label: 'Breakdown — rip, dock & defect', indonesian: 'Pembahanan', typicalYield: 0.62,
+    hint: 'Sawn timber into component blanks. This is where the timber yield is decided and nowhere else — a careless cutter costs more than a careless buyer.',
+  },
+  {
+    value: 'PANEL_CUT', label: 'Panel cut (nested)', indonesian: 'Potong panel', typicalYield: 0.86,
+    hint: 'A sheet nested into parts. The yield is the nesting software’s, and what falls out is a drop big enough to keep.',
+  },
+  {
+    value: 'LAMINATION', label: 'Lamination / veneer press', indonesian: 'Laminasi', typicalYield: 0.94,
+    hint: 'Veneer or HPL pressed onto a substrate. Two inputs, one output, and a press cycle that cannot be hurried.',
+  },
+  {
+    value: 'MOULDING', label: 'Moulding & profiling', indonesian: 'Pembentukan profil', typicalYield: 0.88,
+    hint: 'A blank run into a section. Loss is shavings, and shavings are gone.',
+  },
+  {
+    value: 'GLUE_UP', label: 'Edge glue-up', indonesian: 'Laminating sambung', typicalYield: 0.91,
+    hint: 'Narrow stock edge-glued into a wide panel — the way short and narrow offcuts stop being offcuts.',
+  },
+  {
+    value: 'RESAW', label: 'Resaw', indonesian: 'Belah tebal', typicalYield: 0.78,
+    hint: 'Splitting thickness. The classic way to rescue an expensive board, at the cost of a saw kerf every pass.',
+  },
+  {
+    value: 'KILN', label: 'Kiln drying', indonesian: 'Pengeringan', typicalYield: 0.96,
+    hint: 'Drying is a conversion with a moisture gate on the end: the same timber comes out, lighter, smaller and worth more.',
+  },
+  {
+    value: 'FINISH_PREP', label: 'Sand, fill & seal', indonesian: 'Persiapan finishing', typicalYield: 0.97,
+    hint: 'Components prepared before they join a work order, so the booth is never the place a sanding fault is found.',
+  },
+]
+
+export const conversionKindMeta = (k: ConversionKind) => CONVERSION_KINDS.find((x) => x.value === k)
+
+export const CONVERSION_ROUTES: { value: ConversionRoute; label: string; hint: string }[] = [
+  {
+    value: 'IN_HOUSE', label: 'Our own floor', hint: 'Run on a work centre. It costs hours the schedule has to find, and the yield is ours to fix.',
+  },
+  {
+    value: 'SUBCONTRACT', label: 'Third party (maklon)', hint: 'Sent out. The material stays ours the whole time, the yield is theirs, and the loss is argued about afterwards.',
+  },
+]
+
+export const CONVERSION_STATUSES: { value: ConversionStatus; label: string; hint: string }[] = [
+  { value: 'PLANNED', label: 'Planned', hint: 'A recipe and a date, nothing drawn.' },
+  { value: 'RELEASED', label: 'Released', hint: 'Cleared to run; the material is reserved but still on the rack.' },
+  { value: 'MATERIAL_ISSUED', label: 'Material issued', hint: 'Stock has left the store against this order. It is work in progress from here.' },
+  { value: 'IN_PROGRESS', label: 'In progress', hint: 'Running on the centre.' },
+  { value: 'AT_SUBCONTRACTOR', label: 'At the subcontractor', hint: 'Out of the building. Still our inventory, still our risk.' },
+  { value: 'COMPLETED', label: 'Completed', hint: 'Output booked in, offcuts registered, waste written off.' },
+  { value: 'CANCELLED', label: 'Cancelled', hint: 'Stood down. Anything already issued has to come back.' },
+]
+
+/**
+ * How far under its own standard a run may come before it stops being variance
+ * and starts being a problem with the cutting list, the grade, or the person at
+ * the saw. Expressed against attainment, so it means the same thing on a
+ * breakdown run and on a nested cut.
+ */
+export const CONVERSION_YIELD_TOLERANCE = 0.05
+
+export const REMNANT_STATUSES: { value: RemnantStatus; label: string; hint: string }[] = [
+  { value: 'AVAILABLE', label: 'Available', hint: 'On the rack, findable, and worth picking before a full board is opened.' },
+  { value: 'RESERVED', label: 'Reserved', hint: 'Earmarked for a work order or a conversion that intends to use it.' },
+  { value: 'CONSUMED', label: 'Used', hint: 'Went into something. This is the number that justifies keeping the rack at all.' },
+  { value: 'WRITTEN_OFF', label: 'Written off', hint: 'Nobody used it in time. It is firewood, and the value comes off the books.' },
+]
+
+/**
+ * What a remnant is worth against full stock. A long clear board off a rip saw is
+ * nearly as good as new; a short piece of edge-banded panel is worth very little.
+ */
+export const REMNANT_VALUE_FACTORS: { kind: string; factor: number; hint: string }[] = [
+  { kind: 'Long clear solid (over 1 m)', factor: 0.85, hint: 'Rails, stiles and drawer sides come out of these all day.' },
+  { kind: 'Short solid (300–1000 mm)', factor: 0.6, hint: 'Good for small parts and glue-ups; too short for anything structural.' },
+  { kind: 'Sheet drop over 0.5 m²', factor: 0.75, hint: 'Nests into drawer bottoms and back panels.' },
+  { kind: 'Sheet drop under 0.5 m²', factor: 0.35, hint: 'Jigs, templates and packing. Rarely worth racking.' },
+  { kind: 'Veneer trim', factor: 0.4, hint: 'Only useful while the flitch is still being worked.' },
+]
+
+/** Past this a remnant stops being inventory and starts being a write-off waiting to happen. */
+export const REMNANT_AGEING_DAYS = 90
+/** Minimum size worth racking at all — below it, the handling costs more than the wood. */
+export const REMNANT_MIN_LENGTH_MM = 300

@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
-import { Flame, PackageSearch, Play, Ship, TriangleAlert, Warehouse } from 'lucide-react'
+import { Flame, PackageSearch, Play, Recycle, Ship, TriangleAlert, Warehouse } from 'lucide-react'
 import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { Because } from '@/components/shared/status'
 import { DataTable } from '@/components/data-table/DataTable'
@@ -23,11 +23,12 @@ const SUPPLY_ICON: Record<MrpLine['supplyKind'], React.ReactNode> = {
   LOCAL_PO: <PackageSearch className="size-3.5" />,
   IMPORT: <Ship className="size-3.5" />,
   KILN: <Flame className="size-3.5" />,
+  REMNANT: <Recycle className="size-3.5" />,
   NONE: <TriangleAlert className="size-3.5" />,
 }
 
 const SUPPLY_TONE: Record<MrpLine['supplyKind'], 'success' | 'info' | 'primary' | 'warning' | 'danger'> = {
-  ON_HAND: 'success', LOCAL_PO: 'info', IMPORT: 'primary', KILN: 'warning', NONE: 'danger',
+  ON_HAND: 'success', LOCAL_PO: 'info', IMPORT: 'primary', KILN: 'warning', REMNANT: 'success', NONE: 'danger',
 }
 
 export function MrpPage() {

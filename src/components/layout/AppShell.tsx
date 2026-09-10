@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Bell, ChevronsLeft, Clock3, Command, Lightbulb, LogOut, Monitor, Moon,
-  ChevronRight, PanelLeftClose, PanelLeftOpen, RotateCcw, Search, ShieldCheck, Sun, TreePine, TriangleAlert,
+  ChevronRight, PanelLeft, PanelLeftClose, PanelLeftOpen, RotateCcw, Search, ShieldCheck, Sun, TreePine, TriangleAlert,
   UserRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -16,6 +16,7 @@ import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } fr
 import { Badge } from '@/components/ui/badge'
 import { claimIsOpen, deliveryIsOpen, quoteIsLive } from '@/lib/commerce'
 import { maintenanceIsOpen, maintenanceStatusNow, subcontractIsOpen } from '@/lib/operations'
+import { conversionIsOpen, remnantState } from '@/lib/conversion'
 import { Segmented } from '@/components/ui/checkbox'
 import { useTheme } from '@/hooks/useTheme'
 import { useMfg } from '@/store/useMfg'
@@ -64,6 +65,10 @@ export function AppShell() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
+  /* below lg the rail is a drawer, not a column — otherwise it eats a phone screen */
+  const [mobileOpen, setMobileOpen] = React.useState(false)
+  React.useEffect(() => { setMobileOpen(false) }, [location.pathname])
+
   const exceptions = useExceptions()
   const mrpLines = useMrpLines()
   const loads = useCapacityLoad()
@@ -87,6 +92,8 @@ export function AppShell() {
     maintenance: store.maintenanceOrders.filter((m) => maintenanceIsOpen(m) && ['OVERDUE', 'IN_PROGRESS', 'WAITING_PARTS'].includes(maintenanceStatusNow(m))).length,
     subcontract: store.subcontractOrders.filter((o) => subcontractIsOpen(o.status)).length,
     payments: store.payments.filter((p) => p.status === 'PENDING_APPROVAL' || p.status === 'BOUNCED').length,
+    conversion: store.conversionOrders.filter((o) => conversionIsOpen(o.status)).length,
+    remnants: store.remnants.filter((r) => remnantState(r).ageing).length,
   }
 
   /* the rail says where you can go; the breadcrumb says where you are */
@@ -108,10 +115,20 @@ export function AppShell() {
   return (
     <div className="flex h-screen w-full overflow-hidden bg-bg">
       {/* ---------------- sidebar ---------------- */}
+      {mobileOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          className="fixed inset-0 z-30 bg-[hsl(24_20%_8%/0.55)] lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
       <aside
         className={cn(
-          'relative z-20 flex shrink-0 flex-col bg-sidebar text-sidebar-fg transition-[width] duration-200 ease-out',
-          collapsed ? 'w-[64px]' : 'w-[244px]',
+          'fixed inset-y-0 left-0 z-40 flex w-[244px] flex-col bg-sidebar text-sidebar-fg shadow-[8px_0_32px_-12px_hsl(24_20%_8%/0.45)] transition-transform duration-200 ease-out',
+          'lg:relative lg:z-20 lg:shrink-0 lg:translate-x-0 lg:shadow-none lg:transition-[width]',
+          mobileOpen ? 'translate-x-0' : '-translate-x-full',
+          collapsed ? 'lg:w-[64px]' : 'lg:w-[244px]',
         )}
       >
         <div className={cn('flex h-16 items-center gap-2.5 px-4', collapsed && 'justify-center px-0')}>
@@ -132,7 +149,9 @@ export function AppShell() {
           {NAV.map((group) => (
             <div key={group.label} className="mb-5 last:mb-0">
               {!collapsed ? (
-                <p className="mb-1.5 px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-muted/80">
+                /* sticky, because at eight groups and thirty-six items you lose
+                   track of which section you are scrolling through otherwise */
+                <p className="sticky top-0 z-10 -mx-2.5 mb-1.5 bg-sidebar px-5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-muted/80">
                   {group.label}
                 </p>
               ) : (
@@ -141,7 +160,7 @@ export function AppShell() {
               <div className="space-y-[3px]">
                 {group.items.map((item) => {
                   const count = item.badgeKey ? badges[item.badgeKey] : 0
-                  const loud = ['overdue', 'customs', 'exceptions', 'claims', 'maintenance'].includes(item.badgeKey ?? '')
+                  const loud = ['overdue', 'customs', 'exceptions', 'claims', 'maintenance', 'remnants'].includes(item.badgeKey ?? '')
                   const link = (
                     <NavLink
                       key={item.to}
@@ -225,7 +244,15 @@ export function AppShell() {
 
       {/* ---------------- main ---------------- */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border/70 bg-bg px-5 lg:px-7">
+        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border/70 bg-bg px-4 sm:px-5 lg:px-7">
+          <Button
+            variant="ghost" size="icon" className="-ml-1 shrink-0 lg:hidden"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open navigation"
+          >
+            <PanelLeft />
+          </Button>
+
           {/* where you are, so the rail is not the only thing saying it */}
           <div className="min-w-0 flex-1">
             <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-[12.5px]">

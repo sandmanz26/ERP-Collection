@@ -100,7 +100,9 @@ The suite also carries the loops that turn those cores into a business anyone ca
 **invoice to cash** (receipts, payments, withholding, FX difference and the bank), **requisition to
 purchase order** (an approval ladder decided by value, and the lead time the waiting costs),
 **maintenance** (downtime netted off capacity before the schedule promises it) and
-**subcontracting** (our stock, on somebody else's floor).
+**subcontracting** (our stock, on somebody else's floor), **conversion** (raw material changing
+shape into semi-finished, on our floor or a third party's) and the **offcut rack** (bahan sisa —
+material that is already cut and already paid for).
 
 **Out.** No backend. Everything lives in the browser (Zustand + `localStorage`) against a seeded
 operating book. No real CEISA, SILK, INSW or bank integration — those are modelled as records and
@@ -330,6 +332,44 @@ not merely reported.
 35. **Loss beyond 2% at a subcontractor is their method, not our specification**, and it is raised
     against the cutting plan before the next order goes out.
 
+**Conversion and the offcut rack**
+
+36. **Changing shape is an order, not an adjustment.** Between buying a cubic metre and building a
+    wardrobe the material is ripped, nested, pressed, resawn or dried. Each of those consumes named
+    inputs — raw *and* semi-finished together — and produces named outputs, so the cost and the
+    yield land somewhere rather than disappearing into an inventory adjustment.
+37. **The units change, so the yield is an attainment.** A breakdown run gets 0.62 m³ of blank out
+    of a m³ of board; a nested cut gets 8.6 parts out of a sheet. Both are yields, and neither is a
+    percentage of the other. Every run carries its own standard in output-per-input, and what is
+    compared is the attainment against it — which is the only figure that means the same thing on
+    both.
+38. **A conversion produces three things, not one.** The output that was wanted, the offcut that is
+    still worth money, and the waste that is not. A run that books no offcut has not avoided the
+    loss, it has lost the material silently.
+39. **The offcut credit comes off the output.** A by-product is valued at a fraction of the material
+    it came from, and that credit is deducted from what the primary output carries — otherwise the
+    offcuts are free and the components look cheaper than they are.
+40. **A conversion can be run in-house or sent out.** In-house it costs hours the schedule has to
+    find and the yield is ours to fix; sent out it costs a maklon rate, the yield is theirs, and the
+    material is still our inventory and our risk the whole time it is on their floor.
+41. **A remnant is stock, and the MRP run nets it.** An offcut of oak is oak that is already cut,
+    already dried and already paid for, available today. It is netted before any purchase is
+    suggested — a works that skips that step buys boards it already owns.
+42. **What a remnant is worth depends on what it can still make.** A long clear board carries 85% of
+    the parent cost; a short piece of panel drop carries 35%. Below 300 mm nothing is racked at all,
+    because the handling costs more than the timber.
+43. **A remnant ages out.** Past ninety days on the rack it is either put into a glue-up or written
+    off. The recovery rate — what share of everything ever racked got used rather than written off —
+    is the number that says whether the rack is inventory or a place things go to be forgotten.
+
+**Delivery kinds**
+
+44. **Not every load is against an order.** A tester goes out to win the order in the first place; a
+    replacement goes out because a claim said so. Both are free of charge, both cost real freight,
+    and neither may reduce what a customer is still owed.
+45. **A delivery is full or it is partial, and the difference is recorded.** A partial load leaves a
+    backorder with a reason attached, and the customer is told what follows and on which sailing.
+
 ---
 
 ## 6. Domain model
@@ -399,9 +439,10 @@ ageing, trial balance, income statement and balance sheet.
 | Group | Screen | What it is for |
 | --- | --- | --- |
 | **Control** | Control Tower | Every exception, ranked by money and by days; the three clocks on one page |
+| | **Material Flow** | The whole chain on one screen: eight places value stands, seven things that move it |
 | **Sales** | **Quotations** | Weighted pipeline, margin against the floor, validity clock, loss reasons by value |
 | | Sales Orders | Order book, ATP promise, credit and deposit gates |
-| | **Deliveries & Packing** | Surat jalan, packing list, container fill, the export document gate |
+| | **Deliveries & Packing** | Surat jalan, packing list, container fill, the export document gate, and whether a load is full, partial, a tester or a replacement |
 | | **Returns & Claims** | Liability, remedy, cost of poor quality, corrective actions |
 | | Customers | Retail, contract/FF&E and export customers with terms and limits |
 | **Engineering** | Products | Catalogue, standard cost roll-up, margin at list |
@@ -418,6 +459,8 @@ ageing, trial balance, income statement and balance sheet.
 | | Quality | Inspections, defect Pareto, dispositions, rework |
 | **Materials** | Item Master | Every purchased material with its import identity |
 | | Inventory | On hand, reserved, available, movements, lot traceability |
+| | **Material Conversion** | Raw and semi-finished in, semi-finished and offcut out; yield against standard, in-house or maklon |
+| | **Offcuts & Remnants** | Bahan sisa: size, what it can still make, what it is worth, and how long it has been on the rack |
 | | Suppliers | Scorecards and lane history |
 | | **Requisitions** | The approval ladder by value, and the lead time the waiting costs |
 | | Purchase Orders | Local and import, with the LARTAS release gate |

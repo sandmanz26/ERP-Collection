@@ -74,6 +74,15 @@ const TONES: Record<string, BadgeTone> = {
 
   /* subcontract */
   MATERIAL_SENT: 'warning', PARTIALLY_RETURNED: 'accent',
+
+  /* conversion */
+  MATERIAL_ISSUED: 'accent', AT_SUBCONTRACTOR: 'warning',
+
+  /* remnants */
+  RESERVED: 'info', WRITTEN_OFF: 'danger',
+
+  /* delivery purpose */
+  ORDER_FULL: 'success', ORDER_PARTIAL: 'accent', SAMPLE: 'purple', REPLACEMENT: 'warning',
 }
 
 export function StatusBadge({ value, size = 'md' }: { value: string; size?: 'sm' | 'md' | 'lg' }) {

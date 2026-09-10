@@ -209,6 +209,10 @@ export interface Routing {
 export type ItemType =
   | 'SOLID_TIMBER' | 'PANEL' | 'VENEER_LAMINATE' | 'HARDWARE' | 'FINISHING_CHEMICAL'
   | 'UPHOLSTERY' | 'PACKAGING' | 'CONSUMABLE' | 'GLASS_STONE'
+  /** made, not bought — the output of a conversion order */
+  | 'SEMI_FINISHED'
+  /** usable leftover: a drop, a short, an offcut that is still worth something */
+  | 'OFFCUT'
 
 /** What the Indonesian import regime demands before this item may land. */
 export type LartasType = 'NONE' | 'DIPK' | 'IP_B2' | 'SNI' | 'DIPK_AND_SNI'
@@ -314,7 +318,14 @@ export interface Lot {
   note?: string
 }
 
-export type MovementKind = 'RECEIPT' | 'ISSUE' | 'TRANSFER' | 'ADJUSTMENT' | 'SCRAP' | 'PRODUCTION_OUTPUT' | 'RETURN'
+export type MovementKind =
+  | 'RECEIPT' | 'ISSUE' | 'TRANSFER' | 'ADJUSTMENT' | 'SCRAP' | 'PRODUCTION_OUTPUT' | 'RETURN'
+  /** consumed by a conversion order */
+  | 'CONVERSION_ISSUE'
+  /** the semi-finished material a conversion produced */
+  | 'CONVERSION_OUTPUT'
+  /** the usable leftover the same conversion produced */
+  | 'REMNANT_RECOVERY'
 
 export interface StockMovement {
   id: ID
@@ -329,6 +340,8 @@ export interface StockMovement {
   reference: string
   workOrderId?: ID
   shipmentId?: ID
+  conversionOrderId?: ID
+  deliveryId?: ID
   actor: string
   note?: string
 }
@@ -710,7 +723,9 @@ export interface MrpLine {
   slackDays: number
   /** which supply is covering it, in a sentence */
   coverage: string
-  supplyKind: 'ON_HAND' | 'LOCAL_PO' | 'IMPORT' | 'KILN' | 'NONE'
+  supplyKind: 'ON_HAND' | 'LOCAL_PO' | 'IMPORT' | 'KILN' | 'REMNANT' | 'NONE'
+  /** how much of the requirement the offcut rack already covers */
+  remnantCover?: number
   shipmentId?: ID
   purchaseOrderId?: ID
   alternateItemId?: ID
@@ -909,6 +924,7 @@ export type ExceptionKind =
   | 'REORDER_POINT' | 'LICENCE_EXPIRING'
   | 'QUOTE_EXPIRING' | 'DELIVERY_UNDERLOADED' | 'DELIVERY_DOCS_MISSING' | 'CLAIM_OPEN'
   | 'PAYMENT_OVERDUE' | 'REQUISITION_WAITING' | 'MAINTENANCE_OVERDUE' | 'SUBCONTRACT_OVERDUE'
+  | 'CONVERSION_YIELD' | 'CONVERSION_OVERDUE' | 'REMNANT_AGEING' | 'ORDER_BACKORDER'
 
 export type ExceptionSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
 
@@ -985,6 +1001,18 @@ export interface Quotation {
    ================================================================== */
 
 export type DeliveryStatus = 'PLANNED' | 'PICKING' | 'PACKED' | 'LOADED' | 'IN_TRANSIT' | 'DELIVERED' | 'PARTIALLY_ACCEPTED' | 'CANCELLED'
+
+/**
+ * Not every load is a shipment against an order. A tester goes out to win the
+ * order in the first place; a replacement goes out because a claim said so.
+ * Neither should reduce what the customer is still owed, and neither is revenue.
+ */
+export type DeliveryPurpose =
+  | 'ORDER_FULL'    /* the whole outstanding balance in one load */
+  | 'ORDER_PARTIAL' /* part of it, with the rest on backorder */
+  | 'SAMPLE'        /* a tester, a signed sample, a showroom piece — free of charge */
+  | 'REPLACEMENT'   /* free of charge, against a claim */
+  | 'RETURN_TO_SUPPLIER'
 export type DeliveryMode = 'LOCAL_TRUCK' | 'DOMESTIC_LCL' | 'EXPORT_FCL' | 'EXPORT_LCL' | 'CUSTOMER_PICKUP'
 export type ContainerType = 'TWENTY_GP' | 'FORTY_GP' | 'FORTY_HC' | 'NONE'
 
@@ -1022,6 +1050,13 @@ export interface Delivery {
   suratJalanNo: string
   customerId: ID
   status: DeliveryStatus
+  purpose: DeliveryPurpose
+  /** the quotation a tester was sent to win */
+  quotationId?: ID
+  /** the claim a replacement was sent against */
+  claimId?: ID
+  /** a free-of-charge load still has a value, it just is not invoiced */
+  chargeable: boolean
   mode: DeliveryMode
   containerType: ContainerType
   containerNo?: string
@@ -1282,5 +1317,136 @@ export interface SubcontractOrder {
   deliveryNoteNo?: string
   qcRecordId?: ID
   invoiceId?: ID
+  note?: string
+}
+
+/* ==================================================================
+   16 · Conversion — turning what we bought into what we build with
+   ================================================================== */
+
+/**
+ * A conversion order is the step nobody models and everybody does: sawn timber
+ * becomes machined components, a sheet becomes nested parts, a coil of veneer
+ * becomes spliced faces. It consumes raw *and* semi-finished material, it can be
+ * run on our own floor or sent out, and it always produces three things — the
+ * output that was wanted, the offcut that is still worth something, and the
+ * sawdust that is not.
+ */
+export type ConversionKind =
+  | 'BREAKDOWN'      /* rip, dock and defect solid timber into component blanks */
+  | 'PANEL_CUT'      /* nest a sheet into parts */
+  | 'LAMINATION'     /* press veneer or HPL onto a substrate */
+  | 'MOULDING'       /* profile a blank into a section */
+  | 'GLUE_UP'        /* edge-glue narrow stock into a wide panel */
+  | 'RESAW'          /* split thickness — the classic way to rescue an expensive board */
+  | 'KILN'           /* drying, which is a conversion with a moisture gate on the end */
+  | 'FINISH_PREP'    /* sand, fill and seal a component before it joins a work order */
+
+export type ConversionRoute = 'IN_HOUSE' | 'SUBCONTRACT'
+
+export type ConversionStatus =
+  | 'PLANNED' | 'RELEASED' | 'MATERIAL_ISSUED' | 'IN_PROGRESS' | 'AT_SUBCONTRACTOR'
+  | 'COMPLETED' | 'CANCELLED'
+
+export interface ConversionInput {
+  id: ID
+  itemId: ID
+  description: string
+  /** what the recipe says this run should consume */
+  plannedQuantity: number
+  /** what was actually issued */
+  issuedQuantity: number
+  uom: string
+  lotIds: ID[]
+  /** a remnant picked instead of a full board — the whole point of keeping them */
+  remnantIds: ID[]
+  unitCost: number
+}
+
+export interface ConversionOutput {
+  id: ID
+  itemId: ID
+  description: string
+  plannedQuantity: number
+  producedQuantity: number
+  uom: string
+  /** the lot this output created, once it is booked in */
+  lotId?: ID
+  /** primary output, or the offcut that came off the same cut */
+  role: 'PRIMARY' | 'BY_PRODUCT'
+  /** what a by-product is worth against the parent material, 0–1 */
+  valueFactor: number
+}
+
+export interface ConversionOrder {
+  id: ID
+  code: string
+  kind: ConversionKind
+  route: ConversionRoute
+  status: ConversionStatus
+  /** where it runs — a work centre for in-house, a supplier for maklon */
+  workCentreId?: ID
+  supplierId?: ID
+  /** the maklon order this conversion is executed under, when it leaves the building */
+  subcontractOrderId?: ID
+  /** the work order that is waiting on the output, when it was raised for one */
+  workOrderId?: ID
+  plannedStart: ISODate
+  dueDate: ISODate
+  actualStart?: ISODate
+  completedAt?: ISODate
+  inputs: ConversionInput[]
+  outputs: ConversionOutput[]
+  /** the yield the standard says this recipe gets, 0–1 */
+  standardYield: number
+  /** hours booked on the centre, in-house only */
+  labourHours: number
+  /** what the outside workshop charges for the run */
+  serviceCost: number
+  /** loss that is genuinely gone — sawdust, planer shavings, trim */
+  wasteQuantity: number
+  operator: string
+  /** moisture gate, where the conversion is a kiln charge */
+  kilnBatchId?: ID
+  note?: string
+}
+
+/* ==================================================================
+   17 · Remnants — the offcut that is still worth something
+   ================================================================== */
+
+export type RemnantStatus = 'AVAILABLE' | 'RESERVED' | 'CONSUMED' | 'WRITTEN_OFF'
+
+export interface Remnant {
+  id: ID
+  code: string
+  /** the item it is a piece of — a remnant of oak is still oak */
+  itemId: ID
+  /** the offcut item it is booked against, so stock reports can see it */
+  offcutItemId?: ID
+  warehouseId: ID
+  status: RemnantStatus
+  /** what created it */
+  sourceConversionId?: ID
+  sourceWorkOrderId?: ID
+  sourceLotId?: ID
+  createdAt: ISODate
+  species?: string
+  /** the size that decides what it can still be used for */
+  lengthMm?: number
+  widthMm?: number
+  thicknessMm?: number
+  /** the quantity in the item's own unit — m³ for timber, m² for sheet, pcs for parts */
+  quantity: number
+  uom: string
+  /** unit cost of the parent material */
+  parentUnitCost: number
+  /** the haircut a remnant carries against full stock, 0–1 */
+  valueFactor: number
+  /** reserved against a work order or a conversion that intends to use it */
+  reservedForWorkOrderId?: ID
+  reservedForConversionId?: ID
+  consumedAt?: ISODate
+  writtenOffAt?: ISODate
   note?: string
 }
