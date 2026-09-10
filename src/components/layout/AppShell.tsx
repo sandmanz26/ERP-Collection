@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Bell, ChevronsLeft, Clock3, Command, Lightbulb, LogOut, Monitor, Moon,
-  PanelLeftClose, PanelLeftOpen, RotateCcw, Search, ShieldCheck, Sun, TreePine, TriangleAlert,
+  ChevronRight, PanelLeftClose, PanelLeftOpen, RotateCcw, Search, ShieldCheck, Sun, TreePine, TriangleAlert,
   UserRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -80,37 +80,59 @@ export function AppShell() {
     capacity: loads.filter((l) => l.utilisation > 100).length,
   }
 
+  /* the rail says where you can go; the breadcrumb says where you are */
+  const crumb = React.useMemo(() => {
+    for (const group of NAV) {
+      const exact = group.items.find((i) => i.to === location.pathname)
+      if (exact) return { group: group.label, page: exact.label }
+    }
+    /* a detail route inherits its list's identity */
+    for (const group of NAV) {
+      const parent = group.items
+        .filter((i) => i.to !== '/')
+        .find((i) => location.pathname.startsWith(`${i.to}/`))
+      if (parent) return { group: group.label, page: parent.label }
+    }
+    return { group: 'Wanakarya', page: 'Control Tower' }
+  }, [location.pathname])
+
   return (
     <div className="flex h-screen w-full overflow-hidden bg-bg">
       {/* ---------------- sidebar ---------------- */}
       <aside
         className={cn(
-          'relative z-20 flex shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-200 ease-out',
-          collapsed ? 'w-[62px]' : 'w-[236px]',
+          'relative z-20 flex shrink-0 flex-col bg-sidebar text-sidebar-fg transition-[width] duration-200 ease-out',
+          collapsed ? 'w-[64px]' : 'w-[244px]',
         )}
       >
-        <div className={cn('flex h-14 items-center gap-2.5 border-b border-border px-3.5', collapsed && 'justify-center px-0')}>
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-fg shadow-[inset_0_1px_0_0_rgb(255_255_255/0.2)]">
-            <TreePine className="size-[17px]" />
+        <div className={cn('flex h-16 items-center gap-2.5 px-4', collapsed && 'justify-center px-0')}>
+          <span className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-sidebar-accent text-[hsl(22_40%_14%)] shadow-[inset_0_1px_0_0_rgb(255_255_255/0.28)]">
+            <TreePine className="size-[19px]" />
           </span>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="truncate text-[13.5px] font-semibold leading-tight tracking-[-0.01em] text-fg">Wanakarya</p>
-              <p className="truncate text-[11px] leading-tight text-fg-subtle">Production &amp; Import Suite</p>
+              <p className="truncate text-[14px] font-semibold leading-tight tracking-[-0.015em]">Wanakarya</p>
+              <p className="truncate text-[10.5px] font-medium uppercase leading-tight tracking-[0.08em] text-sidebar-muted">
+                Production &amp; Import
+              </p>
             </div>
           )}
         </div>
 
-        <nav className="scrollbar-thin flex-1 overflow-y-auto px-2 py-3">
+        <nav className="scrollbar-thin flex-1 overflow-y-auto px-2.5 pb-2">
           {NAV.map((group) => (
-            <div key={group.label} className="mb-4 last:mb-0">
-              {!collapsed && (
-                <p className="mb-1 px-2.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-fg-subtle">{group.label}</p>
+            <div key={group.label} className="mb-5 last:mb-0">
+              {!collapsed ? (
+                <p className="mb-1.5 px-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-muted/80">
+                  {group.label}
+                </p>
+              ) : (
+                <div className="mx-auto mb-2 h-px w-6 bg-sidebar-border" />
               )}
-              {collapsed && <Separator className="mx-auto mb-2 w-6" />}
-              <div className="space-y-0.5">
+              <div className="space-y-[3px]">
                 {group.items.map((item) => {
                   const count = item.badgeKey ? badges[item.badgeKey] : 0
+                  const loud = item.badgeKey === 'overdue' || item.badgeKey === 'customs' || item.badgeKey === 'exceptions'
                   const link = (
                     <NavLink
                       key={item.to}
@@ -118,32 +140,43 @@ export function AppShell() {
                       end={item.to === '/'}
                       className={({ isActive }) =>
                         cn(
-                          'group relative flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] font-medium transition-colors',
-                          collapsed && 'justify-center px-0 py-2',
+                          'group relative flex items-center gap-2.5 rounded-[9px] px-2.5 py-[8px] text-[13px] font-medium transition-colors',
+                          collapsed && 'justify-center px-0 py-2.5',
                           isActive
-                            ? 'bg-primary-soft text-primary-soft-fg'
-                            : 'text-fg-muted hover:bg-bg-muted hover:text-fg',
+                            ? 'bg-sidebar-active text-sidebar-fg'
+                            : 'text-sidebar-fg/62 hover:bg-sidebar-hover hover:text-sidebar-fg',
                         )
                       }
                     >
                       {({ isActive }) => (
                         <>
-                          {isActive && !collapsed && (
-                            <span className="absolute -left-2 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" />
+                          {isActive && (
+                            <span
+                              className={cn(
+                                'absolute top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-sidebar-accent',
+                                collapsed ? 'left-0' : '-left-2.5',
+                              )}
+                            />
                           )}
-                          <item.icon className={cn('size-[17px] shrink-0', isActive && 'text-primary')} />
+                          <item.icon className={cn('size-[17px] shrink-0', isActive && 'text-sidebar-accent')} />
                           {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
                           {!collapsed && count > 0 && (
                             <span
                               className={cn(
-                                'tnum rounded px-1.5 py-0.5 text-[10.5px] font-semibold',
-                                item.badgeKey === 'overdue' || item.badgeKey === 'customs'
-                                  ? 'bg-danger-soft text-danger-soft-fg'
-                                  : 'bg-neutral-soft text-neutral-soft-fg',
+                                'tnum rounded-full px-1.5 py-[1px] text-[10.5px] font-semibold',
+                                loud ? 'bg-danger text-white' : 'bg-sidebar-fg/12 text-sidebar-fg/80',
                               )}
                             >
                               {count}
                             </span>
+                          )}
+                          {collapsed && count > 0 && (
+                            <span
+                              className={cn(
+                                'absolute right-2 top-1.5 size-[7px] rounded-full ring-2 ring-sidebar',
+                                loud ? 'bg-danger' : 'bg-sidebar-accent',
+                              )}
+                            />
                           )}
                         </>
                       )}
@@ -162,11 +195,11 @@ export function AppShell() {
           ))}
         </nav>
 
-        <div className={cn('border-t border-border p-2', collapsed && 'flex justify-center')}>
+        <div className={cn('border-t border-sidebar-border p-2.5', collapsed && 'flex justify-center')}>
           <button
             onClick={() => setCollapsed((v) => !v)}
             className={cn(
-              'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[12.5px] font-medium text-fg-muted transition-colors hover:bg-bg-muted hover:text-fg',
+              'flex w-full items-center gap-2.5 rounded-[9px] px-2.5 py-2 text-[12.5px] font-medium text-sidebar-fg/60 transition-colors hover:bg-sidebar-hover hover:text-sidebar-fg',
               collapsed && 'w-auto justify-center px-2',
             )}
           >
@@ -174,7 +207,7 @@ export function AppShell() {
             {!collapsed && (
               <>
                 <span className="flex-1 text-left">Collapse</span>
-                <Kbd>⌘\</Kbd>
+                <Kbd className="border-sidebar-border bg-sidebar-hover text-sidebar-fg/70 shadow-none">⌘\</Kbd>
               </>
             )}
           </button>
@@ -183,17 +216,27 @@ export function AppShell() {
 
       {/* ---------------- main ---------------- */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
+        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border/70 bg-bg px-5 lg:px-7">
+          {/* where you are, so the rail is not the only thing saying it */}
+          <div className="min-w-0 flex-1">
+            <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-[12.5px]">
+              <span className="truncate font-medium uppercase tracking-[0.07em] text-fg-subtle">{crumb.group}</span>
+              <ChevronRight className="size-3 shrink-0 text-fg-subtle" />
+              <span className="truncate font-semibold text-fg">{crumb.page}</span>
+            </nav>
+          </div>
+
           <button
             onClick={() => setPaletteOpen(true)}
-            className="group flex h-9 w-full max-w-sm items-center gap-2.5 rounded-lg border border-border-strong/70 bg-bg-muted/60 px-3 text-left text-[13px] text-fg-subtle transition-colors hover:border-border-strong hover:bg-bg-muted"
+            className="group hidden h-9 w-full max-w-xs items-center gap-2.5 rounded-full border border-border bg-surface px-3.5 text-left text-[12.5px] text-fg-subtle shadow-card transition-colors hover:border-border-strong md:flex"
           >
             <Search className="size-4" />
-            <span className="flex-1 truncate">Search orders, items, shipments, work orders…</span>
-            <Kbd className="bg-surface">⌘K</Kbd>
+            <span className="flex-1 truncate">Search…</span>
+            <Kbd className="bg-bg-muted">⌘K</Kbd>
           </button>
-
-          <div className="flex-1" />
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setPaletteOpen(true)} aria-label="Search">
+            <Search />
+          </Button>
 
           <Menu>
             <MenuTrigger asChild>

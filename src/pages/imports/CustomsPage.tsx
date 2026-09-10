@@ -4,7 +4,6 @@ import { FileCheck2, Stamp, TriangleAlert } from 'lucide-react'
 import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { Because, StatusBadge } from '@/components/shared/status'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Progress, Separator } from '@/components/ui/misc'
 import { Tooltip } from '@/components/ui/tooltip'
 import { DataTable } from '@/components/data-table/DataTable'
@@ -101,7 +100,6 @@ export function CustomsPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><Stamp className="size-3" /> Import</Badge>}
         title="Customs & permits"
         description="The declaration register and the permits behind it. Every consignment is self-assessed and lodged through CEISA, then channelled hijau, kuning or merah — and the lane is not luck, it is a supplier’s paperwork record."
       />

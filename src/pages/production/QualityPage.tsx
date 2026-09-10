@@ -139,7 +139,6 @@ export function QualityPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><ShieldCheck className="size-3" /> Production</Badge>}
         title="Quality"
         description="Three inspection points, because the three failures are different animals: a wet lot on receipt, a jig that has drifted mid-process, and fish eye on a finished top. Each is dispositioned, and rework spawns a real order that consumes real hours."
       />

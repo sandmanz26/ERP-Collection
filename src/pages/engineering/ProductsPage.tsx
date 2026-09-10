@@ -3,7 +3,6 @@ import { Package, Wallet } from 'lucide-react'
 import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { DataTable } from '@/components/data-table/DataTable'
 import type { Column } from '@/components/data-table/types'
-import { Badge } from '@/components/ui/badge'
 import { Tooltip } from '@/components/ui/tooltip'
 import { useMfg } from '@/store/useMfg'
 import type { Product } from '@/data/types'
@@ -161,7 +160,6 @@ export function ProductsPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><Package className="size-3" /> Engineering</Badge>}
         title="Products"
         description="The catalogue, plus the sub-assemblies that are BOM nodes with routings of their own. Every standard cost here is exploded from the bill with its yields applied and run out over the routing — none of it is a typed figure."
       />

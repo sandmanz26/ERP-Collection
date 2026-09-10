@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ArrowDownUp, Boxes, TriangleAlert, Warehouse } from 'lucide-react'
+import { ArrowDownUp, Boxes, TriangleAlert } from 'lucide-react'
 import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { Because, StatusBadge } from '@/components/shared/status'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
@@ -204,7 +204,6 @@ export function InventoryPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><Warehouse className="size-3" /> Materials</Badge>}
         title="Inventory & lots"
         description="Stock is held as lots, not as a number, because the questions that matter are about a particular consignment: which flitch, which dye lot, which kiln batch, and which country the tree came from."
       />

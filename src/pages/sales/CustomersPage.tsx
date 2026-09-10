@@ -4,7 +4,6 @@ import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { StatusBadge } from '@/components/shared/status'
 import { DataTable } from '@/components/data-table/DataTable'
 import type { Column } from '@/components/data-table/types'
-import { Badge } from '@/components/ui/badge'
 import { Tooltip } from '@/components/ui/tooltip'
 import { useMfg } from '@/store/useMfg'
 import type { Customer } from '@/data/types'
@@ -127,7 +126,6 @@ export function CustomersPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><Building2 className="size-3" /> Sales</Badge>}
         title="Customers"
         description="Four kinds of buyer with four different tolerances: a retail chain forgives price and never forgives a delivery window, a contract fit-out carries a penalty clause, and an export buyer asks for the harvest country of the timber."
       />

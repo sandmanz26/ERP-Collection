@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
-import { Combine, Flame, PackageSearch, Play, Ship, TriangleAlert, Warehouse } from 'lucide-react'
+import { Flame, PackageSearch, Play, Ship, TriangleAlert, Warehouse } from 'lucide-react'
 import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { Because } from '@/components/shared/status'
 import { DataTable } from '@/components/data-table/DataTable'
@@ -173,7 +173,6 @@ export function MrpPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><Combine className="size-3" /> Planning</Badge>}
         title="MRP run"
         description="Netting over a 90-day horizon. The useful output is not the plan — it is this exception list, and every line of it answers with a date and a cause rather than a quantity."
         meta={

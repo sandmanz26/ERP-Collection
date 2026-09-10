@@ -73,7 +73,6 @@ export function PlanningPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><CalendarRange className="size-3" /> Planning</Badge>}
         title="Master schedule"
         description="Eight weeks of demand against the hours there are to build it with. The capacity line is the whole factory minus the kiln and the subcontractor, because neither is bought by the hour."
       />

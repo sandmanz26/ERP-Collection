@@ -30,7 +30,6 @@ export function RoutingsPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><RouteIcon className="size-3" /> Engineering</Badge>}
         title="Routings & work centres"
         description="What each product costs in hours, and on which machine. Queue time here is physics rather than backlog — lacquer curing and glue setting cannot be shortened by adding a shift."
         actions={

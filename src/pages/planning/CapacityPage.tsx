@@ -4,7 +4,6 @@ import { Gauge, Layers, TriangleAlert } from 'lucide-react'
 import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { Because, StatusBadge } from '@/components/shared/status'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Segmented } from '@/components/ui/checkbox'
 import { EmptyState, Progress } from '@/components/ui/misc'
 import { useMfg } from '@/store/useMfg'
@@ -42,7 +41,6 @@ export function CapacityPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><Layers className="size-3" /> Planning</Badge>}
         title="Capacity & load"
         description="Loaded hours against available, per work centre. Capacity here is a gate rather than a chart: a work order cannot be scheduled past a centre’s hours, and the board names the one that decides the plan."
         actions={

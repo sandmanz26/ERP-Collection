@@ -135,7 +135,6 @@ export function SuppliersPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><Truck className="size-3" /> Materials</Badge>}
         title="Suppliers"
         description="A scorecard is only worth having if it changes a plan. The lane history here is not a vanity metric — it is the parameter the MRP run uses to work out when a container becomes issuable."
       />

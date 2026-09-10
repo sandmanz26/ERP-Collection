@@ -50,7 +50,6 @@ export function BomPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><GitBranch className="size-3" /> Engineering</Badge>}
         title="Bills of material"
         description="Every line carries a yield, because a bill without one silently under-orders every material it touches. Solid timber runs 62–72% from rough sawn, so a 0.086 m³ net requirement is really 0.129 m³ off the rack."
         actions={

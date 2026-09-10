@@ -62,7 +62,6 @@ export function DashboardPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><Gauge className="size-3" /> Control Tower</Badge>}
         title="What is going to be late, and what it costs"
         description="A customer promise, a container on the water and a kiln that has not finished drying run at three different speeds. Everything below is the reconciliation — and every figure is derived from the book, not typed into a dashboard."
         meta={

@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
-import { ClipboardCheck, Clock, TriangleAlert } from 'lucide-react'
+import { Clock, TriangleAlert } from 'lucide-react'
 import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { Because, StatusBadge } from '@/components/shared/status'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
@@ -49,7 +49,6 @@ export function ShopFloorPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><ClipboardCheck className="size-3" /> Production</Badge>}
         title="Shop floor"
         description="Every open operation, by what is stopping it rather than by what department it belongs to. A supervisor opens this to answer one question: what can my bench start in the next hour?"
         actions={

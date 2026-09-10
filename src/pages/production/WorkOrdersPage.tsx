@@ -152,7 +152,6 @@ export function WorkOrdersPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><Factory className="size-3" /> Production</Badge>}
         title="Work orders"
         description="What the floor is building, how far each one has got, and what is stopping the ones that have stopped. A block here always names the supply and the date, never just the shortage."
       />

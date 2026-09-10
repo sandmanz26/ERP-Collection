@@ -3,7 +3,6 @@ import { Droplets, Flame, ThermometerSun, TriangleAlert } from 'lucide-react'
 import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { Because, StatusBadge } from '@/components/shared/status'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState, Progress, Separator } from '@/components/ui/misc'
 import { Tooltip } from '@/components/ui/tooltip'
@@ -29,7 +28,6 @@ export function KilnPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><Flame className="size-3" /> Production</Badge>}
         title="Kiln drying"
         description="Solid timber cannot be issued to the rough mill until its batch closes inside the target band — 8–12% for indoor, 12–15% for outdoor. This is the gate that prevents the warranty claim eighteen months from now, and it is the only one nobody can hurry."
       />

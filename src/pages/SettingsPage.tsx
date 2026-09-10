@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Building2, History, RotateCcw, Settings as SettingsIcon, ShieldCheck, Users } from 'lucide-react'
+import { Building2, History, RotateCcw, ShieldCheck, Users } from 'lucide-react'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Because, MetaRow, StatusBadge } from '@/components/shared/status'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
@@ -26,7 +26,6 @@ export function SettingsPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><SettingsIcon className="size-3" /> Insight</Badge>}
         title="Settings & audit"
         description="The parameters every rule in the system reads from, the licences that make the imports lawful, and the trail of what has been done in this browser."
         actions={

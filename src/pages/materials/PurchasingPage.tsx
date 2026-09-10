@@ -184,7 +184,6 @@ export function PurchasingPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><PackageSearch className="size-3" /> Materials</Badge>}
         title="Purchase orders"
         description="Local orders are simple. An import order is the head of a consignment, and it does not leave the building until the permit that covers its restricted lines is on file, matches their HS codes, and does not lapse before the vessel berths."
       />

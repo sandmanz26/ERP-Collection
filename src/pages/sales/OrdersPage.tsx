@@ -5,7 +5,6 @@ import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { StatusBadge } from '@/components/shared/status'
 import { DataTable } from '@/components/data-table/DataTable'
 import type { Column } from '@/components/data-table/types'
-import { Badge } from '@/components/ui/badge'
 import { Tooltip } from '@/components/ui/tooltip'
 import { useMfg } from '@/store/useMfg'
 import type { SalesOrder } from '@/data/types'
@@ -144,7 +143,6 @@ export function OrdersPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><ShoppingCart className="size-3" /> Sales</Badge>}
         title="Sales orders"
         description="The order book, and the honest promise date beside the one that was actually given. Where the two disagree, the difference is shown in days and — where the contract carries a penalty — in money."
       />

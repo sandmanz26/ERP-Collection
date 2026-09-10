@@ -36,7 +36,6 @@ export function LandedCostPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><Receipt className="size-3" /> Import</Badge>}
         title="Landed cost"
         description="Goods, freight, duty, clearance and inland, spread over the lines on the basis each cost actually behaves on. Creditable taxes are deliberately excluded — putting PPN into inventory is the commonest way a furniture works over-states its material cost by fourteen per cent."
         actions={

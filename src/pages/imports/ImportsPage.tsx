@@ -4,7 +4,6 @@ import { Ship, TriangleAlert, Wallet } from 'lucide-react'
 import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { Because, StatusBadge } from '@/components/shared/status'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/misc'
 import { Tooltip } from '@/components/ui/tooltip'
 import { DataTable } from '@/components/data-table/DataTable'
@@ -186,7 +185,6 @@ export function ImportsPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><Ship className="size-3" /> Import</Badge>}
         title="Import shipments"
         description="Eleven states, and none of them skippable. The column that matters is not the ETA — it is the day the goods become legally issuable, which is arrival plus the lane plus the trucking, and which no stock report knows."
       />

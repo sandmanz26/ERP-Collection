@@ -2,7 +2,6 @@ import { BarChart3, Flame, Ship, ShieldCheck, TrendingUp } from 'lucide-react'
 import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { Because, StatusBadge } from '@/components/shared/status'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Progress, Separator } from '@/components/ui/misc'
 import { Tooltip } from '@/components/ui/tooltip'
 import { useMfg } from '@/store/useMfg'
@@ -31,7 +30,6 @@ export function AnalyticsPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><BarChart3 className="size-3" /> Insight</Badge>}
         title="Operations analytics"
         description="Twelve numbers the director keeps. Each one is computed from the book — and each one is here because it changes a decision, not because it fills a tile."
       />

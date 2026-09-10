@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, FileSpreadsheet, LineChart, Wallet } from 'lucide-react'
+import { BookOpen, Wallet } from 'lucide-react'
 import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { Because, StatusBadge } from '@/components/shared/status'
 import { Card, CardBody, CardHeader } from '@/components/ui/card'
@@ -107,7 +107,6 @@ export function InvoicesPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><Wallet className="size-3" /> Finance</Badge>}
         title="Invoices & bills"
         description="Receivables against a customer book that includes one account on hold, and payables against a supplier book where two consignments were paid for before they had cleared."
       />
@@ -252,7 +251,6 @@ export function LedgerPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><BookOpen className="size-3" /> Finance</Badge>}
         title="General ledger"
         description="Double entry, with the postings a manufacturer that imports actually makes: goods receipt at landed cost with the creditable taxes kept out of it, a landed-cost finalisation that moves the difference to purchase price variance, and a scrap entry that carries the operations already spent."
       />
@@ -349,7 +347,6 @@ export function AccountsPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><FileSpreadsheet className="size-3" /> Finance</Badge>}
         title="Chart of accounts"
         description="Indonesian in shape and manufacturing in structure: three inventory stages kept apart, cost of sales split into material, labour and overhead, PPN masukan and PPh 22 as prepaid tax rather than cost, and named accounts for purchase price and usage variance — because a variance with nowhere to post is a variance nobody explains."
       />
@@ -406,7 +403,6 @@ export function ReportsPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><LineChart className="size-3" /> Finance</Badge>}
         title="Financial reports"
         description="Everything below is summed from the journal. Nothing here is entered twice."
         actions={
@@ -576,7 +572,6 @@ export function CostingPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><Wallet className="size-3" /> Finance</Badge>}
         title="Costing & variance"
         description="Standard against actual, decomposed rather than netted. A variance explained six weeks later at month end is a variance nobody can act on, so anything beyond tolerance raises an exception the day it happens."
       />

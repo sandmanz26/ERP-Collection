@@ -171,7 +171,6 @@ export function ItemsPage() {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
-        eyebrow={<Badge tone="primary" size="sm"><Boxes className="size-3" /> Materials</Badge>}
         title="Item master"
         description="Every purchased material with its import identity attached: HS heading, the duty a certificate of origin is worth, the permit regime it falls under, and the lead time broken into the four things it is actually made of."
       />

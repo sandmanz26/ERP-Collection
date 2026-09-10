@@ -76,6 +76,16 @@
   --auth-panel: 20 40% 22%;
   --auth-panel-fg: 40 40% 97%;
 
+  /* the navigation rail is its own small theme: dark walnut in both modes, so
+     the app has a spine and navigation never blurs into the work beside it */
+  --sidebar: 22 32% 15%;
+  --sidebar-fg: 38 34% 94%;
+  --sidebar-muted: 30 12% 64%;
+  --sidebar-border: 22 20% 23%;
+  --sidebar-hover: 22 24% 20%;
+  --sidebar-active: 22 28% 24%;
+  --sidebar-accent: 30 82% 60%;
+
   --shadow-color: 24 32% 20%;
   --radius: 0.625rem;
 }
@@ -126,6 +136,14 @@
   --purple: 282 70% 68%;
   --purple-soft: 282 38% 20%;
   --purple-soft-fg: 284 80% 80%;
+
+  --sidebar: 24 15% 8%;
+  --sidebar-fg: 36 30% 92%;
+  --sidebar-muted: 30 10% 58%;
+  --sidebar-border: 26 12% 17%;
+  --sidebar-hover: 24 12% 13%;
+  --sidebar-active: 24 13% 16%;
+  --sidebar-accent: 28 74% 60%;
 
   --shadow-color: 24 40% 2%;
 }
@@ -179,6 +197,14 @@
   --color-purple: hsl(var(--purple));
   --color-purple-soft: hsl(var(--purple-soft));
   --color-purple-soft-fg: hsl(var(--purple-soft-fg));
+
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-fg: hsl(var(--sidebar-fg));
+  --color-sidebar-muted: hsl(var(--sidebar-muted));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-hover: hsl(var(--sidebar-hover));
+  --color-sidebar-active: hsl(var(--sidebar-active));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
