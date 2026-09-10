@@ -15,8 +15,12 @@ import { MOISTURE_BANDS } from '@/data/reference'
 
 export interface CentreLoad {
   workCentre: WorkCentre
-  /** hours available across all stations over the window */
+  /** hours available across all stations over the window, after maintenance is netted off */
   availableHours: number
+  /** hours the calendar had before maintenance took some back */
+  scheduledHours: number
+  /** hours booked out to maintenance inside the window */
+  downtimeHours: number
   loadedHours: number
   utilisation: number
   openOperations: number
@@ -32,6 +36,8 @@ export interface CentreLoad {
  */
 export function capacityLoad(
   workCentres: WorkCentre[], workOrders: WorkOrder[], from = TODAY, days = 14,
+  /** hours already promised to maintenance — capacity that ignores these promises a machine in pieces */
+  downtime?: (workCentreId: string) => number,
 ): CentreLoad[] {
   const to = addDays(from, days)
   return workCentres
@@ -51,10 +57,14 @@ export function capacityLoad(
         .sort((a, b) => (a.plannedStart < b.plannedStart ? -1 : 1))
 
       const loadedHours = queue.reduce((a, q) => a + q.hours, 0)
-      const availableHours = wc.stations * wc.hoursPerDay * days
+      const scheduledHours = wc.stations * wc.hoursPerDay * days
+      const downtimeHours = downtime?.(wc.id) ?? 0
+      const availableHours = Math.max(0, scheduledHours - downtimeHours)
       return {
         workCentre: wc,
         availableHours,
+        scheduledHours,
+        downtimeHours,
         loadedHours,
         utilisation: availableHours ? (loadedHours / availableHours) * 100 : 0,
         openOperations: queue.length,

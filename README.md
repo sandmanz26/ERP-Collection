@@ -79,13 +79,23 @@ in the store. There is no hand-typed dashboard figure anywhere in the applicatio
 
 ## Modules
 
-**Sales** — Sales orders (with the ATP promise, credit and deposit gates) · Customers
+**Sales** — **Quotations** (weighted pipeline, margin floor, validity clock, loss reasons) · Sales orders (with the ATP promise, credit and deposit gates) · **Deliveries & packing** (surat jalan, container fill, the export document gate) · **Returns & claims** · Customers
 **Engineering** — Products · Bills of material (multi-level, yield, alternates, where-used) · Routings & work centres
 **Planning** — Master schedule · MRP run · Capacity & load
-**Production** — Work orders · Shop floor · Kiln drying · Quality
-**Materials & Import** — Item master · Inventory & lots · Suppliers · Purchase orders · **Import shipments** · **Customs & permits** · **Landed cost**
-**Finance** — Costing & variance · Invoices & bills · General ledger · Chart of accounts · Financial reports
+**Production** — Work orders · Shop floor · Kiln drying · **Subcontracting** · **Maintenance** · Quality
+**Materials & Import** — Item master · Inventory & lots · Suppliers · **Requisitions** (the approval ladder) · Purchase orders · **Import shipments** · **Customs & permits** · **Landed cost**
+**Finance** — Costing & variance · Invoices & bills · **Receipts & payments** · General ledger · Chart of accounts · Financial reports
 **Insight** — Operations analytics · Settings & audit
+
+Each of those closes a loop the core would otherwise leave open. A quotation carries the standard
+cost it was priced on, frozen, so a win can be judged afterwards. A delivery is the only thing that
+moves a sales order line, and it will not load until the paperwork its mode demands is verified —
+a container with an unsubmitted PEB gets no gate pass. A claim settles at what the remedy costs, not
+at the sale value, and closes with a corrective action or it comes back. A receipt with nothing to
+allocate it to is reported as money nobody can match to anything. A requisition needs every rung of
+the approval ladder its value clears, and the days it waits are counted as lead time spent. Downtime
+is netted off capacity before the schedule promises the hours. And material at a subcontractor is
+valued and aged here, because it is still our stock and it is on somebody else's floor.
 
 The product requirements document behind all of it, including the research it was built from, is in
 [`docs/PRD.md`](docs/PRD.md).
@@ -149,6 +159,21 @@ the PIB and its lane and the SPPB, the permits, and the cost lines with the basi
 
 **Work order** — routing progress per operation, material issues against the bill, QC results,
 scrap, rework and a cost roll-up that keeps material, labour, overhead and subcontract apart.
+
+**Quotation, delivery and claim** — a quotation line freezes the standard cost it was priced on and
+the lead time it promised. A delivery carries packed units with their marks, cartons, weight and
+cube, the documents its mode requires, and the short quantity with the reason for it. A claim
+carries liability, remedy, what was claimed against what was settled, what was recovered from
+whoever caused it, and the corrective action that stops it recurring.
+
+**Payment** — direction, method, the bank account it moved through, withholding kept back at source,
+bank charges, the FX difference between invoice and settlement rate, and the allocations that say
+which invoice or which order each slice of the money is against.
+
+**Requisition, maintenance and subcontract order** — a requisition carries the justification that
+got it raised and an approval ladder built from its own value. A maintenance order carries its
+interval, its planned and actual downtime, the parts and the root cause. A subcontract order carries
+what went out, what came back, what was lost, and the value standing at somebody else's premises.
 
 **Finance** — an Indonesian-shaped chart of accounts that separates the three inventory stages,
 splits cost of sales into material, labour and overhead, treats PPN masukan and PPh 22 as prepaid

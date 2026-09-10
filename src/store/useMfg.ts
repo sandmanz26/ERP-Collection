@@ -12,13 +12,20 @@ import type {
   Account, AppSettings, Bom, CompanyProfile, Customer, ImportShipment, Invoice, Item, JournalEntry,
   KilnBatch, Lot, MrpRun, Permit, Product, PurchaseOrder, QcRecord, Routing, SalesOrder, StockMovement,
   Supplier, Warehouse, WorkCentre, WorkOrder,
+  BankAccount, Claim, Delivery, MaintenanceOrder, Payment, PurchaseRequisition, Quotation,
+  SubcontractOrder,
 } from '@/data/types'
 import { company as seedCompany, customers as seedCustomers, defaultSettings, items as seedItems, products as seedProducts, suppliers as seedSuppliers, warehouses as seedWarehouses, workCentres as seedWorkCentres } from '@/data/seed-master'
 import { boms as seedBoms, routings as seedRoutings } from '@/data/seed-engineering'
 import { permits as seedPermits, purchaseOrders as seedPurchaseOrders, shipments as seedShipments } from '@/data/seed-import'
 import { kilnBatches as seedKiln, lots as seedLots, qcRecords as seedQc, salesOrders as seedSalesOrders, stockMovements as seedMovements, workOrders as seedWorkOrders } from '@/data/seed-production'
 import { accounts as seedAccounts, invoices as seedInvoices, journal as seedJournal } from '@/data/seed-finance'
-import { uid } from '@/lib/utils'
+import { bankAccounts as seedBankAccounts, claims as seedClaims, deliveries as seedDeliveries, payments as seedPayments, quotations as seedQuotations } from '@/data/seed-commerce'
+import { maintenanceOrders as seedMaintenance, requisitions as seedRequisitions, subcontractOrders as seedSubcontract } from '@/data/seed-operations'
+import { buildApprovals, requisitionValue } from '@/lib/operations'
+import { nextCode, uid } from '@/lib/utils'
+import { addDays, TODAY } from '@/data/clock'
+import { deliveryDocGate } from '@/lib/commerce'
 import { useAuth } from './useAuth'
 
 const actor = () => {
@@ -39,6 +46,8 @@ export type EntityKey =
   | 'customers' | 'products' | 'boms' | 'routings' | 'workCentres' | 'items' | 'suppliers'
   | 'warehouses' | 'lots' | 'movements' | 'purchaseOrders' | 'shipments' | 'permits'
   | 'salesOrders' | 'workOrders' | 'kilnBatches' | 'qcRecords' | 'accounts' | 'journal' | 'invoices'
+  | 'quotations' | 'deliveries' | 'claims' | 'payments' | 'bankAccounts' | 'requisitions'
+  | 'maintenanceOrders' | 'subcontractOrders'
 
 interface MfgState {
   customers: Customer[]
@@ -61,6 +70,14 @@ interface MfgState {
   accounts: Account[]
   journal: JournalEntry[]
   invoices: Invoice[]
+  quotations: Quotation[]
+  deliveries: Delivery[]
+  claims: Claim[]
+  payments: Payment[]
+  bankAccounts: BankAccount[]
+  requisitions: PurchaseRequisition[]
+  maintenanceOrders: MaintenanceOrder[]
+  subcontractOrders: SubcontractOrder[]
   mrpRuns: MrpRun[]
   company: CompanyProfile
   settings: AppSettings
@@ -87,10 +104,42 @@ interface MfgState {
   addKilnReading: (id: string, moisture: number, dryBulb: number, wetBulb: number) => void
   dispositionQc: (id: string, disposition: QcRecord['disposition'], rootCause?: string) => void
   recordMrpRun: (run: MrpRun) => void
+
+  /* commercial */
+  sendQuotation: (id: string) => void
+  decideQuotation: (id: string, outcome: 'WON' | 'LOST' | 'WITHDRAWN', reason?: Quotation['lostReason']) => void
+  convertQuotation: (id: string) => void
+  advanceDelivery: (id: string, to: Delivery['status']) => void
+  setDeliveryDocument: (deliveryId: string, docId: string, status: Delivery['documents'][number]['status'], reference?: string) => void
+  settleClaim: (id: string, remedy: Claim['remedy'], liability: Claim['liability'], settledAmount: number) => void
+  closeClaim: (id: string, correctiveAction?: string) => void
+  clearPayment: (id: string) => void
+  allocatePayment: (id: string, invoiceId: string, amount: number) => void
+
+  /* operations */
+  submitRequisition: (id: string) => void
+  decideRequisition: (id: string, level: number, decision: 'APPROVED' | 'REJECTED', comment?: string) => void
+  convertRequisition: (id: string) => void
+  startMaintenance: (id: string) => void
+  completeMaintenance: (id: string, actualDowntimeHours: number, rootCause?: string) => void
+  sendSubcontract: (id: string) => void
+  receiveSubcontract: (id: string, returned: Record<string, number>, loss: Record<string, number>) => void
   updateSettings: (patch: Partial<AppSettings>) => void
   updateCompany: (patch: Partial<CompanyProfile>) => void
   reseed: () => void
 }
+
+/** The collections a version-1 book predates. */
+const newCollections = () => ({
+  quotations: seedQuotations,
+  deliveries: seedDeliveries,
+  claims: seedClaims,
+  payments: seedPayments,
+  bankAccounts: seedBankAccounts,
+  requisitions: seedRequisitions,
+  maintenanceOrders: seedMaintenance,
+  subcontractOrders: seedSubcontract,
+})
 
 const seed = () => ({
   customers: seedCustomers,
@@ -113,6 +162,7 @@ const seed = () => ({
   accounts: seedAccounts,
   journal: seedJournal,
   invoices: seedInvoices,
+  ...newCollections(),
   mrpRuns: [] as MrpRun[],
   company: seedCompany,
   settings: defaultSettings,
@@ -390,6 +440,297 @@ export const useMfg = create<MfgState>()(
           }
         }),
 
+
+      /* ---------------- commercial ---------------- */
+
+      sendQuotation: (id) =>
+        set((s) => {
+          const q = s.quotations.find((x) => x.id === id)
+          if (q) get().log('Sent', 'Quotation', `${q.code} went out, valid to ${q.validUntil}.`)
+          return { quotations: s.quotations.map((x) => (x.id === id ? { ...x, status: 'SENT' as const } : x)) }
+        }),
+
+      decideQuotation: (id, outcome, reason) =>
+        set((s) => {
+          const q = s.quotations.find((x) => x.id === id)
+          if (q) get().log(outcome === 'WON' ? 'Won' : 'Closed', 'Quotation', `${q.code} marked ${outcome.toLowerCase()}${reason ? ` — ${reason.replace(/_/g, ' ').toLowerCase()}` : ''}.`)
+          return {
+            quotations: s.quotations.map((x) =>
+              x.id === id
+                ? { ...x, status: outcome, decidedAt: TODAY, lostReason: outcome === 'LOST' ? reason : undefined, probabilityPercent: outcome === 'WON' ? 100 : 0 }
+                : x,
+            ),
+          }
+        }),
+
+      /**
+       * A won quotation becomes an order with the prices it was won at — retyping
+       * them is where the margin quietly disappears between the desk and the book.
+       */
+      convertQuotation: (id) =>
+        set((s) => {
+          const q = s.quotations.find((x) => x.id === id)
+          if (!q || q.salesOrderId) return {}
+          const code = nextCode('SO', s.salesOrders.map((o) => o.code), 4, true)
+          const customer = s.customers.find((c) => c.id === q.customerId)
+          const order: SalesOrder = {
+            id: uid('so'), code, customerId: q.customerId, status: 'PENDING_CONFIRMATION',
+            priority: 'STANDARD', orderDate: TODAY, currency: q.currency, fxRate: q.fxRate,
+            depositPercent: customer?.depositPercent ?? 0, depositReceived: 0,
+            salesPerson: q.salesPerson, incoterm: q.incoterm, destination: q.destination,
+            note: `Converted from ${q.code} at revision ${q.revision}.`,
+            lines: q.lines.map((l) => ({
+              id: uid('sol'), productId: l.productId, description: l.description, quantity: l.quantity,
+              unitPrice: l.unitPrice, requestedDate: addDays(TODAY, l.leadTimeDays), shippedQuantity: 0,
+            })),
+          }
+          get().log('Converted', 'Quotation', `${q.code} became ${code} at the prices it was won at.`)
+          return {
+            salesOrders: [order, ...s.salesOrders],
+            quotations: s.quotations.map((x) => (x.id === id ? { ...x, status: 'WON' as const, decidedAt: TODAY, salesOrderId: order.id } : x)),
+          }
+        }),
+
+      /**
+       * A delivery cannot be loaded until every document it needs is verified —
+       * an export container that sails on an unsubmitted PEB does not get a gate pass.
+       */
+      advanceDelivery: (id, to) =>
+        set((s) => {
+          const dv = s.deliveries.find((x) => x.id === id)
+          if (!dv) return {}
+          if ((to === 'LOADED' || to === 'IN_TRANSIT') && !deliveryDocGate(dv).ok) {
+            get().log('Blocked', 'Delivery', `${dv.code} cannot move to ${to.toLowerCase()} — ${deliveryDocGate(dv).missing.join(', ')} still outstanding.`)
+            return {}
+          }
+          get().log('Advanced', 'Delivery', `${dv.code} → ${to.replace(/_/g, ' ').toLowerCase()}.`)
+          return {
+            deliveries: s.deliveries.map((x) =>
+              x.id === id
+                ? {
+                    ...x, status: to,
+                    dispatchedAt: to === 'IN_TRANSIT' ? TODAY : x.dispatchedAt,
+                    deliveredAt: to === 'DELIVERED' || to === 'PARTIALLY_ACCEPTED' ? TODAY : x.deliveredAt,
+                  }
+                : x,
+            ),
+            /* delivering is the only thing that legitimately moves a sales order line's shipped quantity */
+            salesOrders: to === 'DELIVERED' || to === 'PARTIALLY_ACCEPTED'
+              ? s.salesOrders.map((o) => {
+                  const lines = dv.lines.filter((dl) => dl.salesOrderId === o.id)
+                  if (!lines.length) return o
+                  return {
+                    ...o,
+                    lines: o.lines.map((l) => {
+                      const dl = lines.find((x) => x.salesOrderLineId === l.id)
+                      return dl ? { ...l, shippedQuantity: Math.min(l.quantity, l.shippedQuantity + dl.quantity) } : l
+                    }),
+                  }
+                })
+              : s.salesOrders,
+          }
+        }),
+
+      setDeliveryDocument: (deliveryId, docId, status, reference) =>
+        set((s) => ({
+          deliveries: s.deliveries.map((dv) =>
+            dv.id === deliveryId
+              ? { ...dv, documents: dv.documents.map((doc) => (doc.id === docId ? { ...doc, status, reference: reference ?? doc.reference } : doc)) }
+              : dv,
+          ),
+        })),
+
+      settleClaim: (id, remedy, liability, settledAmount) =>
+        set((s) => {
+          const c = s.claims.find((x) => x.id === id)
+          if (c) get().log('Settled', 'Claim', `${c.code} — ${remedy.replace(/_/g, ' ').toLowerCase()}, liability ${liability.toLowerCase()}.`)
+          return {
+            claims: s.claims.map((x) =>
+              x.id === id
+                ? {
+                    ...x, remedy, liability, settledAmount,
+                    status: remedy === 'CREDIT_NOTE' ? ('CREDITED' as const)
+                      : remedy === 'NO_REMEDY' ? ('REJECTED' as const)
+                      : remedy === 'REPLACE' ? ('REPLACING' as const)
+                      : ('APPROVED' as const),
+                  }
+                : x,
+            ),
+          }
+        }),
+
+      closeClaim: (id, correctiveAction) =>
+        set((s) => {
+          const c = s.claims.find((x) => x.id === id)
+          if (c) get().log('Closed', 'Claim', `${c.code} closed.`)
+          return {
+            claims: s.claims.map((x) =>
+              x.id === id ? { ...x, status: 'CLOSED' as const, closedAt: TODAY, correctiveAction: correctiveAction ?? x.correctiveAction } : x,
+            ),
+          }
+        }),
+
+      clearPayment: (id) =>
+        set((s) => {
+          const p = s.payments.find((x) => x.id === id)
+          if (!p) return {}
+          get().log('Cleared', 'Payment', `${p.code} cleared the bank.`)
+          const allocated = new Map<string, number>()
+          p.allocations.forEach((a) => {
+            if (a.invoiceId) allocated.set(a.invoiceId, (allocated.get(a.invoiceId) ?? 0) + a.amount)
+          })
+          return {
+            payments: s.payments.map((x) => (x.id === id ? { ...x, status: 'CLEARED' as const } : x)),
+            invoices: s.invoices.map((inv) => {
+              const add = allocated.get(inv.id)
+              if (!add) return inv
+              const paid = inv.paidAmount + add
+              return { ...inv, paidAmount: paid, status: paid >= inv.total - 1 ? ('PAID' as const) : ('PARTIALLY_PAID' as const) }
+            }),
+          }
+        }),
+
+      allocatePayment: (id, invoiceId, amount) =>
+        set((s) => ({
+          payments: s.payments.map((p) =>
+            p.id === id
+              ? { ...p, allocations: [...p.allocations, { id: uid('pal'), invoiceId, amount, memo: `Applied to ${s.invoices.find((i) => i.id === invoiceId)?.code ?? invoiceId}` }] }
+              : p,
+          ),
+        })),
+
+      /* ---------------- operations ---------------- */
+
+      submitRequisition: (id) =>
+        set((s) => {
+          const r = s.requisitions.find((x) => x.id === id)
+          if (!r) return {}
+          const value = requisitionValue(r)
+          get().log('Submitted', 'Requisition', `${r.code} submitted at ${Math.round(value).toLocaleString('en-US')}, needing ${buildApprovals(value).length} signature(s).`)
+          return {
+            requisitions: s.requisitions.map((x) =>
+              x.id === id
+                ? { ...x, status: 'PENDING_APPROVAL' as const, approvals: x.approvals.length ? x.approvals : buildApprovals(value) }
+                : x,
+            ),
+          }
+        }),
+
+      decideRequisition: (id, level, decision, comment) =>
+        set((s) => {
+          const r = s.requisitions.find((x) => x.id === id)
+          if (!r) return {}
+          const approvals = r.approvals.map((a) =>
+            a.level === level ? { ...a, decision, decidedAt: TODAY, comment: comment ?? a.comment } : a,
+          )
+          const rejected = approvals.some((a) => a.decision === 'REJECTED')
+          const complete = !rejected && approvals.every((a) => a.decision === 'APPROVED')
+          get().log(decision === 'APPROVED' ? 'Approved' : 'Rejected', 'Requisition', `${r.code} at level ${level}.`)
+          return {
+            requisitions: s.requisitions.map((x) =>
+              x.id === id
+                ? {
+                    ...x, approvals,
+                    status: rejected ? ('REJECTED' as const) : complete ? ('APPROVED' as const) : ('PENDING_APPROVAL' as const),
+                    rejectedReason: rejected ? comment ?? x.rejectedReason : x.rejectedReason,
+                  }
+                : x,
+            ),
+          }
+        }),
+
+      /** One purchase order per supplier on the requisition — which is how buying actually works. */
+      convertRequisition: (id) =>
+        set((s) => {
+          const r = s.requisitions.find((x) => x.id === id)
+          if (!r || r.status !== 'APPROVED') return {}
+          const bySupplier = new Map<string, typeof r.lines>()
+          r.lines.forEach((l) => {
+            const key = l.suggestedSupplierId ?? 'unassigned'
+            bySupplier.set(key, [...(bySupplier.get(key) ?? []), l])
+          })
+          const codes = s.purchaseOrders.map((p) => p.code)
+          const created: PurchaseOrder[] = []
+          bySupplier.forEach((lines, supplierId) => {
+            const supplier = s.suppliers.find((x) => x.id === supplierId)
+            const code = nextCode('PO', [...codes, ...created.map((c) => c.code)], 4, true)
+            created.push({
+              id: uid('po'), code, supplierId, status: 'DRAFT',
+              kind: supplier?.country && supplier.country !== 'ID' ? 'OVERSEAS' : 'LOCAL',
+              orderDate: TODAY, currency: lines[0].currency, fxRateAtOrder: 1,
+              incoterm: supplier?.country !== 'ID' ? 'FOB' : 'DAP',
+              paymentInstrument: supplier?.paymentInstrument ?? 'TT_30',
+              requisitionId: r.id, requestedBy: r.requestedBy,
+              lines: lines.map((l) => ({
+                id: uid('pol'), itemId: l.itemId ?? '', quantity: l.quantity,
+                uom: l.uom, unitPrice: l.estimatedUnitCost, receivedQuantity: 0,
+                requiredDate: l.requiredDate, mrpDemandRef: l.justification,
+              })),
+              note: `Raised from ${r.code}. ${lines[0].justification}`,
+            })
+          })
+          get().log('Converted', 'Requisition', `${r.code} became ${created.map((c) => c.code).join(', ')}.`)
+          return {
+            purchaseOrders: [...created, ...s.purchaseOrders],
+            requisitions: s.requisitions.map((x) => (x.id === id ? { ...x, status: 'CONVERTED' as const } : x)),
+          }
+        }),
+
+      startMaintenance: (id) =>
+        set((s) => {
+          const m = s.maintenanceOrders.find((x) => x.id === id)
+          if (m) get().log('Started', 'Maintenance', `${m.code} — ${m.assetName} is down for ${m.plannedDowntimeHours} hours.`)
+          return {
+            maintenanceOrders: s.maintenanceOrders.map((x) =>
+              x.id === id ? { ...x, status: 'IN_PROGRESS' as const, startedAt: TODAY } : x,
+            ),
+          }
+        }),
+
+      completeMaintenance: (id, actualDowntimeHours, rootCause) =>
+        set((s) => {
+          const m = s.maintenanceOrders.find((x) => x.id === id)
+          if (m) get().log('Completed', 'Maintenance', `${m.code} closed after ${actualDowntimeHours} hours of downtime.`)
+          return {
+            maintenanceOrders: s.maintenanceOrders.map((x) =>
+              x.id === id
+                ? { ...x, status: 'COMPLETED' as const, completedAt: TODAY, actualDowntimeHours, lastDoneAt: TODAY, rootCause: rootCause ?? x.rootCause }
+                : x,
+            ),
+          }
+        }),
+
+      sendSubcontract: (id) =>
+        set((s) => {
+          const o = s.subcontractOrders.find((x) => x.id === id)
+          if (o) get().log('Sent', 'Subcontract', `${o.code} — material left the gate for ${s.suppliers.find((x) => x.id === o.supplierId)?.name ?? 'the subcontractor'}.`)
+          return {
+            subcontractOrders: s.subcontractOrders.map((x) =>
+              x.id === id ? { ...x, status: 'MATERIAL_SENT' as const, sentAt: TODAY } : x,
+            ),
+          }
+        }),
+
+      receiveSubcontract: (id, returned, loss) =>
+        set((s) => {
+          const o = s.subcontractOrders.find((x) => x.id === id)
+          if (!o) return {}
+          const materials = o.materials.map((m) => ({
+            ...m,
+            returnedQuantity: m.returnedQuantity + (returned[m.id] ?? 0),
+            lossQuantity: m.lossQuantity + (loss[m.id] ?? 0),
+          }))
+          const done = materials.every((m) => m.returnedQuantity + m.lossQuantity >= m.sentQuantity)
+          get().log('Received', 'Subcontract', `${o.code} — ${done ? 'all back' : 'part back'} from ${s.suppliers.find((x) => x.id === o.supplierId)?.name ?? 'the subcontractor'}.`)
+          return {
+            subcontractOrders: s.subcontractOrders.map((x) =>
+              x.id === id
+                ? { ...x, materials, status: done ? ('RETURNED' as const) : ('PARTIALLY_RETURNED' as const), returnedAt: done ? TODAY : x.returnedAt }
+                : x,
+            ),
+          }
+        }),
+
       recordMrpRun: (run) => set((s) => ({ mrpRuns: [run, ...s.mrpRuns].slice(0, 30) })),
 
       updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
@@ -397,6 +738,18 @@ export const useMfg = create<MfgState>()(
 
       reseed: () => set({ ...seed() }),
     }),
-    { name: 'wanakarya-mfg', version: 1 },
+    {
+      name: 'wanakarya-mfg',
+      version: 2,
+      /**
+       * A book saved before the commercial and operations modules existed has no
+       * quotations, deliveries or maintenance in it. Rather than discard the user's
+       * edits, fold the new collections in from seed and keep everything else.
+       */
+      migrate: (persisted, from) => {
+        if (from >= 2) return persisted as MfgState
+        return { ...seed(), ...(persisted as object), ...newCollections() } as MfgState
+      },
+    },
   ),
 )

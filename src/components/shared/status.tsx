@@ -48,6 +48,32 @@ const TONES: Record<string, BadgeTone> = {
 
   /* bom / routing */
   SUPERSEDED: 'neutral',
+
+  /* quotations */
+  SENT: 'info', NEGOTIATING: 'warning', WON: 'success', LOST: 'danger', EXPIRED: 'danger', WITHDRAWN: 'neutral',
+
+  /* deliveries */
+  PICKING: 'info', PACKED: 'accent', LOADED: 'primary', IN_TRANSIT: 'primary',
+  DELIVERED: 'success', PARTIALLY_ACCEPTED: 'warning',
+  SUBMITTED: 'info',
+
+  /* claims */
+  LOGGED: 'warning', INVESTIGATING: 'info', IN_REWORK: 'primary', REPLACING: 'primary', CREDITED: 'accent',
+  OURS: 'danger', CARRIER: 'warning', SUPPLIER: 'warning', CUSTOMER: 'info', UNDECIDED: 'neutral',
+  REPAIR_ON_SITE: 'info', REPLACE: 'warning', CREDIT_NOTE: 'accent', DISCOUNT: 'warning',
+  RETURN_AND_REWORK: 'warning', NO_REMEDY: 'neutral',
+
+  /* payments */
+  BOUNCED: 'danger',
+
+  /* requisitions */
+  CONVERTED: 'success',
+
+  /* maintenance */
+  SCHEDULED: 'neutral', DUE: 'warning', WAITING_PARTS: 'danger',
+
+  /* subcontract */
+  MATERIAL_SENT: 'warning', PARTIALLY_RETURNED: 'accent',
 }
 
 export function StatusBadge({ value, size = 'md' }: { value: string; size?: 'sm' | 'md' | 'lg' }) {

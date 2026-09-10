@@ -14,6 +14,8 @@ import { Kbd, Separator } from '@/components/ui/misc'
 import { Tooltip } from '@/components/ui/tooltip'
 import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from '@/components/ui/menu'
 import { Badge } from '@/components/ui/badge'
+import { claimIsOpen, deliveryIsOpen, quoteIsLive } from '@/lib/commerce'
+import { maintenanceIsOpen, maintenanceStatusNow, subcontractIsOpen } from '@/lib/operations'
 import { Segmented } from '@/components/ui/checkbox'
 import { useTheme } from '@/hooks/useTheme'
 import { useMfg } from '@/store/useMfg'
@@ -78,6 +80,13 @@ export function AppShell() {
     orders: store.salesOrders.filter((o) => o.status === 'PENDING_CONFIRMATION' || o.status === 'CONFIRMED').length,
     overdue: store.invoices.filter((i) => i.status === 'OVERDUE').length,
     capacity: loads.filter((l) => l.utilisation > 100).length,
+    quotations: store.quotations.filter((q) => quoteIsLive(q.status)).length,
+    deliveries: store.deliveries.filter((dv) => deliveryIsOpen(dv.status)).length,
+    claims: store.claims.filter((c) => claimIsOpen(c.status)).length,
+    requisitions: store.requisitions.filter((r) => r.status === 'SUBMITTED' || r.status === 'PENDING_APPROVAL').length,
+    maintenance: store.maintenanceOrders.filter((m) => maintenanceIsOpen(m) && ['OVERDUE', 'IN_PROGRESS', 'WAITING_PARTS'].includes(maintenanceStatusNow(m))).length,
+    subcontract: store.subcontractOrders.filter((o) => subcontractIsOpen(o.status)).length,
+    payments: store.payments.filter((p) => p.status === 'PENDING_APPROVAL' || p.status === 'BOUNCED').length,
   }
 
   /* the rail says where you can go; the breadcrumb says where you are */
@@ -132,7 +141,7 @@ export function AppShell() {
               <div className="space-y-[3px]">
                 {group.items.map((item) => {
                   const count = item.badgeKey ? badges[item.badgeKey] : 0
-                  const loud = item.badgeKey === 'overdue' || item.badgeKey === 'customs' || item.badgeKey === 'exceptions'
+                  const loud = ['overdue', 'customs', 'exceptions', 'claims', 'maintenance'].includes(item.badgeKey ?? '')
                   const link = (
                     <NavLink
                       key={item.to}

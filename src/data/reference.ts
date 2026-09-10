@@ -9,6 +9,9 @@ import type {
   ImportCostCode, ImportDocType, InspectionPoint, ItemType, KpiTargets, LartasType, PaymentInstrument,
   PermitKind, ProductCategory, QcPoint, ShipmentStatus, SupplierKind, UserRole, WarehouseKind,
   WorkCentreKind, WorkOrderStatus,
+  ClaimKind, ClaimLiability, ClaimRemedy, ContainerType, Delivery, DeliveryMode, DeliveryStatus,
+  LostReason, MaintenanceKind, MaintenanceStatus, PaymentMethod, PaymentStatus, QuotationStatus,
+  RequisitionOrigin, RequisitionStatus, SubcontractStatus,
 } from './types'
 
 /* ==================================================================
@@ -494,6 +497,14 @@ export const EXCEPTION_META: Record<ExceptionKind, { label: string; group: strin
   COST_NOT_FINALISED: { label: 'Landed cost still provisional', group: 'Finance' },
   REORDER_POINT: { label: 'Below reorder point', group: 'Planning' },
   LICENCE_EXPIRING: { label: 'Company licence expiring', group: 'Compliance' },
+  QUOTE_EXPIRING: { label: 'Quotation about to expire', group: 'Commercial' },
+  DELIVERY_UNDERLOADED: { label: 'Container going out half empty', group: 'Logistics' },
+  DELIVERY_DOCS_MISSING: { label: 'Export document missing', group: 'Logistics' },
+  CLAIM_OPEN: { label: 'Customer claim open', group: 'Quality' },
+  PAYMENT_OVERDUE: { label: 'Payment overdue', group: 'Finance' },
+  REQUISITION_WAITING: { label: 'Requisition waiting for a signature', group: 'Planning' },
+  MAINTENANCE_OVERDUE: { label: 'Maintenance overdue', group: 'Production' },
+  SUBCONTRACT_OVERDUE: { label: 'Subcontract work overdue', group: 'Production' },
 }
 
 export const SEVERITY_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 } as const
@@ -559,3 +570,195 @@ export function passwordProblems(pw: string): string[] {
 }
 
 export const LICENCE_WARNING_DAYS = 60
+
+/* ==================================================================
+   Quotation, delivery, claim, payment, requisition, maintenance, subcontract
+   ================================================================== */
+
+export const QUOTATION_STATUSES: { value: QuotationStatus; label: string; hint: string }[] = [
+  { value: 'DRAFT', label: 'Draft', hint: 'Being priced. Nothing has gone to the customer yet.' },
+  { value: 'SENT', label: 'Sent', hint: 'With the customer, inside its validity window.' },
+  { value: 'NEGOTIATING', label: 'Negotiating', hint: 'They have come back on price, spec or date.' },
+  { value: 'WON', label: 'Won', hint: 'Converted into a sales order.' },
+  { value: 'LOST', label: 'Lost', hint: 'Closed against us. The reason is what makes the loss worth recording.' },
+  { value: 'EXPIRED', label: 'Expired', hint: 'The validity ran out before they decided. Timber and FX have both moved since.' },
+  { value: 'WITHDRAWN', label: 'Withdrawn', hint: 'Pulled by us — usually credit, or capacity we can no longer promise.' },
+]
+
+export const LOST_REASONS: { value: LostReason; label: string; hint: string }[] = [
+  { value: 'PRICE', label: 'Price', hint: 'Beaten on number. Check whether the standard cost behind it was honest.' },
+  { value: 'LEAD_TIME', label: 'Lead time', hint: 'Our honest date was later than somebody else’s promise. Often the import clock.' },
+  { value: 'SPECIFICATION', label: 'Specification', hint: 'We could not make what they asked for, or not to that certification.' },
+  { value: 'CREDIT', label: 'Credit', hint: 'We would not carry them, or they would not pay a deposit.' },
+  { value: 'NO_DECISION', label: 'No decision', hint: 'The project stalled. Worth re-quoting rather than writing off.' },
+  { value: 'COMPETITOR', label: 'Incumbent kept it', hint: 'Lost to the supplier already on the account.' },
+  { value: 'CAPACITY', label: 'Capacity', hint: 'We declined it. Recording this keeps the win rate honest.' },
+]
+
+/**
+ * The contribution floor a quote has to clear before it goes out without a
+ * director's signature. It is measured over factory standard cost — material off
+ * the bill plus labour and absorbed overhead — so it has to carry selling, admin
+ * and finance as well as profit. That is why the floor is well above the net
+ * margin the commercial team actually reports.
+ */
+export const QUOTE_MARGIN_FLOOR_PERCENT = 40
+/** How long before expiry a live quote starts asking to be chased. */
+export const QUOTE_CHASE_DAYS = 7
+
+export const DELIVERY_STATUSES: { value: DeliveryStatus; label: string; hint: string }[] = [
+  { value: 'PLANNED', label: 'Planned', hint: 'A date and a load, nothing picked.' },
+  { value: 'PICKING', label: 'Picking', hint: 'Stock being drawn against the lines.' },
+  { value: 'PACKED', label: 'Packed', hint: 'Cartons marked and measured; the packing list can be cut.' },
+  { value: 'LOADED', label: 'Loaded', hint: 'In the container or on the truck, sealed.' },
+  { value: 'IN_TRANSIT', label: 'In transit', hint: 'Gone. The order is short until it is signed for.' },
+  { value: 'DELIVERED', label: 'Delivered', hint: 'Signed for in full.' },
+  { value: 'PARTIALLY_ACCEPTED', label: 'Partly accepted', hint: 'Signed for with a shortage or damage noted on the surat jalan — the start of a claim.' },
+  { value: 'CANCELLED', label: 'Cancelled', hint: 'Stood down before dispatch.' },
+]
+
+export const DELIVERY_MODES: { value: DeliveryMode; label: string; hint: string }[] = [
+  { value: 'LOCAL_TRUCK', label: 'Local truck', hint: 'Our own or a contracted truck, within Java.' },
+  { value: 'DOMESTIC_LCL', label: 'Domestic groupage', hint: 'Shared load to an outer island.' },
+  { value: 'EXPORT_FCL', label: 'Export, full container', hint: 'One container, one buyer. Fill rate is the whole margin conversation.' },
+  { value: 'EXPORT_LCL', label: 'Export, groupage', hint: 'Consolidated at the forwarder. Priced by measurement, so cubic metres cost money.' },
+  { value: 'CUSTOMER_PICKUP', label: 'Customer collects', hint: 'Ex works. Ours ends at the gate.' },
+]
+
+/** Usable cube per box, allowing for the stow you never actually achieve. */
+export const CONTAINER_SPECS: Record<ContainerType, { label: string; cbm: number; payloadKg: number }> = {
+  TWENTY_GP: { label: "20' GP", cbm: 33.0, payloadKg: 28_200 },
+  FORTY_GP: { label: "40' GP", cbm: 67.5, payloadKg: 28_800 },
+  FORTY_HC: { label: "40' HC", cbm: 76.0, payloadKg: 28_600 },
+  NONE: { label: 'Not containerised', cbm: 0, payloadKg: 0 },
+}
+
+/** Below this fill an export container is losing money on freight per piece. */
+export const CONTAINER_FILL_FLOOR = 0.85
+
+export const DELIVERY_DOC_TYPES: { value: Delivery['documents'][number]['type']; label: string; hint: string; exportOnly: boolean }[] = [
+  { value: 'DELIVERY_NOTE', label: 'Surat jalan', hint: 'The note the driver carries and the customer’s gate stamps.', exportOnly: false },
+  { value: 'PACKING_LIST', label: 'Packing list', hint: 'Marks, cartons, weights and cube. Customs on both ends reads this.', exportOnly: false },
+  { value: 'COMMERCIAL_INVOICE', label: 'Commercial invoice', hint: 'The declared value. It has to agree with the PEB and the L/C to the cent.', exportOnly: true },
+  { value: 'PEB', label: 'PEB (BC 3.0)', hint: 'Export declaration through CEISA. No NPE, no gate pass at the port.', exportOnly: true },
+  { value: 'BL_AWB', label: 'Bill of lading', hint: 'Title to the goods. Released against the L/C or the paid invoice.', exportOnly: true },
+  { value: 'COO_FORM', label: 'Certificate of origin', hint: 'Form D, Form AK or a Form JIEPA — what gets the buyer their preference at their end.', exportOnly: true },
+  { value: 'FUMIGATION', label: 'Fumigation / ISPM 15', hint: 'Solid-wood packing has to be heat-treated and stamped, or the container is refused on arrival.', exportOnly: true },
+  { value: 'INSURANCE', label: 'Marine insurance', hint: 'Only ours to arrange on a CIF or CIP line.', exportOnly: true },
+]
+
+export const CLAIM_KINDS: { value: ClaimKind; label: string; hint: string }[] = [
+  { value: 'TRANSIT_DAMAGE', label: 'Transit damage', hint: 'Broken between our gate and theirs. Recoverable from the carrier if it was noted on delivery.' },
+  { value: 'MANUFACTURING_DEFECT', label: 'Manufacturing defect', hint: 'Ours. It got past final inspection, which is a quality signal as much as a cost.' },
+  { value: 'FINISH_DEFECT', label: 'Finish defect', hint: 'Bloom, sheen drift or a run that only showed up under their lighting.' },
+  { value: 'WRONG_ITEM', label: 'Wrong item shipped', hint: 'A picking error. Cheap to fix, expensive in trust.' },
+  { value: 'SHORT_SHIPMENT', label: 'Short shipment', hint: 'The count on the packing list did not match what arrived.' },
+  { value: 'WARRANTY', label: 'Warranty', hint: 'Failed in service inside the warranty term.' },
+  { value: 'SPECIFICATION_DISPUTE', label: 'Specification dispute', hint: 'They say it is not what was ordered; the drawing says otherwise. Read the signed sample first.' },
+]
+
+export const CLAIM_REMEDIES: { value: ClaimRemedy; label: string; hint: string }[] = [
+  { value: 'PENDING', label: 'Not yet decided', hint: 'Under investigation.' },
+  { value: 'REPAIR_ON_SITE', label: 'Repair on site', hint: 'A finisher travels. Cheapest remedy where the piece is already installed.' },
+  { value: 'REPLACE', label: 'Replace', hint: 'A rework order at full cost, plus the freight both ways.' },
+  { value: 'CREDIT_NOTE', label: 'Credit note', hint: 'They keep it, we credit. Fastest to close, straight off the margin.' },
+  { value: 'DISCOUNT', label: 'Price concession', hint: 'Accepted as a second, at a reduced price.' },
+  { value: 'RETURN_AND_REWORK', label: 'Return and rework', hint: 'It comes back, gets fixed, goes out again. Freight twice.' },
+  { value: 'NO_REMEDY', label: 'Declined', hint: 'Outside the window, or not ours.' },
+]
+
+export const CLAIM_LIABILITIES: { value: ClaimLiability; label: string; hint: string }[] = [
+  { value: 'UNDECIDED', label: 'Undecided', hint: 'Still being worked out. Everything sits on our books until it is.' },
+  { value: 'OURS', label: 'Ours', hint: 'Cost of poor quality. It belongs in the yield conversation, not just the ledger.' },
+  { value: 'CARRIER', label: 'Carrier', hint: 'Recoverable — but only if the damage was noted on the delivery note at the time.' },
+  { value: 'SUPPLIER', label: 'Supplier', hint: 'A bought-in component failed. Chargeable back, and it belongs on their scorecard.' },
+  { value: 'CUSTOMER', label: 'Customer', hint: 'Their handling, their storage, or their change of mind.' },
+]
+
+/** A claim open longer than this is a relationship problem, not a quality one. */
+export const CLAIM_AGEING_DAYS = 21
+
+export const PAYMENT_METHODS: { value: PaymentMethod; label: string; hint: string }[] = [
+  { value: 'BANK_TRANSFER', label: 'Bank transfer', hint: 'The default both ways.' },
+  { value: 'LC_SETTLEMENT', label: 'L/C settlement', hint: 'Proceeds released by the bank against clean documents.' },
+  { value: 'CHEQUE', label: 'Cheque / giro', hint: 'Not cash until it clears, and it can still bounce.' },
+  { value: 'CASH', label: 'Cash', hint: 'Petty amounts only.' },
+  { value: 'CARD', label: 'Card', hint: 'Small purchasing, mostly consumables.' },
+  { value: 'OFFSET', label: 'Contra / offset', hint: 'Netted against what the same party owes us. No money actually moves.' },
+]
+
+export const PAYMENT_STATUSES: { value: PaymentStatus; label: string; hint: string }[] = [
+  { value: 'DRAFT', label: 'Draft', hint: 'Prepared, not sent.' },
+  { value: 'PENDING_APPROVAL', label: 'Pending approval', hint: 'Waiting on a signature above the release limit.' },
+  { value: 'CLEARED', label: 'Cleared', hint: 'In or out of the bank, and reconciled.' },
+  { value: 'BOUNCED', label: 'Bounced', hint: 'Returned unpaid. The invoice goes straight back to overdue.' },
+  { value: 'VOID', label: 'Void', hint: 'Cancelled before it moved.' },
+]
+
+/** PPh 23 on domestic services — subcontract carving, finishing, transport. */
+export const PPH23_RATE = 0.02
+
+export const REQUISITION_STATUSES: { value: RequisitionStatus; label: string; hint: string }[] = [
+  { value: 'DRAFT', label: 'Draft', hint: 'Being written.' },
+  { value: 'SUBMITTED', label: 'Submitted', hint: 'In the queue, not yet looked at.' },
+  { value: 'PENDING_APPROVAL', label: 'Pending approval', hint: 'Sitting on somebody’s desk. Every day here is a day of lead time spent for nothing.' },
+  { value: 'APPROVED', label: 'Approved', hint: 'Cleared to buy. Purchasing can cut the order.' },
+  { value: 'REJECTED', label: 'Rejected', hint: 'Turned down, with a reason on the record.' },
+  { value: 'CONVERTED', label: 'Converted', hint: 'A purchase order exists against every line.' },
+  { value: 'CANCELLED', label: 'Cancelled', hint: 'Withdrawn by the requester.' },
+]
+
+export const REQUISITION_ORIGINS: { value: RequisitionOrigin; label: string; hint: string }[] = [
+  { value: 'MRP', label: 'From the MRP run', hint: 'The netting said so, and carried the sentence that explains why.' },
+  { value: 'REORDER_POINT', label: 'Reorder point', hint: 'Stock fell through its trigger level.' },
+  { value: 'WORK_ORDER', label: 'Work order', hint: 'A shortage found on the floor, after release.' },
+  { value: 'MAINTENANCE', label: 'Maintenance', hint: 'A spare a machine is waiting on.' },
+  { value: 'MANUAL', label: 'Raised by hand', hint: 'Somebody asked. The justification field earns its keep here.' },
+  { value: 'SAMPLE', label: 'Sampling', hint: 'For a quotation or a new development.' },
+]
+
+/**
+ * Who can sign for how much. A requisition needs every rung whose limit it clears,
+ * which is why a big import order takes three signatures and a box of abrasives takes none.
+ */
+export const APPROVAL_LADDER: { level: number; role: UserRole; title: string; limit: number }[] = [
+  { level: 1, role: 'PPIC', title: 'Manajer PPIC', limit: 50_000_000 },
+  { level: 2, role: 'PURCHASING', title: 'Manajer Pembelian', limit: 300_000_000 },
+  { level: 3, role: 'FINANCE', title: 'Manajer Keuangan', limit: 1_500_000_000 },
+  { level: 4, role: 'DIRECTOR', title: 'Direktur Operasi', limit: Number.MAX_SAFE_INTEGER },
+]
+
+/** A requisition older than this without a decision is holding up the plan. */
+export const REQUISITION_SLA_DAYS = 2
+
+export const MAINTENANCE_KINDS: { value: MaintenanceKind; label: string; hint: string }[] = [
+  { value: 'PREVENTIVE', label: 'Preventive', hint: 'On an interval, planned into the capacity calendar before it is needed.' },
+  { value: 'CORRECTIVE', label: 'Corrective', hint: 'Something found wrong and scheduled, rather than something that stopped.' },
+  { value: 'BREAKDOWN', label: 'Breakdown', hint: 'It stopped. Every hour here is capacity the plan already promised away.' },
+  { value: 'CALIBRATION', label: 'Calibration', hint: 'Moisture meters, spray guns, the CNC probe. Out of calibration is a quality problem waiting.' },
+  { value: 'SAFETY_INSPECTION', label: 'Safety inspection', hint: 'Statutory — dust extraction, compressors, lifting gear.' },
+]
+
+export const MAINTENANCE_STATUSES: { value: MaintenanceStatus; label: string; hint: string }[] = [
+  { value: 'SCHEDULED', label: 'Scheduled', hint: 'On the calendar, not yet due.' },
+  { value: 'DUE', label: 'Due', hint: 'Due this week. Plan the downtime before the plan assumes the hours.' },
+  { value: 'OVERDUE', label: 'Overdue', hint: 'Past due and still running. This is where breakdowns come from.' },
+  { value: 'IN_PROGRESS', label: 'In progress', hint: 'The centre is down now, and capacity is short by exactly these hours.' },
+  { value: 'WAITING_PARTS', label: 'Waiting parts', hint: 'Down, and nothing can be done until a spare lands. Usually an import.' },
+  { value: 'COMPLETED', label: 'Completed', hint: 'Back in service.' },
+  { value: 'CANCELLED', label: 'Cancelled', hint: 'Stood down.' },
+]
+
+export const SUBCONTRACT_STATUSES: { value: SubcontractStatus; label: string; hint: string }[] = [
+  { value: 'DRAFT', label: 'Draft', hint: 'Priced, not issued.' },
+  { value: 'ISSUED', label: 'Issued', hint: 'The order is with the workshop; nothing has left our gate.' },
+  { value: 'MATERIAL_SENT', label: 'Material sent', hint: 'Our stock is at their premises. It is still our inventory and still our risk.' },
+  { value: 'IN_PROGRESS', label: 'In progress', hint: 'Being worked. The routing operation is waiting on it.' },
+  { value: 'PARTIALLY_RETURNED', label: 'Partly returned', hint: 'Some pieces back, the rest still out.' },
+  { value: 'RETURNED', label: 'Returned', hint: 'All back and counted, pending incoming inspection.' },
+  { value: 'CLOSED', label: 'Closed', hint: 'Inspected, received into stock and invoiced.' },
+  { value: 'CANCELLED', label: 'Cancelled', hint: 'Recalled. Anything already sent has to come home.' },
+]
+
+/** Loss beyond this at a subcontractor is a conversation, not a rounding difference. */
+export const SUBCONTRACT_LOSS_TOLERANCE = 0.02

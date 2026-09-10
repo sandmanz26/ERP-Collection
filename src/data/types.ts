@@ -368,6 +368,8 @@ export interface PurchaseOrder {
   paymentInstrument: PaymentInstrument
   lines: PurchaseOrderLine[]
   shipmentId?: ID
+  /** the requisition whose signatures authorised this order */
+  requisitionId?: ID
   requestedBy: string
   approvedBy?: string
   approvedAt?: ISODate
@@ -905,6 +907,8 @@ export type ExceptionKind =
   | 'KILN_OUT_OF_BAND' | 'CAPACITY_OVERLOAD' | 'QC_FAILURE' | 'COST_VARIANCE'
   | 'ORDER_AT_RISK' | 'CREDIT_LIMIT' | 'DEPOSIT_MISSING' | 'COST_NOT_FINALISED'
   | 'REORDER_POINT' | 'LICENCE_EXPIRING'
+  | 'QUOTE_EXPIRING' | 'DELIVERY_UNDERLOADED' | 'DELIVERY_DOCS_MISSING' | 'CLAIM_OPEN'
+  | 'PAYMENT_OVERDUE' | 'REQUISITION_WAITING' | 'MAINTENANCE_OVERDUE' | 'SUBCONTRACT_OVERDUE'
 
 export type ExceptionSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
 
@@ -922,4 +926,361 @@ export interface SystemException {
   daysLate?: number
   link?: string
   entityLabel?: string
+}
+
+/* ==================================================================
+   9 · Quotation — the order book before it is an order
+   ================================================================== */
+
+export type QuotationStatus = 'DRAFT' | 'SENT' | 'NEGOTIATING' | 'WON' | 'LOST' | 'EXPIRED' | 'WITHDRAWN'
+export type LostReason = 'PRICE' | 'LEAD_TIME' | 'SPECIFICATION' | 'CREDIT' | 'NO_DECISION' | 'COMPETITOR' | 'CAPACITY'
+
+export interface QuotationLine {
+  id: ID
+  productId: ID
+  description: string
+  quantity: number
+  /** the price offered, in the quotation currency */
+  unitPrice: number
+  /** discount already conceded off list, as a fraction */
+  discountPercent: number
+  /** the standard cost the quote was built on, frozen at the moment it went out */
+  standardCostAtQuote: number
+  /** the honest date the three clocks supported when the quote was priced */
+  leadTimeDays: number
+  note?: string
+}
+
+export interface Quotation {
+  id: ID
+  code: string
+  customerId: ID
+  status: QuotationStatus
+  /** an enquiry that names no customer yet still has to be answered */
+  enquiryFrom?: string
+  issueDate: ISODate
+  /** past this the price is not ours any more — timber and FX both move */
+  validUntil: ISODate
+  currency: Currency
+  fxRate: number
+  lines: QuotationLine[]
+  /** the freight, crating and inland the quote absorbed */
+  logisticsAllowance: number
+  incoterm?: Incoterm
+  destination?: string
+  salesPerson: string
+  /** the chance the desk gives it, 0–100 — what makes the pipeline a forecast */
+  probabilityPercent: number
+  revision: number
+  /** set when the quote turned into an order */
+  salesOrderId?: ID
+  decidedAt?: ISODate
+  lostReason?: LostReason
+  lostToCompetitor?: string
+  note?: string
+}
+
+/* ==================================================================
+   10 · Delivery, packing and the container going the other way
+   ================================================================== */
+
+export type DeliveryStatus = 'PLANNED' | 'PICKING' | 'PACKED' | 'LOADED' | 'IN_TRANSIT' | 'DELIVERED' | 'PARTIALLY_ACCEPTED' | 'CANCELLED'
+export type DeliveryMode = 'LOCAL_TRUCK' | 'DOMESTIC_LCL' | 'EXPORT_FCL' | 'EXPORT_LCL' | 'CUSTOMER_PICKUP'
+export type ContainerType = 'TWENTY_GP' | 'FORTY_GP' | 'FORTY_HC' | 'NONE'
+
+export interface PackedUnit {
+  id: ID
+  /** the carton or crate mark printed on the outside */
+  mark: string
+  productId: ID
+  quantity: number
+  cartons: number
+  grossWeightKg: number
+  cbm: number
+  lotIds: ID[]
+  note?: string
+}
+
+export interface DeliveryLine {
+  id: ID
+  salesOrderId: ID
+  salesOrderLineId: ID
+  productId: ID
+  description: string
+  /** what the order still owes at the moment the delivery was cut */
+  orderedQuantity: number
+  quantity: number
+  /** short-shipped, and why — the line the customer service desk actually reads */
+  shortQuantity: number
+  shortReason?: string
+}
+
+export interface Delivery {
+  id: ID
+  code: string
+  /** surat jalan number — the one the driver carries and the gate stamps */
+  suratJalanNo: string
+  customerId: ID
+  status: DeliveryStatus
+  mode: DeliveryMode
+  containerType: ContainerType
+  containerNo?: string
+  /** the seal, because an export container without one is not shippable */
+  sealNo?: string
+  plannedDate: ISODate
+  dispatchedAt?: ISODate
+  deliveredAt?: ISODate
+  /** who signed for it */
+  receivedBy?: string
+  carrier: string
+  vehicleOrVessel?: string
+  driver?: string
+  destination: string
+  incoterm?: Incoterm
+  lines: DeliveryLine[]
+  units: PackedUnit[]
+  freightCost: number
+  /** export paperwork the shipment cannot leave without */
+  documents: { id: ID; type: 'PACKING_LIST' | 'COMMERCIAL_INVOICE' | 'PEB' | 'BL_AWB' | 'COO_FORM' | 'FUMIGATION' | 'INSURANCE' | 'DELIVERY_NOTE'; status: 'REQUIRED' | 'SUBMITTED' | 'VERIFIED' | 'NOT_APPLICABLE'; reference?: string }[]
+  note?: string
+}
+
+/* ==================================================================
+   11 · Returns, claims and the cost of poor quality after the gate
+   ================================================================== */
+
+export type ClaimKind = 'TRANSIT_DAMAGE' | 'MANUFACTURING_DEFECT' | 'WRONG_ITEM' | 'SHORT_SHIPMENT' | 'FINISH_DEFECT' | 'WARRANTY' | 'SPECIFICATION_DISPUTE'
+export type ClaimStatus = 'LOGGED' | 'INVESTIGATING' | 'APPROVED' | 'IN_REWORK' | 'REPLACING' | 'CREDITED' | 'REJECTED' | 'CLOSED'
+export type ClaimRemedy = 'REPAIR_ON_SITE' | 'REPLACE' | 'CREDIT_NOTE' | 'DISCOUNT' | 'RETURN_AND_REWORK' | 'NO_REMEDY' | 'PENDING'
+export type ClaimLiability = 'OURS' | 'CARRIER' | 'SUPPLIER' | 'CUSTOMER' | 'UNDECIDED'
+
+export interface Claim {
+  id: ID
+  code: string
+  kind: ClaimKind
+  status: ClaimStatus
+  customerId: ID
+  salesOrderId?: ID
+  deliveryId?: ID
+  productId: ID
+  quantity: number
+  raisedAt: ISODate
+  /** the window the contract gives them to raise it at all */
+  claimWindowDays: number
+  reportedBy: string
+  description: string
+  defectCode?: DefectCode
+  liability: ClaimLiability
+  remedy: ClaimRemedy
+  /** what the customer is asking for */
+  claimedAmount: number
+  /** what we agreed to bear */
+  settledAmount?: number
+  /** the rework or replacement order it spawned */
+  workOrderId?: ID
+  creditNoteId?: ID
+  /** recovered from a carrier or a supplier who caused it */
+  recoveredAmount: number
+  rootCause?: string
+  correctiveAction?: string
+  closedAt?: ISODate
+  owner: string
+  note?: string
+}
+
+/* ==================================================================
+   12 · Money moving — receipts, payments and the bank
+   ================================================================== */
+
+export type PaymentDirection = 'IN' | 'OUT'
+export type PaymentMethod = 'BANK_TRANSFER' | 'CHEQUE' | 'CASH' | 'LC_SETTLEMENT' | 'CARD' | 'OFFSET'
+export type PaymentStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'CLEARED' | 'BOUNCED' | 'VOID'
+
+export interface BankAccount {
+  id: ID
+  name: string
+  bank: string
+  accountNo: string
+  currency: Currency
+  accountCode: string
+  openingBalance: number
+  active: boolean
+  note?: string
+}
+
+export interface PaymentAllocation {
+  id: ID
+  invoiceId?: ID
+  salesOrderId?: ID
+  purchaseOrderId?: ID
+  amount: number
+  /** what this slice of the money is against, in words */
+  memo: string
+}
+
+export interface Payment {
+  id: ID
+  code: string
+  direction: PaymentDirection
+  status: PaymentStatus
+  method: PaymentMethod
+  bankAccountId: ID
+  partyId: ID
+  partyName: string
+  date: ISODate
+  currency: Currency
+  fxRate: number
+  /** gross, in the payment currency */
+  amount: number
+  /** withholding kept back at source — PPh 23 on services, PPh 22 on imports */
+  withholdingTax: number
+  bankCharge: number
+  /** the gain or loss between invoice rate and settlement rate */
+  fxDifference: number
+  reference: string
+  allocations: PaymentAllocation[]
+  /** a receipt against an order with no invoice yet is a deposit */
+  isAdvance: boolean
+  approvedBy?: string
+  note?: string
+}
+
+/* ==================================================================
+   13 · Purchase requisition — the ask before the order
+   ================================================================== */
+
+export type RequisitionStatus = 'DRAFT' | 'SUBMITTED' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CONVERTED' | 'CANCELLED'
+export type RequisitionOrigin = 'MRP' | 'REORDER_POINT' | 'MANUAL' | 'WORK_ORDER' | 'MAINTENANCE' | 'SAMPLE'
+
+export interface RequisitionLine {
+  id: ID
+  /** absent for a one-off buy that has no place in the item master — a machine spare, say */
+  itemId?: ID
+  description: string
+  quantity: number
+  uom: string
+  estimatedUnitCost: number
+  currency: Currency
+  requiredDate: ISODate
+  /** the MRP sentence that justified it, carried through so approval has the reason */
+  justification: string
+  suggestedSupplierId?: ID
+  purchaseOrderId?: ID
+}
+
+export interface RequisitionApproval {
+  id: ID
+  /** the rung of the ladder this signature is */
+  level: number
+  role: UserRole
+  approverName: string
+  /** the ceiling this rung can sign to, in IDR */
+  limit: number
+  decidedAt?: ISODate
+  decision: 'PENDING' | 'APPROVED' | 'REJECTED'
+  comment?: string
+}
+
+export interface PurchaseRequisition {
+  id: ID
+  code: string
+  status: RequisitionStatus
+  origin: RequisitionOrigin
+  requestedBy: string
+  department: 'PPIC' | 'PRODUCTION' | 'MAINTENANCE' | 'QC' | 'WAREHOUSE' | 'SALES' | 'GENERAL'
+  raisedAt: ISODate
+  neededBy: ISODate
+  lines: RequisitionLine[]
+  approvals: RequisitionApproval[]
+  mrpRunId?: ID
+  workOrderId?: ID
+  maintenanceOrderId?: ID
+  rejectedReason?: string
+  note?: string
+}
+
+/* ==================================================================
+   14 · Maintenance — the hours capacity never gets
+   ================================================================== */
+
+export type MaintenanceKind = 'PREVENTIVE' | 'CORRECTIVE' | 'BREAKDOWN' | 'CALIBRATION' | 'SAFETY_INSPECTION'
+export type MaintenanceStatus = 'SCHEDULED' | 'DUE' | 'OVERDUE' | 'IN_PROGRESS' | 'WAITING_PARTS' | 'COMPLETED' | 'CANCELLED'
+
+export interface MaintenanceOrder {
+  id: ID
+  code: string
+  kind: MaintenanceKind
+  status: MaintenanceStatus
+  workCentreId: ID
+  assetName: string
+  assetSerial?: string
+  /** the interval a preventive task repeats on */
+  intervalDays?: number
+  lastDoneAt?: ISODate
+  dueDate: ISODate
+  startedAt?: ISODate
+  completedAt?: ISODate
+  /** hours the centre is off the plan for this — the number capacity has to net off */
+  plannedDowntimeHours: number
+  actualDowntimeHours?: number
+  technician: string
+  /** parts drawn from stock, and what they cost */
+  partsUsed: { id: ID; itemId?: ID; description: string; quantity: number; cost: number }[]
+  labourCost: number
+  externalCost: number
+  /** what the machine was doing wrong, for a breakdown */
+  symptom?: string
+  rootCause?: string
+  requisitionId?: ID
+  note?: string
+}
+
+/* ==================================================================
+   15 · Subcontracting — work that leaves the building
+   ================================================================== */
+
+export type SubcontractStatus = 'DRAFT' | 'ISSUED' | 'MATERIAL_SENT' | 'IN_PROGRESS' | 'PARTIALLY_RETURNED' | 'RETURNED' | 'CLOSED' | 'CANCELLED'
+
+export interface SubcontractMaterial {
+  id: ID
+  itemId?: ID
+  productId?: ID
+  description: string
+  /** what went out */
+  sentQuantity: number
+  uom: string
+  /** what came back as good pieces */
+  returnedQuantity: number
+  /** what came back scrapped, or never came back at all */
+  lossQuantity: number
+  /** the value sitting at somebody else's premises */
+  unitValue: number
+  lotIds: ID[]
+}
+
+export interface SubcontractOrder {
+  id: ID
+  code: string
+  status: SubcontractStatus
+  supplierId: ID
+  /** the operation on the routing this replaces */
+  workOrderId?: ID
+  operationNo?: number
+  productId?: ID
+  service: string
+  quantity: number
+  unitRate: number
+  currency: Currency
+  /** PPh 23 at 2% on services — kept back, not paid */
+  withholdingRate: number
+  issuedAt: ISODate
+  sentAt?: ISODate
+  dueBack: ISODate
+  returnedAt?: ISODate
+  materials: SubcontractMaterial[]
+  /** the delivery note the material left on */
+  deliveryNoteNo?: string
+  qcRecordId?: ID
+  invoiceId?: ID
+  note?: string
 }

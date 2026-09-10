@@ -11,6 +11,7 @@ import { useMfg } from '@/store/useMfg'
 import { runMrp } from '@/lib/mrp'
 import { buildExceptions } from '@/lib/exceptions'
 import { capacityLoad } from '@/lib/production'
+import { downtimeHours } from '@/lib/operations'
 
 export function useMrpLines() {
   const s = useMfg()
@@ -37,12 +38,18 @@ export function useExceptions() {
         workOrders: s.workOrders, workCentres: s.workCentres, qcRecords: s.qcRecords,
         salesOrders: s.salesOrders, customers: s.customers, invoices: s.invoices,
         mrpLines, company: s.company, settings: s.settings,
+        quotations: s.quotations, deliveries: s.deliveries, claims: s.claims, payments: s.payments,
+        requisitions: s.requisitions, maintenanceOrders: s.maintenanceOrders,
+        subcontractOrders: s.subcontractOrders,
       }),
-    [s.shipments, s.purchaseOrders, s.suppliers, s.permits, s.items, s.lots, s.kilnBatches, s.workOrders, s.workCentres, s.qcRecords, s.salesOrders, s.customers, s.invoices, s.company, s.settings, mrpLines],
+    [s.shipments, s.purchaseOrders, s.suppliers, s.permits, s.items, s.lots, s.kilnBatches, s.workOrders, s.workCentres, s.qcRecords, s.salesOrders, s.customers, s.invoices, s.company, s.settings, mrpLines, s.quotations, s.deliveries, s.claims, s.payments, s.requisitions, s.maintenanceOrders, s.subcontractOrders],
   )
 }
 
 export function useCapacityLoad(days = 14) {
-  const { workCentres, workOrders } = useMfg()
-  return React.useMemo(() => capacityLoad(workCentres, workOrders, undefined, days), [workCentres, workOrders, days])
+  const { workCentres, workOrders, maintenanceOrders } = useMfg()
+  return React.useMemo(
+    () => capacityLoad(workCentres, workOrders, undefined, days, (id) => downtimeHours(maintenanceOrders, id, undefined, days)),
+    [workCentres, workOrders, maintenanceOrders, days],
+  )
 }

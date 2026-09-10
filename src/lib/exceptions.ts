@@ -7,10 +7,21 @@
  */
 
 import type {
-  AppSettings, CompanyProfile, Customer, ImportShipment, Invoice, Item, KilnBatch, Lot, MrpLine,
-  Permit, PurchaseOrder, QcRecord, SalesOrder, Supplier, SystemException, WorkOrder,
+  AppSettings, Claim, CompanyProfile, Customer, Delivery, ImportShipment, Invoice, Item, KilnBatch,
+  Lot, MaintenanceOrder, MrpLine, Payment, Permit, PurchaseOrder, PurchaseRequisition, QcRecord,
+  Quotation, SalesOrder, SubcontractOrder, Supplier, SystemException, WorkOrder,
 } from '@/data/types'
-import { EXCEPTION_META, LICENCE_WARNING_DAYS, SEVERITY_ORDER } from '@/data/reference'
+import {
+  CLAIM_AGEING_DAYS, CONTAINER_FILL_FLOOR, EXCEPTION_META, LICENCE_WARNING_DAYS,
+  REQUISITION_SLA_DAYS, SEVERITY_ORDER,
+} from '@/data/reference'
+import {
+  claimCost, claimIsOpen, deliveryDocGate, deliveryIsOpen, invoiceOutstanding, loadPlan,
+  quoteClock, quoteValue,
+} from './commerce'
+import {
+  approvalState, maintenanceIsOpen, maintenanceStatusNow, subcontractIsOpen, subcontractState,
+} from './operations'
 import { daysBetween, TODAY } from '@/data/clock'
 import { freeTimeState, permitGate, pibGate, preferenceAtRisk } from './importing'
 import { belowReorderPoint } from './mrp'
@@ -34,6 +45,13 @@ export interface ExceptionInput {
   mrpLines: MrpLine[]
   company: CompanyProfile
   settings: AppSettings
+  quotations: Quotation[]
+  deliveries: Delivery[]
+  claims: Claim[]
+  payments: Payment[]
+  requisitions: PurchaseRequisition[]
+  maintenanceOrders: MaintenanceOrder[]
+  subcontractOrders: SubcontractOrder[]
 }
 
 export function buildExceptions(x: ExceptionInput): SystemException[] {
@@ -307,6 +325,149 @@ export function buildExceptions(x: ExceptionInput): SystemException[] {
     })
   })
 
+
+  /* ---------------- commercial: the pipeline and what goes back out ---------------- */
+  x.quotations.forEach((q) => {
+    const clock = quoteClock(q)
+    if (!clock.live || (!clock.chasing && !clock.lapsed)) return
+    const v = quoteValue(q)
+    push({
+      id: `ex_quote_${q.id}`, kind: 'QUOTE_EXPIRING', severity: clock.lapsed ? 'HIGH' : 'MEDIUM',
+      title: clock.lapsed
+        ? `${q.code} lapsed ${Math.abs(clock.daysLeft)} day${Math.abs(clock.daysLeft) === 1 ? '' : 's'} ago`
+        : `${q.code} expires in ${clock.daysLeft} day${clock.daysLeft === 1 ? '' : 's'}`,
+      detail: `${fmtParty(x.customers, q.customerId) ?? q.enquiryFrom ?? 'Enquiry'} — ${Math.round(v.gross).toLocaleString('en-US')} at ${q.probabilityPercent}% probability, revision ${q.revision}.`,
+      remedy: clock.lapsed
+        ? 'Re-price before re-sending. The timber cost and the rate have both moved since it went out, so the old number is not ours to honour.'
+        : 'Chase it now. A quote that lapses has to be re-priced, and re-pricing upward is how a deal that was winnable becomes one that is not.',
+      moneyAtRisk: v.gross,
+      link: '/quotations', entityLabel: q.code,
+    })
+  })
+
+  x.deliveries.filter((dv) => deliveryIsOpen(dv.status)).forEach((dv) => {
+    const gate = deliveryDocGate(dv)
+    if (!gate.ok && (dv.status === 'PACKED' || dv.status === 'LOADED')) {
+      push({
+        id: `ex_dvdoc_${dv.id}`, kind: 'DELIVERY_DOCS_MISSING', severity: dv.status === 'LOADED' ? 'CRITICAL' : 'HIGH',
+        title: `${dv.code} cannot sail — ${gate.missing.length} document${gate.missing.length === 1 ? '' : 's'} outstanding`,
+        detail: `${gate.missing.join(', ')} still to be verified on a ${dv.mode.replace(/_/g, ' ').toLowerCase()} to ${dv.destination}.`,
+        remedy: 'Clear the paperwork before the cut-off. A container with an unsubmitted PEB does not get a gate pass, and a missed sailing is a week, not a day.',
+        link: '/deliveries', entityLabel: dv.code,
+      })
+    }
+    const lp = loadPlan(dv)
+    if (lp.underloaded && (dv.status === 'PACKED' || dv.status === 'LOADED')) {
+      push({
+        id: `ex_dvfill_${dv.id}`, kind: 'DELIVERY_UNDERLOADED', severity: 'MEDIUM',
+        title: `${dv.code} is sailing at ${Math.round(lp.fillPercent)}% of its cube`,
+        detail: `${lp.cbm.toFixed(1)} m³ loaded into ${lp.capacityCbm.toFixed(1)} m³. ${dv.lines.filter((l) => l.shortQuantity > 0).map((l) => l.shortReason).filter(Boolean).join(' ')}`,
+        remedy: `Fill it or hold it. The freight is the same either way, so below ${Math.round(CONTAINER_FILL_FLOOR * 100)}% every piece on board is carrying the empty space as well as itself.`,
+        link: '/deliveries', entityLabel: dv.code,
+      })
+    }
+  })
+
+  x.claims.filter((c) => claimIsOpen(c.status)).forEach((c) => {
+    const cost = claimCost(c)
+    if (!cost.ageing && c.liability !== 'UNDECIDED') return
+    push({
+      id: `ex_claim_${c.id}`, kind: 'CLAIM_OPEN',
+      severity: cost.ageing ? 'HIGH' : 'MEDIUM',
+      title: cost.ageing
+        ? `${c.code} has been open ${cost.daysOpen} days`
+        : `${c.code} still has nobody carrying it`,
+      detail: `${fmtParty(x.customers, c.customerId) ?? ''}: ${c.description}`,
+      remedy: c.liability === 'UNDECIDED'
+        ? 'Decide liability. Until somebody does it sits on our margin, and a carrier claim goes cold the moment the delivery note stops being fresh.'
+        : `Settle it. Past ${CLAIM_AGEING_DAYS} days this stops being a quality problem and becomes a relationship one.`,
+      moneyAtRisk: cost.net, daysLate: cost.ageing ? cost.daysOpen - CLAIM_AGEING_DAYS : undefined,
+      link: '/claims', entityLabel: c.code,
+    })
+  })
+
+  /* ---------------- cash ---------------- */
+  x.payments.filter((p) => p.status === 'BOUNCED').forEach((p) => {
+    push({
+      id: `ex_bounce_${p.id}`, kind: 'PAYMENT_OVERDUE', severity: 'CRITICAL',
+      title: `${p.code} was returned unpaid`,
+      detail: `${p.partyName} — ${Math.round(p.amount * (p.fxRate || 1)).toLocaleString('en-US')}. ${p.reference}`,
+      remedy: 'Put the invoice straight back to overdue and stop anything new going out to them until it is settled in cleared funds.',
+      moneyAtRisk: p.amount * (p.fxRate || 1),
+      link: '/finance/payments', entityLabel: p.code,
+    })
+  })
+
+  x.payments.filter((p) => p.status === 'PENDING_APPROVAL' && p.direction === 'OUT').forEach((p) => {
+    const due = p.allocations
+      .map((a) => x.invoices.find((i) => i.id === a.invoiceId))
+      .filter((i): i is Invoice => !!i)
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0]
+    const late = due ? daysBetween(due.dueDate, TODAY) : 0
+    if (late <= 0) return
+    push({
+      id: `ex_paywait_${p.id}`, kind: 'PAYMENT_OVERDUE', severity: late > 14 ? 'HIGH' : 'MEDIUM',
+      title: `${p.code} is ${late} day${late === 1 ? '' : 's'} past due and still unsigned`,
+      detail: `${p.partyName} — ${Math.round(p.amount * (p.fxRate || 1)).toLocaleString('en-US')} against ${due?.code}. ${p.note ?? ''}`,
+      remedy: 'Release it. A supplier in arrears does not release the next lot, and on a sole-source timber auction that is the whole programme.',
+      moneyAtRisk: due ? invoiceOutstanding(due, x.payments) : undefined,
+      daysLate: late,
+      link: '/finance/payments', entityLabel: p.code,
+    })
+  })
+
+  /* ---------------- operations ---------------- */
+  x.requisitions.forEach((r) => {
+    const st = approvalState(r)
+    if (!st.breachingSla || !st.waitingOn) return
+    push({
+      id: `ex_req_${r.id}`, kind: 'REQUISITION_WAITING', severity: st.daysWaiting > 5 ? 'HIGH' : 'MEDIUM',
+      title: `${r.code} has been with ${st.waitingOn.approverName} for ${st.daysWaiting} days`,
+      detail: `${Math.round(st.value).toLocaleString('en-US')} across ${r.lines.length} line(s). ${r.lines[0]?.justification ?? ''}`,
+      remedy: `Sign it or send it back. The service level is ${REQUISITION_SLA_DAYS} days, and every day past it comes off the supplier lead time, not the approval queue.`,
+      moneyAtRisk: st.value, daysLate: st.daysWaiting - REQUISITION_SLA_DAYS,
+      link: '/requisitions', entityLabel: r.code,
+    })
+  })
+
+  x.maintenanceOrders.filter(maintenanceIsOpen).forEach((m) => {
+    const now = maintenanceStatusNow(m)
+    if (now !== 'OVERDUE' && m.status !== 'WAITING_PARTS') return
+    const load = loads.find((l) => l.workCentre.id === m.workCentreId)
+    push({
+      id: `ex_maint_${m.id}`, kind: 'MAINTENANCE_OVERDUE',
+      severity: m.status === 'WAITING_PARTS' ? 'CRITICAL' : 'HIGH',
+      title: m.status === 'WAITING_PARTS'
+        ? `${m.assetName} is stopped waiting on a part`
+        : `${m.code} is ${daysBetween(m.dueDate, TODAY)} days overdue`,
+      detail: `${m.symptom ?? m.note ?? ''} ${load ? `The centre is loaded to ${Math.round(load.utilisation)}% before the ${m.actualDowntimeHours ?? m.plannedDowntimeHours} hours of downtime come off.` : ''}`.trim(),
+      remedy: m.status === 'WAITING_PARTS'
+        ? 'Expedite the spare and re-plan the centre around the outage. Nothing else on this machine happens until the part lands.'
+        : 'Book the downtime now, while it is still a planned four hours rather than an unplanned two days.',
+      daysLate: now === 'OVERDUE' ? daysBetween(m.dueDate, TODAY) : undefined,
+      link: '/maintenance', entityLabel: m.code,
+    })
+  })
+
+  x.subcontractOrders.filter((o) => subcontractIsOpen(o.status)).forEach((o) => {
+    const st = subcontractState(o)
+    if (!st.overdue && !st.lossBeyondTolerance) return
+    push({
+      id: `ex_sub_${o.id}`, kind: 'SUBCONTRACT_OVERDUE',
+      severity: st.overdue && st.daysLate > 5 ? 'HIGH' : 'MEDIUM',
+      title: st.overdue
+        ? `${o.code} is ${st.daysLate} day${st.daysLate === 1 ? '' : 's'} past due back`
+        : `${o.code} lost ${st.lossPercent.toFixed(1)}% at the subcontractor`,
+      detail: `${x.suppliers.find((s) => s.id === o.supplierId)?.name ?? ''} — ${o.service}. ${st.note}`,
+      remedy: st.overdue
+        ? 'Chase it, and re-sequence the operation behind it. A routing step waiting on somebody else’s floor is a customer date waiting three steps downstream.'
+        : 'Take it up on the cutting plan before the next order goes out. Loss at this rate is the subcontractor’s method, not our specification.',
+      moneyAtRisk: st.overdue ? st.valueAtSubcontractor : st.loss * (o.materials[0]?.unitValue ?? 0),
+      daysLate: st.overdue ? st.daysLate : undefined,
+      link: '/subcontract', entityLabel: o.code,
+    })
+  })
+
   /* ---------------- compliance ---------------- */
   x.company.licences.forEach((l) => {
     if (!l.expiresAt) return
@@ -326,6 +487,11 @@ export function buildExceptions(x: ExceptionInput): SystemException[] {
     if (s !== 0) return s
     return (b.moneyAtRisk ?? 0) - (a.moneyAtRisk ?? 0)
   })
+}
+
+/** A party name for an exception's detail line, without dragging a whole lookup in. */
+function fmtParty(customers: Customer[], id: string) {
+  return customers.find((c) => c.id === id)?.name
 }
 
 export const exceptionGroup = (kind: SystemException['kind']) => EXCEPTION_META[kind]?.group ?? 'Other'

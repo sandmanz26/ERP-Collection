@@ -28,6 +28,13 @@ import { ImportDetailPage } from '@/pages/imports/ImportDetailPage'
 import { CustomsPage } from '@/pages/imports/CustomsPage'
 import { LandedCostPage } from '@/pages/imports/LandedCostPage'
 import { AccountsPage, CostingPage, InvoicesPage, LedgerPage, ReportsPage } from '@/pages/finance/FinancePages'
+import { QuotationsPage } from '@/pages/commerce/QuotationsPage'
+import { DeliveriesPage } from '@/pages/commerce/DeliveriesPage'
+import { ClaimsPage } from '@/pages/commerce/ClaimsPage'
+import { PaymentsPage } from '@/pages/commerce/PaymentsPage'
+import { RequisitionsPage } from '@/pages/operations/RequisitionsPage'
+import { MaintenancePage } from '@/pages/operations/MaintenancePage'
+import { SubcontractPage } from '@/pages/operations/SubcontractPage'
 import { AnalyticsPage } from '@/pages/AnalyticsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 
@@ -57,6 +64,9 @@ export default function App() {
                   {/* sales */}
                   <Route path="/orders" element={<OrdersPage />} />
                   <Route path="/orders/:id" element={<OrderDetailPage />} />
+                  <Route path="/quotations" element={<QuotationsPage />} />
+                  <Route path="/deliveries" element={<DeliveriesPage />} />
+                  <Route path="/claims" element={<ClaimsPage />} />
                   <Route path="/customers" element={<CustomersPage />} />
 
                   {/* engineering */}
@@ -75,11 +85,14 @@ export default function App() {
                   <Route path="/shopfloor" element={<ShopFloorPage />} />
                   <Route path="/kiln" element={<KilnPage />} />
                   <Route path="/quality" element={<QualityPage />} />
+                  <Route path="/subcontract" element={<SubcontractPage />} />
+                  <Route path="/maintenance" element={<MaintenancePage />} />
 
                   {/* materials & import */}
                   <Route path="/items" element={<ItemsPage />} />
                   <Route path="/inventory" element={<InventoryPage />} />
                   <Route path="/suppliers" element={<SuppliersPage />} />
+                  <Route path="/requisitions" element={<RequisitionsPage />} />
                   <Route path="/purchasing" element={<PurchasingPage />} />
                   <Route path="/imports" element={<ImportsPage />} />
                   <Route path="/imports/:id" element={<ImportDetailPage />} />
@@ -89,6 +102,7 @@ export default function App() {
                   {/* finance */}
                   <Route path="/finance/costing" element={<CostingPage />} />
                   <Route path="/finance/invoices" element={<InvoicesPage />} />
+                  <Route path="/finance/payments" element={<PaymentsPage />} />
                   <Route path="/finance/ledger" element={<LedgerPage />} />
                   <Route path="/finance/accounts" element={<AccountsPage />} />
                   <Route path="/finance/reports" element={<ReportsPage />} />

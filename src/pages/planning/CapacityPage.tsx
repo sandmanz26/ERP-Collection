@@ -99,6 +99,9 @@ export function CapacityPage() {
                   />
                   <p className="tnum mt-1.5 text-[11px] text-fg-muted">
                     {fmtNumber(l.loadedHours, 0)} h loaded · {fmtNumber(Math.max(0, l.availableHours - l.loadedHours), 0)} h spare
+                    {l.downtimeHours > 0 && (
+                      <span className="text-warning"> · {fmtNumber(l.downtimeHours, 0)} h already given to maintenance</span>
+                    )}
                   </p>
                 </button>
               ))}

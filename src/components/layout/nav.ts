@@ -1,7 +1,8 @@
 import {
-  Banknote, BarChart3, BookOpen, Boxes, Building2, CalendarRange, ClipboardCheck, Combine,
-  Factory, FileSpreadsheet, Flame, Gauge, GitBranch, Layers, LineChart, Package, PackageSearch,
-  Receipt, Route, Settings, ShieldCheck, Ship, ShoppingCart, Stamp, Truck, Warehouse, Wallet,
+  Banknote, BarChart3, BookOpen, Boxes, Building2, CalendarRange, ClipboardCheck, ClipboardList,
+  Combine, Container, Factory, FileSpreadsheet, FileText, Flame, Gauge, GitBranch, HandCoins,
+  Handshake, Layers, LineChart, Package, PackageSearch, Receipt, Route, Settings, ShieldCheck,
+  Ship, ShoppingCart, Stamp, Truck, Undo2, Warehouse, Wallet, Wrench,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -11,7 +12,8 @@ export interface NavItem {
   icon: LucideIcon
   badgeKey?:
     | 'exceptions' | 'shortages' | 'workOrders' | 'imports' | 'customs' | 'qc' | 'kiln'
-    | 'orders' | 'overdue' | 'capacity'
+    | 'orders' | 'overdue' | 'capacity' | 'quotations' | 'deliveries' | 'claims'
+    | 'requisitions' | 'maintenance' | 'subcontract' | 'payments'
   description?: string
 }
 
@@ -28,7 +30,10 @@ export const NAV: NavGroup[] = [
   {
     label: 'Sales',
     items: [
+      { to: '/quotations', label: 'Quotations', icon: FileText, badgeKey: 'quotations', description: 'The pipeline, weighted, and why we lose' },
       { to: '/orders', label: 'Sales Orders', icon: ShoppingCart, badgeKey: 'orders', description: 'The order book and the honest promise date' },
+      { to: '/deliveries', label: 'Deliveries & Packing', icon: Container, badgeKey: 'deliveries', description: 'Surat jalan, packing list and container fill' },
+      { to: '/claims', label: 'Returns & Claims', icon: Undo2, badgeKey: 'claims', description: 'What comes back, who pays and what it costs' },
       { to: '/customers', label: 'Customers', icon: Building2, description: 'Retail, contract, dealer and export' },
     ],
   },
@@ -54,6 +59,8 @@ export const NAV: NavGroup[] = [
       { to: '/work-orders', label: 'Work Orders', icon: Factory, badgeKey: 'workOrders', description: 'Release, progress by operation, cost' },
       { to: '/shopfloor', label: 'Shop Floor', icon: ClipboardCheck, description: 'One board per work centre' },
       { to: '/kiln', label: 'Kiln Drying', icon: Flame, badgeKey: 'kiln', description: 'Batches, readings and the moisture gate' },
+      { to: '/subcontract', label: 'Subcontracting', icon: Handshake, badgeKey: 'subcontract', description: 'Work that left the building, and the value with it' },
+      { to: '/maintenance', label: 'Maintenance', icon: Wrench, badgeKey: 'maintenance', description: 'Downtime the plan has to net off before it promises' },
       { to: '/quality', label: 'Quality', icon: ShieldCheck, badgeKey: 'qc', description: 'Inspections, defect Pareto, dispositions' },
     ],
   },
@@ -63,6 +70,7 @@ export const NAV: NavGroup[] = [
       { to: '/items', label: 'Item Master', icon: Boxes, description: 'Every material with its import identity' },
       { to: '/inventory', label: 'Inventory & Lots', icon: Warehouse, description: 'On hand, reserved, blocked, traceability' },
       { to: '/suppliers', label: 'Suppliers', icon: Truck, description: 'Scorecards and lane history' },
+      { to: '/requisitions', label: 'Requisitions', icon: ClipboardList, badgeKey: 'requisitions', description: 'The ask, the ladder and the days it costs' },
       { to: '/purchasing', label: 'Purchase Orders', icon: PackageSearch, description: 'Local and import, with the LARTAS gate' },
       { to: '/imports', label: 'Import Shipments', icon: Ship, badgeKey: 'imports', description: 'Eleven states, free time, demurrage accruing' },
       { to: '/customs', label: 'Customs & Permits', icon: Stamp, badgeKey: 'customs', description: 'PIB, CEISA lane, SPPB, permit expiry' },
@@ -74,6 +82,7 @@ export const NAV: NavGroup[] = [
     items: [
       { to: '/finance/costing', label: 'Costing & Variance', icon: Banknote, description: 'Standard against actual per work order' },
       { to: '/finance/invoices', label: 'Invoices & Bills', icon: Wallet, badgeKey: 'overdue', description: 'AR and AP with ageing' },
+      { to: '/finance/payments', label: 'Receipts & Payments', icon: HandCoins, badgeKey: 'payments', description: 'Cash in, cash out, and what is left in the bank' },
       { to: '/finance/ledger', label: 'General Ledger', icon: BookOpen, description: 'Double-entry journal' },
       { to: '/finance/accounts', label: 'Chart of Accounts', icon: FileSpreadsheet, description: 'Account structure' },
       { to: '/finance/reports', label: 'Financial Reports', icon: LineChart, description: 'Trial balance, P&L, balance sheet' },

@@ -93,6 +93,15 @@ suppliers, local and import purchase orders; **import shipments end to end** —
 allocation; product costing with standard-versus-actual variance; AR/AP, a double-entry ledger and
 statutory-shaped reports; operations analytics.
 
+The suite also carries the loops that turn those cores into a business anyone can actually run:
+**quotation to order** (a priced pipeline with a frozen standard cost and a recorded loss reason),
+**order to delivery** (surat jalan, packing list, container fill and the export document gate),
+**delivery to claim** (returns, liability, remedy and the cost of poor quality after the gate),
+**invoice to cash** (receipts, payments, withholding, FX difference and the bank), **requisition to
+purchase order** (an approval ladder decided by value, and the lead time the waiting costs),
+**maintenance** (downtime netted off capacity before the schedule promises it) and
+**subcontracting** (our stock, on somebody else's floor).
+
 **Out.** No backend. Everything lives in the browser (Zustand + `localStorage`) against a seeded
 operating book. No real CEISA, SILK, INSW or bank integration — those are modelled as records and
 statuses, which is what the operator sees anyway. No HR/payroll beyond a labour rate per work
@@ -193,7 +202,15 @@ not merely reported.
 
 **Commercial**
 
-1. **ATP promise check.** A sales order line cannot be confirmed against a date the three clocks
+1. **A quotation freezes the cost it was priced on.** Every quote line stores the standard cost at
+   the moment it went out — material exploded off the bill with its yields, plus labour and overhead
+   run out over the routing. Without that figure nobody can say afterwards whether a win was worth
+   having, and a quote priced under the margin floor needs a signature before it leaves.
+2. **A quote has a shelf life.** Past its validity date it cannot be re-sent, only re-priced: the
+   timber cost and the settlement rate have both moved underneath it.
+3. **Losses are recorded by value and by reason.** A win rate counted on quotations flatters a desk
+   that wins small ones, and losing on lead time is the import clock showing up in the order book.
+4. **ATP promise check.** A sales order line cannot be confirmed against a date the three clocks
    cannot meet. The system offers the earliest honest date and names the binding constraint.
 2. **Credit hold.** An order that takes a customer past their credit limit blocks confirmation, and
    the overage is shown in money, not as a flag.
@@ -270,6 +287,49 @@ not merely reported.
 20. **Margin is per order, and it is the truth.** Quoted price against actual landed material,
     actual labour, absorbed overhead, plus the rework and the demurrage that the order caused.
 
+**Delivery, claims and cash**
+
+21. **Only a delivery moves a sales order line.** `shippedQuantity` is not editable; it changes when
+    a surat jalan is signed for, which is the only event that can honestly change it.
+22. **The export document gate.** A delivery cannot be marked loaded or in transit until every
+    document its mode requires is verified. A container with an unsubmitted PEB gets no gate pass at
+    the port, and Australia refuses solid-wood packing without an ISPM 15 stamp.
+23. **Container fill is a margin question.** Below 85% of the cube the freight is the same and every
+    piece on board carries the empty space as well as itself, so an under-filled box raises an
+    exception naming the cubic metres and the reason they are missing.
+24. **A claim costs what the remedy costs.** A repair on site settles at the finisher's travel and
+    materials, a credit note at the sale value, a return-and-rework at the rework plus freight both
+    ways. Claiming the sale value for a scuff is not a settlement, it is an opening position.
+25. **Liability decides who carries it.** Undecided is not neutral — everything in it sits on our
+    margin until somebody decides, and a carrier claim is only collectable if the damage was noted
+    on the delivery note at the time.
+26. **A claim closes with a corrective action or it comes back.** The action lands on the routing,
+    the QC plan or a maintenance order, not in a meeting minute.
+27. **A receipt with no allocation is not revenue collected.** It is money in a bank account nobody
+    can match to anything, and it is reported as such.
+28. **Withholding is a prepayment, not a discount.** PPh 23 at 2% on domestic services is kept back
+    at source and reclaimed by the supplier; we are liable for it whether or not we remembered.
+29. **The FX difference is between invoice rate and settlement rate**, and it is posted, not
+    absorbed into the cost of the goods.
+
+**Buying, maintenance and subcontracting**
+
+30. **The approval ladder is decided by value, not by department.** A requisition needs every rung
+    whose ceiling it clears, so a box of abrasives takes one signature and a container of walnut
+    takes four.
+31. **Waiting is measured, not approvals.** Every day a requisition spends on a desk is a day of
+    supplier lead time already spent; past the two-day service level it raises an exception naming
+    the person it is with.
+32. **A requisition converts into one purchase order per supplier**, at the estimated costs and
+    carrying the justification that got it signed.
+33. **Capacity is scheduled hours less booked downtime.** Maintenance that is overdue, running or
+    waiting on a part counts against the window whatever its due date says — a machine that stopped
+    last Tuesday is not outside the window, it is in the middle of it.
+34. **Material at a subcontractor is still our inventory and still our risk.** It does not appear in
+    any warehouse stock report, so it is valued and aged here instead.
+35. **Loss beyond 2% at a subcontractor is their method, not our specification**, and it is raised
+    against the cutting plan before the next order goes out.
+
 ---
 
 ## 6. Domain model
@@ -339,7 +399,10 @@ ageing, trial balance, income statement and balance sheet.
 | Group | Screen | What it is for |
 | --- | --- | --- |
 | **Control** | Control Tower | Every exception, ranked by money and by days; the three clocks on one page |
-| **Sales** | Sales Orders | Order book, ATP promise, credit and deposit gates |
+| **Sales** | **Quotations** | Weighted pipeline, margin against the floor, validity clock, loss reasons by value |
+| | Sales Orders | Order book, ATP promise, credit and deposit gates |
+| | **Deliveries & Packing** | Surat jalan, packing list, container fill, the export document gate |
+| | **Returns & Claims** | Liability, remedy, cost of poor quality, corrective actions |
 | | Customers | Retail, contract/FF&E and export customers with terms and limits |
 | **Engineering** | Products | Catalogue, standard cost roll-up, margin at list |
 | | Bill of Materials | Multi-level tree, yield, alternates, **where-used** |
@@ -350,16 +413,20 @@ ageing, trial balance, income statement and balance sheet.
 | **Production** | Work Orders | Release, schedule, progress by operation, cost |
 | | Shop Floor | One board per work centre: queued, running, blocked |
 | | Kiln Drying | Batches, readings, the moisture gate |
+| | **Subcontracting** | Value out at a subcontractor, days late, loss against tolerance, PPh 23 |
+| | **Maintenance** | Preventive intervals, breakdowns, downtime netted off availability |
 | | Quality | Inspections, defect Pareto, dispositions, rework |
 | **Materials** | Item Master | Every purchased material with its import identity |
 | | Inventory | On hand, reserved, available, movements, lot traceability |
 | | Suppliers | Scorecards and lane history |
+| | **Requisitions** | The approval ladder by value, and the lead time the waiting costs |
 | | Purchase Orders | Local and import, with the LARTAS release gate |
 | | **Import Shipments** | The eleven states, free time, demurrage accruing |
 | | **Customs & Permits** | PIB register, CEISA lane, SPPB, permit expiry |
 | | **Landed Cost** | Allocation, provisional against final, variance |
 | **Finance** | Costing & Variance | Standard against actual per work order |
 | | Invoices & Bills | AR and AP with ageing |
+| | **Receipts & Payments** | Cash in and out, allocations, withholding, FX difference, the bank |
 | | General Ledger · Chart of Accounts · Reports | Double entry, trial balance, P&L, balance sheet |
 | **Insight** | Analytics | On-time, yield, scrap, OEE-shaped utilisation, import lead time, cost variance |
 | | Settings & Audit | Tax rates, tolerances, numbering, activity trail |
