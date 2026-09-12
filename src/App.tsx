@@ -31,6 +31,10 @@ import { PurchaseOrderDetailPage } from '@/pages/procurement/PurchaseOrderDetail
 import { GoodsReceiptsPage } from '@/pages/procurement/GoodsReceiptsPage'
 import { PaymentsPage } from '@/pages/procurement/PaymentsPage'
 import { StockTransfersPage } from '@/pages/inventory/StockTransfersPage'
+import { FinanceOverviewPage } from '@/pages/finance/FinanceOverviewPage'
+import { InvoicesPage } from '@/pages/finance/InvoicesPage'
+import { InvoiceDetailPage } from '@/pages/finance/InvoiceDetailPage'
+import { ClientReceiptsPage } from '@/pages/finance/ClientReceiptsPage'
 import { UsersPage } from '@/pages/admin/UsersPage'
 import { RolesPage } from '@/pages/admin/RolesPage'
 import { PrivilegesPage } from '@/pages/admin/PrivilegesPage'
@@ -116,6 +120,17 @@ export default function App() {
                 </Route>
                 <Route element={<RequirePermission permission="divisions.view" />}>
                   <Route path="/divisions" element={<DivisionsPage />} />
+                </Route>
+
+                <Route element={<RequirePermission permission="finance.view" />}>
+                  <Route path="/finance" element={<FinanceOverviewPage />} />
+                </Route>
+                <Route element={<RequirePermission permission="invoices.view" />}>
+                  <Route path="/invoices" element={<InvoicesPage />} />
+                  <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
+                </Route>
+                <Route element={<RequirePermission permission="receipts.view" />}>
+                  <Route path="/receipts" element={<ClientReceiptsPage />} />
                 </Route>
 
                 <Route element={<RequirePermission permission="users.view" />}>

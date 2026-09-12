@@ -8,8 +8,9 @@ This is a **front-end only** build. There is no backend and no API layer. All da
 browser (Zustand + `localStorage`), seeded with a realistic operating book: 12 clients, 18 buildings,
 18 projects carrying 136 manpower lines, 17 positions, 6 warehouses, 70 master items, 155 warehouse
 stock lines, 12 divisions, 10 suppliers with 107 purchase prices behind them, four monthly material
-request sessions that produced 12 purchase orders, 10 deliveries and 10 payments, and 17 accounts
-across 12 roles built from a catalogue of 96 privileges.
+request sessions that produced 12 purchase orders, 10 deliveries and 10 payments, four months of
+client invoices with the money collected against them, and 17 accounts across 12 roles built from a
+catalogue of 106 privileges.
 
 ```bash
 npm install
@@ -225,7 +226,56 @@ line is drawn from a specific stock line, so the batch, its expiry and its cost 
 goods. Receiving counts what actually arrived: anything short of what was sent is refused until
 somebody says what happened to it, and is then kept on the line as a variance.
 
-### 9. User management — users, roles, privileges
+### 9. Finance — invoices, tax, money in
+
+This is where the company's one number stops being a colour on a chart and starts costing somebody
+money. An invoice bills the **contracted** headcount at the contracted rate, then deducts the posts
+that were not filled:
+
+```
+Project (a contract, a building, a month)
+  └── Invoice   INV-2026-09-0049, one per project per period
+        ├── service lines      contracted headcount × bill rate
+        ├── deduction lines    unfilled posts × the same rate   ← the gap, priced
+        ├── adjustments        overtime, penalties, a credit — negotiated, typed in
+        └──1:N──> ClientReceipt   full or partial, until nothing is outstanding
+```
+
+A month of an empty post is a month the client did not receive what it is paying for, so the two are
+shown as separate lines rather than netted — the client's own finance team will ask which is which.
+The management fee is deliberately *not* a line: the bill rate is already the client's price and the
+fee is the margin inside it.
+
+**The two Indonesian tax mechanics are modelled properly**, because getting them the wrong way round
+changes what actually arrives in the bank:
+
+```
+subtotal (DPP) = services − deductions ± adjustments
+total          = subtotal + PPN 11%        ← added to what the client owes
+transferred    = total − PPh 23 2%         ← withheld by the client, paid to the tax office
+```
+
+Both rates are copied onto the invoice when it is raised, and both are read from the client record:
+a client marked as not PPN-applicable gets no PPN line at all rather than a zero.
+
+**Raising** a period creates one draft per contract that was running in it and has not been billed for
+it — never an issued bill, because a coordinator has to confirm the headcount first. **Issuing**
+freezes the lines and starts the term running from the issue date. **Cancelling** frees the period to
+be billed again, and is refused outright once money has been received against the invoice, since that
+money would be left pointing at nothing.
+
+**Receipts** are full or partial, and the register measures each one against the term that was agreed
+— how many days early or late the money actually arrived, and the average across the book.
+
+**Credit limits** are enforced as a conversation rather than a wall: the client record's limit is shown
+against what that client currently owes, on the invoice, on the register and in the warning that
+appears before issuing another bill to somebody already over it.
+
+**The finance overview** puts both directions on one page: contracted margin, what clients owe, what
+the company owes its suppliers, the net position, money in against money out month by month, and the
+receivables ageing with the clients worth chasing first.
+
+### 10. User management — users, roles, privileges
 
 Access is enforced, not decorated. The role an account holds decides which menu entries exist, which
 routes open, and which buttons render; a page that is not permitted refuses with the name of the
@@ -239,7 +289,7 @@ Three layers, each with one job:
 
 | Layer | Where it lives | Rule |
 | --- | --- | --- |
-| **Privilege** | In code (`data/permissions.ts`) — 96 of them, `<module>.<action>` | Never created by a user. Adding one is a code change, because each corresponds to a control the interface shows or hides. |
+| **Privilege** | In code (`data/permissions.ts`) — 106 of them, `<module>.<action>` | Never created by a user. Adding one is a code change, because each corresponds to a control the interface shows or hides. |
 | **Role** | Data — 10 system roles, 2 custom | Only ever *grants*. An inactive role grants nothing, so an engagement can be switched off without unpicking who held it. |
 | **Override** | On the account | Grants an exception, or revokes something a role gives. **Revoked always wins**, and the user record shows which layer every privilege came from. |
 
@@ -307,9 +357,12 @@ them:
 | Goods receipts | 10 deliveries, 3,796 units in, 6 units rejected at the gate, 1 arrived late |
 | Payments | 10 — deposits, balances and one giro; IDR 346M paid, IDR 112M outstanding, 4 orders overdue |
 | Stock transfers | 5 — two received (one short in transit), one in transit, one draft, one cancelled |
+| Invoices | 52 across four months — 3 drafts, 6 overdue, 1 cancelled; 175 unfilled posts deducted |
+| Client receipts | 36 — full settlements, part payments and one client that has stopped paying |
+| The money | IDR 22.2B billed, IDR 15.1B collected, IDR 7.1B outstanding, IDR 4B of it overdue |
 | Accounts | 17 — active, invited, unverified, locked and suspended; several carry privilege overrides |
 | Roles | 12 — 10 system, 2 custom, one of them deliberately switched off |
-| Privileges | 96 across 21 modules, 17 of them high risk |
+| Privileges | 106 across 24 modules, 20 of them high risk |
 
 The gaps are deliberate: an unfilled night shift at the hospital, a gondola cleaner whose certificate
 lapsed, a contract 38 days from its end with no auto-renewal, one fall-protection harness short of what the
@@ -352,6 +405,7 @@ src/
     domain.ts       Everything the modules compute rather than store
     procurement.ts  The MR → PR arithmetic: the merge, the lock guard, the price basis
     purchasing.ts   Orders, receipts, payments, ageing — and the stock posting they share
+    finance.ts      Invoicing: the deduction, PPN and PPh 23, receivables and the cash position
     csv.ts          CSV parse/serialise for import and export
     format.ts       Money, dates, numbers, Indonesian casing rules
   pages/            One folder per module
@@ -372,8 +426,14 @@ are not here — are:
 - **Supplier invoices and three-way match.** Payment is recorded against the order, not against an
   invoice document, so there is nothing to match order → receipt → invoice on. A supplier that
   invoices two orders on one bill is entered as two payments.
-- **The ledger.** Money paid is recorded on the order; it is not posted anywhere, and there is no
-  accrual for goods received but not yet invoiced.
+- **The ledger.** Money moves both ways and is recorded on the document that caused it, but nothing is
+  posted to an account. There is no trial balance, no accrual for goods received but not yet
+  invoiced, and no profit and loss beyond the contracted margin the dashboard computes.
+- **Tax filing.** PPN and PPh 23 are calculated on each invoice, but no faktur pajak is produced and
+  no monthly tax return is assembled from them. The bukti potong the client issues is assumed, not
+  recorded.
+- **Payroll.** The cost side of the margin is a rate on a contract line, not a person's salary, so the
+  gap between what a project costs on paper and what it costs in wages is not modelled.
 - **Server-side enforcement.** Privileges are enforced throughout this front end — menus, routes and
   controls all obey them — but a front end can only ever hide a control. Real enforcement belongs on
   the server, where the same privilege keys would gate the API. Treat this module as the interface

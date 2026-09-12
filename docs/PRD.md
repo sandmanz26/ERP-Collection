@@ -41,7 +41,8 @@ three cost money:
 | Position master with rates and standard issue | Recruitment pipeline, training records |
 | Inventory: warehouses, item master, warehouse stock, transfers between warehouses | Issue notes to a site, stock takes |
 | Procurement: divisions, suppliers, monthly material request sessions, purchase requests | Tendering, contracts, framework agreements |
-| Purchasing: orders per supplier, goods receipt, payments in full or in part | Supplier invoices, three-way match, the general ledger |
+| Purchasing: orders per supplier, goods receipt, payments in full or in part | Supplier invoices, three-way match |
+| Finance: monthly client invoices with PPN and PPh 23, receipts, receivables ageing, credit exposure | The general ledger, faktur pajak, tax returns, payroll |
 | Fulfilment, contract value and margin as computed figures | Invoicing, tax documents, general ledger |
 | User management: accounts, roles and privilege control, enforced across the interface | Server-side enforcement, SSO, real second-factor challenge |
 
@@ -76,6 +77,11 @@ PurchaseRequest ──split──> PurchaseOrder ──N:1──> Supplier
 
 StockTransfer ──N:1──> Warehouse (from) and Warehouse (to)
       └── StockTransferLine ──N:1──> WarehouseStock (the exact source line)
+
+Project ──monthly──> Invoice ──N:1──> Client
+            └── InvoiceLine   SERVICE | DEDUCTION | ADJUSTMENT
+                  └──N:1──> ManpowerRequirement   (what was contracted, what stood empty)
+            └──1:N──> ClientReceipt               (money in, full or partial)
 ```
 
 **R1 — One project serves exactly one building.** A client that wants a second building signs a second
@@ -208,6 +214,40 @@ transit puts the goods back on the shelf they left.
 reason is given, and the difference is then kept on the line as a variance rather than quietly
 adjusting the quantity.
 
+**R35 — One project, one month, one invoice.** A project is one contract for one building with its own
+payment term, so that is the unit that gets billed. A period can only be billed once; a cancelled
+invoice frees it to be billed again, which is what cancelling is for.
+
+**R36 — The invoice bills the contract and deducts what was not delivered.** Service lines carry the
+contracted headcount at the contracted rate; a deduction line follows at the same rate for every post
+that stood empty. They are shown separately rather than netted, because the client will ask which is
+which. The management fee is never a line of its own: the bill rate already contains it, and adding
+one would count the margin twice.
+
+**R37 — PPN is added, PPh 23 is withheld.** `total = subtotal + PPN`, and what the client actually
+transfers is `total − PPh 23`. Both rates come from the client record and are copied onto the invoice
+when it is raised, so a change of terms next quarter cannot restate a bill that has already gone out.
+A client not subject to PPN gets no PPN line rather than a zero one.
+
+**R38 — Raising produces drafts, never issued bills.** The headcount behind a month has to be
+confirmed by a coordinator before anything reaches a client. Issuing freezes the lines and starts the
+payment term from the issue date.
+
+**R39 — A draft owes nothing and cannot be late.** Only an issued invoice can be overdue, collected
+against or counted as a receivable.
+
+**R40 — An invoice with money against it cannot be cancelled.** The receipt would be left pointing at
+a claim that no longer exists. Refund it outside the system first, then cancel.
+
+**R41 — Money in cannot exceed what is owed.** A receipt is capped at the outstanding balance, and the
+invoice's status is derived from what has been received rather than chosen: issued → partially paid →
+paid.
+
+**R42 — The credit limit is advisory, and visible.** What a client owes is shown against the limit on
+its record wherever the decision is made — on the register, on the invoice and in a warning before
+issuing another bill to a client already over it — but it never blocks the invoice, because refusing
+to bill for work already done helps nobody.
+
 ## 5. Module requirements
 
 ### 5.1 Authentication
@@ -303,10 +343,25 @@ adjusting the quantity.
 - Dispatch takes the stock out of the source warehouse; receipt puts what actually arrived into the
   destination, and a shortfall is recorded as a variance with a reason.
 
-### 5.10 User management
+### 5.10 Finance
+
+- **Invoices** — per project per period: service lines from the manpower requirements, automatic
+  deduction lines for unfilled posts, free adjustments, the client purchase order, the payment term,
+  and the PPN and PPh 23 rates copied from the client. Raise a whole period at once, edit while it is
+  a draft, issue it, cancel it with a reason.
+- **The tax block** states each step rather than only the answer: services, deductions, adjustments,
+  DPP, PPN, invoice total, PPh 23 withheld, and what the client actually transfers.
+- **Receipts** — amount, method (transfer, giro, cheque, cash), date, reference, and the account the
+  money landed in. Full or partial; the invoice status follows the balance.
+- **Receivables** — ageing in the usual four buckets, what each client owes against its credit limit,
+  and how many days early or late each payment actually arrived.
+- **Finance overview** — contracted margin, owed by clients, owed to suppliers, net position, money in
+  against money out month by month, ageing, and the clients worth chasing first.
+
+### 5.11 User management
 
 - **Privileges** are defined in code as `<module>.<action>` with a risk level, because each one
-  corresponds to a control the interface shows or hides. 96 of them across 21 modules.
+  corresponds to a control the interface shows or hides. 106 of them across 24 modules.
 - **Roles** bundle privileges. Ten ship with the system and cannot be deleted; custom roles are
   created by administrators, and any role can be duplicated as a starting point. The editor is a
   module × action matrix that states how many accounts a change will affect before it is saved.
@@ -349,6 +404,9 @@ shortfall, red a breach.
 | What an item last actually cost | The item's price history, written by every receipt | at the moment a supplier is chosen |
 | What the company owes and when | Payments, ageing view | before the term runs out |
 | Where a batch physically is | Stock transfers, in-transit view | while it is still on the road |
+| What an unfilled post costs the company | Invoice, deduction lines | in the month it happened, not at year end |
+| Which client is slowest to pay | Client receipts, days against term | before the next contract is renewed |
+| Whether the month covered itself | Finance overview, money in and out | on one screen |
 
 ## 8. Next phases
 
@@ -359,8 +417,9 @@ shortfall, red a breach.
 3. **Issue and stock take.** Goods now arrive by receipt and move by transfer; what is missing is
    issuing them out to a project and counting them physically. Those two close the last places where
    a quantity changes without a document behind it.
-4. **Billing.** Monthly invoice from the manpower lines, with PPN and PPh 23 as the client record
-   already describes them.
+4. **The ledger and tax filing.** Invoices and payments now exist on both sides, but nothing posts to
+   an account: no trial balance, no accrual for goods received and not yet invoiced, no faktur pajak
+   and no monthly return assembled from the PPN and PPh 23 each invoice already calculates.
 5. **Server-side enforcement.** The same privilege keys gating the API, so the front end's checks
    become a convenience rather than the control. Plus branch data scope applied to the queries
    themselves — it is recorded on the account today but not yet used to filter what is fetched.

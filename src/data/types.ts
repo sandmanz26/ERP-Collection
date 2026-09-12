@@ -46,6 +46,9 @@ export type PermissionModule =
   | 'grn'
   | 'payments'
   | 'transfers'
+  | 'invoices'
+  | 'receipts'
+  | 'finance'
   | 'users'
   | 'roles'
   | 'settings'
@@ -781,6 +784,97 @@ export interface StockTransfer {
 }
 
 /* ================================================================
+   Billing the client — invoice, tax, money in
+
+   An outsourcing contract is a promise of people on site, and the invoice
+   is where that promise is priced. It is raised per project, because one
+   project is one contract for one building with its own payment term:
+
+       Project ──monthly──> Invoice ──1:N──> ClientReceipt
+
+   Two Indonesian mechanics shape the arithmetic. PPN is *added* to what
+   the client owes; PPh 23 is *withheld* by the client and paid to the tax
+   office on our behalf, so it never arrives in the bank account. What the
+   client actually transfers is therefore subtotal + PPN − PPh 23.
+   ================================================================ */
+
+export type InvoiceStatus = 'DRAFT' | 'ISSUED' | 'PARTIALLY_PAID' | 'PAID' | 'VOID'
+
+/**
+ * `SERVICE` is a manpower line as contracted. `DEDUCTION` is what the client
+ * does not have to pay for because the post was not filled — the gap the whole
+ * system tracks, finally priced. `ADJUSTMENT` is anything negotiated on top.
+ */
+export type InvoiceLineKind = 'SERVICE' | 'DEDUCTION' | 'ADJUSTMENT'
+
+export interface InvoiceLine {
+  id: string
+  kind: InvoiceLineKind
+  /** The manpower line this was priced from, for a service or deduction line. */
+  requirementId?: string
+  positionId?: string
+  shift?: Shift
+  description: string
+  /** Headcount for a service line; unfilled posts for a deduction. */
+  qty: number
+  /** Per person per month, as contracted. */
+  unitPrice: number
+  /** Negative on a deduction, so the lines always sum to the subtotal. */
+  amount: number
+  note?: string
+}
+
+/** One project, one month, one bill. */
+export interface Invoice {
+  id: string
+  /** INV-2026-09-0001 */
+  code: string
+  clientId: string
+  projectId: string
+  periodMonth: number
+  periodYear: number
+  status: InvoiceStatus
+  lines: InvoiceLine[]
+
+  /** The client's own purchase order, quoted back on the invoice. */
+  poNumber?: string
+  issuedAt?: ISODate
+  dueAt?: ISODate
+  /**
+   * Terms and rates are copied when the invoice is raised: renegotiating a
+   * contract next quarter must not restate a bill that has already gone out.
+   */
+  paymentTermDays: number
+  ppnRate: number
+  pph23Rate: number
+
+  createdBy: string
+  createdAt: ISODate
+  updatedAt: ISODate
+  voidReason?: string
+  note?: string
+}
+
+/** Money in, against one invoice. Partial payments are ordinary. */
+export interface ClientReceipt {
+  id: string
+  /** RCP-2026-0001 */
+  code: string
+  invoiceId: string
+  clientId: string
+  amount: number
+  method: PaymentMethod
+  receivedAt: ISODate
+  /** Nomor bukti transfer. */
+  reference?: string
+  /** Which of our accounts the money landed in. */
+  bankAccount?: string
+  recordedBy: string
+  createdAt: ISODate
+  note?: string
+}
+
+/* ================================================================
    Company profile
    ================================================================ */
 
@@ -798,4 +892,8 @@ export interface CompanyProfile {
   director: string
   licenceNo: string
   foundedYear: number
+  /** Where clients are told to pay. An invoice without it is not an invoice. */
+  bankName?: string
+  bankAccount?: string
+  bankAccountName?: string
 }

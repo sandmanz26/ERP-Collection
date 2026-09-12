@@ -15,6 +15,9 @@ export const company: CompanyProfile = {
   director: 'Hendra Wijayanto',
   licenceNo: 'SIO Satpam: 1424/XI/2024/Baharkam',
   foundedYear: 2009,
+  bankName: 'Bank Central Asia',
+  bankAccount: '206-3001-4455',
+  bankAccountName: 'PT Tata Gemilang Sejahtera',
 }
 
 /* ------------------------------------------------------------------

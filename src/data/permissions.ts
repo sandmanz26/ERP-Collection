@@ -30,6 +30,9 @@ export const MODULES: { key: PermissionModule; label: string; description: strin
   { key: 'grn', label: 'Goods Receipt', description: 'Deliveries arriving into a warehouse against an order', group: 'Procurement' },
   { key: 'payments', label: 'Payments', description: 'Money paid to suppliers, in full or in instalments', group: 'Procurement' },
   { key: 'transfers', label: 'Stock Transfers', description: 'Goods moving from one warehouse to another', group: 'Inventory' },
+  { key: 'invoices', label: 'Invoices', description: 'What each project bills its client every month', group: 'Finance' },
+  { key: 'receipts', label: 'Client Receipts', description: 'Money arriving from clients against an invoice', group: 'Finance' },
+  { key: 'finance', label: 'Finance overview', description: 'Receivables, payables and the cash position', group: 'Finance' },
   { key: 'users', label: 'Users', description: 'Accounts that can sign in', group: 'Administration' },
   { key: 'roles', label: 'Roles', description: 'Bundles of privileges assigned to accounts', group: 'Administration' },
   { key: 'settings', label: 'Settings', description: 'Company profile and system preferences', group: 'Administration' },
@@ -43,6 +46,7 @@ const RISK: Record<string, PermissionRisk> = {
   view: 'LOW', export: 'LOW', create: 'MEDIUM', edit: 'MEDIUM', import: 'MEDIUM', submit: 'MEDIUM',
   delete: 'HIGH', approve: 'HIGH', manage: 'HIGH', review: 'MEDIUM', lock: 'HIGH', assign: 'MEDIUM',
   receive: 'MEDIUM', dispatch: 'MEDIUM', close: 'HIGH', price: 'MEDIUM', pay: 'HIGH',
+  issue: 'HIGH', void: 'HIGH', collect: 'HIGH',
 }
 
 /** Wording that says what the privilege lets a person do, not what it is called. */
@@ -167,6 +171,19 @@ export const PERMISSIONS: PermissionDef[] = [
   perm('transfers', 'receive', 'Receive a transfer into the destination warehouse, recording any shortfall in transit.'),
   perm('transfers', 'export', 'Download transfers with their quantities and variances.'),
 
+  perm('invoices', 'view', 'Open the invoice register and any invoice.'),
+  perm('invoices', 'create', 'Raise the invoices for a period from the contracts that were running in it.'),
+  perm('invoices', 'edit', 'Change lines, adjustments and the client purchase order on a draft invoice.'),
+  perm('invoices', 'issue', 'Send an invoice to the client. It starts the payment clock and can no longer be edited.'),
+  perm('invoices', 'void', 'Cancel an issued invoice, giving up the claim and freeing the period to be billed again.'),
+  perm('invoices', 'export', 'Download invoices with their lines, tax and outstanding balance.'),
+
+  perm('receipts', 'view', 'See what clients have paid and what is still owed.'),
+  perm('receipts', 'collect', 'Record money received against an invoice, in full or in part.'),
+  perm('receipts', 'export', 'Download the receipt register and the ageing of what is outstanding.'),
+
+  perm('finance', 'view', 'Open the finance overview: receivables, payables and the cash position.'),
+
   perm('users', 'view', 'See the account register and what each account can do.'),
   perm('users', 'create', 'Invite a new account.'),
   perm('users', 'edit', 'Change an account, its roles and its individual privilege overrides.'),
@@ -191,7 +208,7 @@ export const permissionsOf = (module: PermissionModule) => PERMISSIONS.filter((p
 /** Every action used anywhere, in the order a permission matrix should show them. */
 export const ACTION_ORDER = [
   'view', 'create', 'edit', 'delete', 'import', 'export', 'submit', 'review', 'assign', 'dispatch',
-  'receive', 'pay', 'price', 'approve', 'close', 'lock', 'manage',
+  'receive', 'collect', 'pay', 'price', 'approve', 'issue', 'void', 'close', 'lock', 'manage',
 ]
 
 /**

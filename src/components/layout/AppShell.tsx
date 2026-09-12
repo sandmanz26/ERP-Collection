@@ -17,6 +17,7 @@ import { useErp } from '@/store/useErp'
 import { useAuth, useCurrentUser } from '@/store/useAuth'
 import { primaryRoleName, rolesOf, useCan } from '@/lib/access'
 import { buildAlerts, daysUntil, fulfilment, isLiveProject, stockStatus } from '@/lib/domain'
+import { invoiceState } from '@/lib/finance'
 
 export function AppShell() {
   const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem('tg-sidebar') === '1')
@@ -91,6 +92,7 @@ export function AppShell() {
       const status = stockStatus(s, store.items.find((i) => i.id === s.itemId))
       return status === 'LOW' || status === 'OUT_OF_STOCK'
     }).length,
+    overdueInvoices: store.invoices.filter((i) => invoiceState(i, store.clientReceipts).overdue).length,
   }
 
   return (

@@ -105,6 +105,15 @@ export function SettingsPage() {
               <Field label="Director">
                 <Input value={draft.director} onChange={(e) => setDraft({ ...draft, director: e.target.value })} />
               </Field>
+              <Field label="Bank" hint="Printed on every invoice as where to pay">
+                <Input value={draft.bankName ?? ''} onChange={(e) => setDraft({ ...draft, bankName: e.target.value })} />
+              </Field>
+              <Field label="Account number">
+                <Input value={draft.bankAccount ?? ''} onChange={(e) => setDraft({ ...draft, bankAccount: e.target.value })} className="font-mono" />
+              </Field>
+              <Field label="Account name" className="sm:col-span-2">
+                <Input value={draft.bankAccountName ?? ''} onChange={(e) => setDraft({ ...draft, bankAccountName: e.target.value })} />
+              </Field>
             </CardBody>
             <CardFooter>
               <span className="text-[12px] text-fg-muted">{dirty ? 'Unsaved changes' : 'Saved'}</span>

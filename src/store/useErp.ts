@@ -1,9 +1,9 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type {
-  Building, Client, CompanyProfile, Division, GoodsReceipt, InventoryItem, MrRequest, MrSession,
-  Position, Project, PurchaseOrder, PurchasePrice, PurchaseRequest, Role, StockTransfer, Supplier,
-  SupplierPayment, Warehouse, WarehouseStock,
+  Building, Client, ClientReceipt, CompanyProfile, Division, GoodsReceipt, InventoryItem, Invoice,
+  MrRequest, MrSession, Position, Project, PurchaseOrder, PurchasePrice, PurchaseRequest, Role,
+  StockTransfer, Supplier, SupplierPayment, Warehouse, WarehouseStock,
 } from '@/data/types'
 import { company as seedCompany, positions as seedPositions } from '@/data/seed-org'
 import { buildings as seedBuildings, clients as seedClients } from '@/data/seed-clients'
@@ -15,6 +15,11 @@ import { purchasePrices as seedPrices, suppliers as seedSuppliers } from '@/data
 import { mrRequests as seedRequests, mrSessions as seedSessions, purchaseRequests as seedPurchaseRequests } from '@/data/seed-procurement'
 import { goodsReceipts as seedReceipts, payments as seedPayments, purchaseOrders as seedOrders } from '@/data/seed-purchasing'
 import { stockTransfers as seedTransfers } from '@/data/seed-transfers'
+import { clientReceipts as seedReceiptsIn, invoices as seedInvoices } from '@/data/seed-finance'
+import {
+  PPH23_RATE, PPN_RATE as PPN_ON_SALES, billableProjects, buildInvoiceLines, invoiceState,
+  invoiceTotals, receiptProblem, statusAfterReceipt,
+} from '@/lib/finance'
 import { buildPrLines, canLockSession } from '@/lib/procurement'
 import {
   PPN_RATE, buildPurchaseOrders, dispatchProblem, paymentProblem, poTotals, stockIn, stockOut,
@@ -63,6 +68,8 @@ interface ErpState {
   goodsReceipts: GoodsReceipt[]
   payments: SupplierPayment[]
   stockTransfers: StockTransfer[]
+  invoices: Invoice[]
+  clientReceipts: ClientReceipt[]
   company: CompanyProfile
   activity: ActivityLog[]
 
@@ -144,6 +151,15 @@ interface ErpState {
   upsertPurchasePrice: (row: PurchasePrice) => void
   removePurchasePrices: (ids: string[]) => void
 
+  /** Raises one draft invoice per contract that was running in the period. */
+  generateInvoices: (month: number, year: number) => { ok: boolean; codes?: string[]; error?: string }
+  upsertInvoice: (row: Invoice) => void
+  /** Sends it to the client, which starts the payment clock and freezes the lines. */
+  issueInvoice: (id: string, issuedAt?: string) => { ok: boolean; error?: string }
+  voidInvoice: (id: string, reason: string) => { ok: boolean; error?: string }
+  removeInvoices: (ids: string[]) => void
+  recordClientReceipt: (row: ClientReceipt) => { ok: boolean; error?: string }
+
   updateCompany: (patch: Partial<CompanyProfile>) => void
   resetDemoData: () => void
 }
@@ -167,6 +183,8 @@ const seedState = () => ({
   goodsReceipts: structuredClone(seedReceipts),
   payments: structuredClone(seedPayments),
   stockTransfers: structuredClone(seedTransfers),
+  invoices: structuredClone(seedInvoices),
+  clientReceipts: structuredClone(seedReceiptsIn),
   company: structuredClone(seedCompany),
   activity: [] as ActivityLog[],
 })
@@ -857,6 +875,137 @@ export const useErp = create<ErpState>()(
         get().log('Deleted', 'Purchase price', rows.map((r) => r.poNumber).join(', '))
       },
 
+      /* ---------------- invoices ---------------- */
+      /**
+       * One draft per contract that was running in the period and has not been
+       * billed for it yet. Drafts rather than issued bills: the coordinator's
+       * headcount has to be confirmed before anything goes to a client.
+       */
+      generateInvoices: (month, year) => {
+        const state = get()
+        const due = billableProjects(state.projects, state.invoices, month, year)
+        if (due.length === 0) {
+          return { ok: false, error: 'Every contract that ran in that month has already been billed.' }
+        }
+
+        const now = new Date().toISOString()
+        const period = `${year}-${String(month).padStart(2, '0')}`
+        let sequence = state.invoices.filter((i) => i.code.startsWith(`INV-${period}`)).length
+
+        const created: Invoice[] = due
+          .map((project): Invoice | null => {
+            const client = state.clients.find((c) => c.id === project.clientId)
+            if (!client) return null
+            const lines = buildInvoiceLines(project, state.positions)
+            if (lines.length === 0) return null
+            sequence += 1
+            return {
+              id: uid('inv'),
+              code: `INV-${period}-${String(sequence).padStart(4, '0')}`,
+              clientId: client.id,
+              projectId: project.id,
+              periodMonth: month,
+              periodYear: year,
+              status: 'DRAFT' as const,
+              lines,
+              paymentTermDays: project.paymentTermDays || client.paymentTermDays,
+              ppnRate: client.ppnApplicable ? PPN_ON_SALES : 0,
+              pph23Rate: client.pph23Withheld ? PPH23_RATE : 0,
+              createdBy: actor(),
+              createdAt: now,
+              updatedAt: now,
+            }
+          })
+          .filter((i): i is Invoice => i !== null)
+
+        if (created.length === 0) return { ok: false, error: 'None of those contracts carry a manpower line to bill.' }
+
+        set((s) => ({ invoices: [...created, ...s.invoices] }))
+        get().log('Raised', 'Invoices', `${period} · ${created.length} drafts · ${created.map((i) => i.code).join(', ').slice(0, 120)}`)
+        return { ok: true, codes: created.map((i) => i.code) }
+      },
+      upsertInvoice: (row) => {
+        const exists = get().invoices.some((x) => x.id === row.id)
+        set((s) => ({ invoices: upsert(s.invoices, { ...row, updatedAt: new Date().toISOString() }) }))
+        get().log(exists ? 'Updated' : 'Created', 'Invoice', `${row.code} · ${row.lines.length} lines`)
+      },
+      issueInvoice: (id, issuedAt) => {
+        const invoice = get().invoices.find((x) => x.id === id)
+        if (!invoice) return { ok: false, error: 'That invoice no longer exists.' }
+        if (invoice.status !== 'DRAFT') return { ok: false, error: 'Only a draft invoice can be issued.' }
+        if (invoice.lines.length === 0) return { ok: false, error: 'There is nothing on this invoice to bill.' }
+        if (invoiceTotals(invoice).due <= 0) {
+          return { ok: false, error: 'This invoice comes to nothing once the deductions are applied — nothing to send.' }
+        }
+
+        const at = issuedAt ?? new Date().toISOString()
+        const dueDate = new Date(at)
+        dueDate.setDate(dueDate.getDate() + invoice.paymentTermDays)
+
+        set((s) => ({
+          invoices: s.invoices.map((x) =>
+            x.id === id
+              ? { ...x, status: 'ISSUED', issuedAt: at, dueAt: dueDate.toISOString(), updatedAt: at }
+              : x,
+          ),
+        }))
+        get().log(
+          'Issued',
+          'Invoice',
+          `${invoice.code} · ${Math.round(invoiceTotals(invoice).due).toLocaleString('en-US')} due ${dueDate.toISOString().slice(0, 10)}`,
+        )
+        return { ok: true }
+      },
+      voidInvoice: (id, reason) => {
+        const state = get()
+        const invoice = state.invoices.find((x) => x.id === id)
+        if (!invoice) return { ok: false, error: 'That invoice no longer exists.' }
+        if (state.clientReceipts.some((r) => r.invoiceId === id)) {
+          /* Cancelling a bill money has already come in against would leave that
+             money pointing at nothing. Refund it outside the system first. */
+          return { ok: false, error: 'Money has already been received against this invoice — it cannot be cancelled.' }
+        }
+        const now = new Date().toISOString()
+        set((s) => ({
+          invoices: s.invoices.map((x) => (x.id === id ? { ...x, status: 'VOID', voidReason: reason, updatedAt: now } : x)),
+        }))
+        get().log('Cancelled', 'Invoice', `${invoice.code} · ${reason}`)
+        return { ok: true }
+      },
+      removeInvoices: (ids) => {
+        const state = get()
+        const rows = state.invoices.filter((x) => ids.includes(x.id))
+        /* Only a draft can be deleted outright: an issued bill is a claim the
+           client has seen, and withdrawing one is a void with a reason. */
+        const deletable = rows.filter((r) => r.status === 'DRAFT').map((r) => r.id)
+        if (deletable.length === 0) return
+        set((s) => ({ invoices: s.invoices.filter((x) => !deletable.includes(x.id)) }))
+        get().log('Deleted', 'Invoice', rows.filter((r) => deletable.includes(r.id)).map((r) => r.code).join(', '))
+      },
+
+      /* ---------------- money in ---------------- */
+      recordClientReceipt: (row) => {
+        const state = get()
+        const invoice = state.invoices.find((x) => x.id === row.invoiceId)
+        if (!invoice) return { ok: false, error: 'That invoice no longer exists.' }
+        const problem = receiptProblem(invoice, row.amount, state.clientReceipts)
+        if (problem) return { ok: false, error: problem }
+
+        const receipts = [row, ...state.clientReceipts]
+        const status = statusAfterReceipt(invoice, receipts)
+        set((s) => ({
+          clientReceipts: receipts,
+          invoices: s.invoices.map((x) => (x.id === invoice.id ? { ...x, status, updatedAt: row.receivedAt } : x)),
+        }))
+        const after = invoiceState({ ...invoice, status }, receipts)
+        get().log(
+          'Received',
+          'Client payment',
+          `${row.code} · ${invoice.code} · ${Math.round(row.amount).toLocaleString('en-US')}${after.outstanding <= 0 ? ' — settled' : ` — ${Math.round(after.outstanding).toLocaleString('en-US')} left`}`,
+        )
+        return { ok: true }
+      },
+
       updateCompany: (patch) => {
         set((s) => ({ company: { ...s.company, ...patch } }))
         get().log('Updated', 'Company profile', Object.keys(patch).join(', '))
@@ -864,6 +1013,6 @@ export const useErp = create<ErpState>()(
 
       resetDemoData: () => set({ ...seedState() }),
     }),
-    { name: 'tata-gemilang-erp', version: 4 },
+    { name: 'tata-gemilang-erp', version: 5 },
   ),
 )

@@ -1,7 +1,7 @@
 import {
-  ArrowLeftRight, Boxes, Building2, CalendarRange, ClipboardList, KeyRound, LayoutDashboard,
-  MapPinned, Network, Package, PackageCheck, Receipt, Settings, ShieldCheck, ShoppingCart, Store,
-  Users, UsersRound, Wallet, Warehouse,
+  ArrowLeftRight, Banknote, Boxes, Building2, CalendarRange, ClipboardList, FileText, KeyRound,
+  LandPlot, LayoutDashboard, MapPinned, Network, Package, PackageCheck, Receipt, Settings,
+  ShieldCheck, ShoppingCart, Store, Users, UsersRound, Wallet, Warehouse,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -12,7 +12,7 @@ export interface NavItem {
   description: string
   /** The privilege that opens this page. No privilege, no menu entry, no route. */
   permission: string
-  badgeKey?: 'gaps' | 'expiring' | 'approvals' | 'lowStock'
+  badgeKey?: 'gaps' | 'expiring' | 'approvals' | 'lowStock' | 'overdueInvoices'
 }
 
 export interface NavGroup {
@@ -62,6 +62,14 @@ export const NAV: NavGroup[] = [
       { to: '/payments', label: 'Payments', icon: Wallet, permission: 'payments.view', description: 'Paid to suppliers, and what is still owed' },
       { to: '/suppliers', label: 'Suppliers', icon: Store, permission: 'suppliers.view', description: 'Who we buy from, and at what price last time' },
       { to: '/divisions', label: 'Divisions', icon: Network, permission: 'divisions.view', description: 'The cost centres that can raise a request' },
+    ],
+  },
+  {
+    label: 'Finance',
+    items: [
+      { to: '/finance', label: 'Overview', icon: LandPlot, permission: 'finance.view', description: 'Receivables, payables and the cash position' },
+      { to: '/invoices', label: 'Invoices', icon: FileText, permission: 'invoices.view', badgeKey: 'overdueInvoices', description: 'What each project bills its client every month' },
+      { to: '/receipts', label: 'Client Receipts', icon: Banknote, permission: 'receipts.view', description: 'Money arriving against an invoice' },
     ],
   },
   {
