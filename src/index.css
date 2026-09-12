@@ -256,3 +256,13 @@
 .animate-fade-in { animation: fade-in .16s ease-out }
 .animate-pop-in { animation: pop-in .14s cubic-bezier(.16,1,.3,1) }
 .animate-slide-up { animation: slide-up .22s cubic-bezier(.16,1,.3,1) }
+
+/* A strip that scrolls sideways on a phone but should not show a scrollbar
+   doing it — tabs, segmented controls, anything that reads as one row. */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

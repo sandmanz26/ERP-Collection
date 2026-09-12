@@ -16,7 +16,7 @@ export function Tabs<T extends string>({
 }) {
   if (variant === 'pill') {
     return (
-      <div className={cn('inline-flex items-center gap-1 rounded-xl border border-border bg-surface-sunken p-1', className)}>
+      <div className={cn('scrollbar-none inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-border bg-surface-sunken p-1', className)}>
         {items.map((it) => (
           <button
             key={it.value}
@@ -37,7 +37,9 @@ export function Tabs<T extends string>({
     )
   }
   return (
-    <div className={cn('flex items-center gap-0.5 border-b border-border', className)}>
+    /* a tab strip wider than the screen scrolls sideways rather than wrapping:
+       wrapped tabs push the content down and lose the single-row reading */
+    <div className={cn('scrollbar-none flex items-center gap-0.5 overflow-x-auto border-b border-border', className)}>
       {items.map((it) => (
         <button
           key={it.value}

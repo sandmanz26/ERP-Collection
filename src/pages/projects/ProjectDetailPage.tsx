@@ -112,8 +112,8 @@ export function ProjectDetailPage() {
       <PageHeader
         eyebrow={
           <>
-            <span className="font-mono text-[12px] text-fg-muted">{project.code}</span>
-            <span className="font-mono text-[11.5px] text-fg-subtle">{project.jobNo}</span>
+            <span className="whitespace-nowrap font-mono text-[12px] text-fg-muted">{project.code}</span>
+            <span className="whitespace-nowrap font-mono text-[11.5px] text-fg-subtle">{project.jobNo}</span>
             <StatusBadge value={project.status} size="sm" />
             {project.priority !== 'STANDARD' && <StatusBadge value={project.priority} size="sm" />}
             <Badge tone={project.type === 'CONSIGNMENT' ? 'purple' : 'outline'} size="sm">{titleCase(project.type)}</Badge>

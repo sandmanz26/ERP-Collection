@@ -19,12 +19,12 @@ export function PageHeader({
   return (
     <div className={cn('flex flex-wrap items-start justify-between gap-4 pb-5', className)}>
       <div className="min-w-0">
-        {eyebrow && <div className="mb-1.5 flex items-center gap-2">{eyebrow}</div>}
+        {eyebrow && <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5">{eyebrow}</div>}
         <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.022em] text-fg">{title}</h1>
         {description && <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-fg-muted">{description}</p>}
-        {meta && <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">{meta}</div>}
+        {meta && <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 sm:gap-x-5">{meta}</div>}
       </div>
-      {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+      {actions && <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto">{actions}</div>}
     </div>
   )
 }

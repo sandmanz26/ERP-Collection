@@ -125,10 +125,20 @@ export function TourGuide() {
   }, [location.pathname])
 
   const steps = tour?.steps ?? []
-  /* a step whose target is missing is dropped, so an empty table never leaves a
-     tour pointing at nothing */
+  /* A step whose target is missing is dropped, so an empty table never leaves a
+     tour pointing at nothing. Present-but-unrendered counts as missing: below
+     the table's breakpoint the column headers are still in the DOM inside a
+     hidden subtree, and a step about "this column" has nothing to say on a
+     phone where the rows are cards. */
   const visible = React.useMemo(
-    () => steps.filter((s) => !s.target || document.querySelector(`[data-tour="${s.target}"]`)),
+    () =>
+      steps.filter((s) => {
+        if (!s.target) return true
+        const el = document.querySelector(`[data-tour="${s.target}"]`)
+        if (!el) return false
+        const r = el.getBoundingClientRect()
+        return r.width > 0 && r.height > 0
+      }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [steps, tour, location.pathname],
   )

@@ -329,13 +329,23 @@ Esc); `MultiSelect` and a hand-built `DatePicker` follow the same conventions.
 - **confirmation on every delete**, escalating with the blast radius: a plain confirm for one record, an itemised list for a few, cascade warnings ("12 projects reference these customers"), and a typed `DELETE` keyword for large or cascading deletions
 - column visibility, density toggle, faceted filters, search, pagination and per-table footer totals
 
+**It works on a phone.** Below the laptop breakpoint the sidebar becomes an off-canvas drawer
+behind a hamburger, so the whole screen belongs to the work; it closes on a tap, on Esc, and on
+navigation. Below the tablet breakpoint **every data table becomes a card list** — a 1,900px-wide
+table inside a 356px phone shows one column at a time and hides the rest behind a horizontal scroll
+nobody finds, so each row is re-laid as a card with the identity line as its heading, every other
+column as a labelled row, and the actions where a thumb can reach them. Only one of the two is in
+the DOM at a time, so a screen reader never meets the same row twice. Search, filters, selection,
+bulk actions, export, import and pagination all work unchanged in either form.
+
 **A guided tour on first arrival.** Landing on Projects, a project, or the operator workspace for
 the first time dims the page and walks a spotlight over the parts that carry meaning — what a job
 row is, what the stage badge counts, why the next cut-off is the most expensive number on screen.
 Each card says what the thing is *and why it matters*, not where to click. It runs once per tour,
 remembers that it has been seen, leaves on Esc or Skip, and can be replayed from the profile menu
 ("Show me around this page", "Replay every tour"). Steps whose target is not on screen are dropped
-rather than pointing at nothing.
+rather than pointing at nothing — which also makes the tour adapt to the viewport: the four steps
+about table columns disappear on a phone, replaced by one about the cards that stand in for them.
 
 Other pieces: a ⌘K command palette indexing every job, container, customer and package; a live
 exception feed in the top bar; and a collapsible sidebar (⌘\).

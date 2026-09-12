@@ -16,6 +16,7 @@ import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } fr
 import { Badge } from '@/components/ui/badge'
 import { Segmented } from '@/components/ui/checkbox'
 import { useTheme } from '@/hooks/useTheme'
+import { useIsDesktop } from '@/hooks/useMediaQuery'
 import { useErp } from '@/store/useErp'
 import { useAuth, useCurrentUser } from '@/store/useAuth'
 import { incidentStatusOpen, roleLabel, stuffingIsOpen } from '@/data/reference'
@@ -29,7 +30,14 @@ import { useToast } from '@/components/ui/toast'
 
 export function AppShell() {
   const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem('mf-sidebar') === '1')
+  /* below lg the sidebar is an off-canvas drawer: 236px of navigation on a
+     390px screen leaves no room for the work itself */
+  const [drawerOpen, setDrawerOpen] = React.useState(false)
   const [paletteOpen, setPaletteOpen] = React.useState(false)
+  const isDesktop = useIsDesktop()
+  /* the icon rail is a desktop affordance; inside the drawer there is room for
+     the labels and no reason to hide them */
+  const rail = isDesktop && collapsed
   const { mode, setMode } = useTheme()
   const location = useLocation()
   const store = useErp()
@@ -48,6 +56,15 @@ export function AppShell() {
   React.useEffect(() => {
     localStorage.setItem('mf-sidebar', collapsed ? '1' : '0')
   }, [collapsed])
+
+  /* a drawer that survives the tap that used it is a trap */
+  React.useEffect(() => setDrawerOpen(false), [location.pathname])
+  React.useEffect(() => {
+    if (!drawerOpen) return
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setDrawerOpen(false)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [drawerOpen])
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -134,17 +151,31 @@ export function AppShell() {
   return (
     <div className="flex h-screen w-full overflow-hidden bg-bg">
       {/* ---------------- sidebar ---------------- */}
+      {/* the backdrop only exists while the drawer is open, and only below lg */}
+      {drawerOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          onClick={() => setDrawerOpen(false)}
+          className="fixed inset-0 z-30 bg-overlay/70 backdrop-blur-[1px] lg:hidden"
+        />
+      )}
       <aside
         className={cn(
-          'relative z-20 flex shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-200 ease-out',
-          collapsed ? 'w-[62px]' : 'w-[236px]',
+          'z-40 flex shrink-0 flex-col border-r border-border bg-surface',
+          /* phone and tablet: a drawer that slides over the content */
+          'fixed inset-y-0 left-0 w-[268px] transition-transform duration-200 ease-out',
+          drawerOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full',
+          /* laptop and up: back in the flow, collapsible as before */
+          'lg:relative lg:z-20 lg:translate-x-0 lg:shadow-none lg:transition-[width]',
+          collapsed ? 'lg:w-[62px]' : 'lg:w-[236px]',
         )}
       >
-        <div className={cn('flex h-14 items-center gap-2.5 border-b border-border px-3.5', collapsed && 'justify-center px-0')}>
+        <div className={cn('flex h-14 items-center gap-2.5 border-b border-border px-3.5', rail && 'justify-center px-0')}>
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-fg shadow-[inset_0_1px_0_0_rgb(255_255_255/0.2)]">
             <Anchor className="size-[17px]" />
           </span>
-          {!collapsed && (
+          {!rail && (
             <div className="min-w-0">
               <p className="truncate text-[13.5px] font-semibold leading-tight tracking-[-0.01em] text-fg">Meridian Freight</p>
               <p className="truncate text-[11px] leading-tight text-fg-subtle">Export Operations Suite</p>
@@ -155,10 +186,10 @@ export function AppShell() {
         <nav className="scrollbar-thin flex-1 overflow-y-auto px-2 py-3">
           {(workspace === 'operator' ? OPERATOR_NAV : NAV).map((group) => (
             <div key={group.label} className="mb-4 last:mb-0">
-              {!collapsed && (
+              {!rail && (
                 <p className="mb-1 px-2.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-fg-subtle">{group.label}</p>
               )}
-              {collapsed && <Separator className="mx-auto mb-2 w-6" />}
+              {rail && <Separator className="mx-auto mb-2 w-6" />}
               <div className="space-y-0.5">
                 {group.items.map((item) => {
                   const count = item.badgeKey ? badges[item.badgeKey] : 0
@@ -170,7 +201,7 @@ export function AppShell() {
                       className={({ isActive }) =>
                         cn(
                           'group relative flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] font-medium transition-colors',
-                          collapsed && 'justify-center px-0 py-2',
+                          rail && 'justify-center px-0 py-2',
                           isActive
                             ? 'bg-primary-soft text-primary-soft-fg'
                             : 'text-fg-muted hover:bg-bg-muted hover:text-fg',
@@ -179,12 +210,12 @@ export function AppShell() {
                     >
                       {({ isActive }) => (
                         <>
-                          {isActive && !collapsed && (
+                          {isActive && !rail && (
                             <span className="absolute -left-2 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-primary" />
                           )}
                           <item.icon className={cn('size-[17px] shrink-0', isActive && 'text-primary')} />
-                          {!collapsed && <span className="flex-1 truncate">{item.label}</span>}
-                          {!collapsed && count > 0 && (
+                          {!rail && <span className="flex-1 truncate">{item.label}</span>}
+                          {!rail && count > 0 && (
                             <span
                               className={cn(
                                 'tnum rounded px-1.5 py-0.5 text-[10.5px] font-semibold',
@@ -200,7 +231,7 @@ export function AppShell() {
                       )}
                     </NavLink>
                   )
-                  return collapsed ? (
+                  return rail ? (
                     <Tooltip key={item.to} content={item.label} side="right">
                       <div>{link}</div>
                     </Tooltip>
@@ -213,19 +244,21 @@ export function AppShell() {
           ))}
         </nav>
 
-        <div className={cn('border-t border-border p-2', collapsed && 'flex justify-center')}>
+        <div className={cn('border-t border-border p-2', rail && 'flex justify-center')}>
+          {/* the same corner does two jobs: collapse the desktop rail, dismiss
+              the mobile drawer — collapsing a drawer to icons means nothing */}
           <button
-            onClick={() => setCollapsed((v) => !v)}
+            onClick={() => (isDesktop ? setCollapsed((v) => !v) : setDrawerOpen(false))}
             className={cn(
               'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[12.5px] font-medium text-fg-muted transition-colors hover:bg-bg-muted hover:text-fg',
-              collapsed && 'w-auto justify-center px-2',
+              rail && 'w-auto justify-center px-2',
             )}
           >
-            {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
-            {!collapsed && (
+            {rail ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+            {!rail && (
               <>
-                <span className="flex-1 text-left">Collapse</span>
-                <Kbd>⌘\</Kbd>
+                <span className="flex-1 text-left">{isDesktop ? 'Collapse' : 'Close'}</span>
+                {isDesktop && <Kbd>⌘\</Kbd>}
               </>
             )}
           </button>
@@ -234,10 +267,25 @@ export function AppShell() {
 
       {/* ---------------- main ---------------- */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
+        <header className="flex h-14 shrink-0 items-center gap-1.5 border-b border-border bg-surface px-2.5 sm:gap-3 sm:px-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            aria-label="Open navigation"
+            onClick={() => setDrawerOpen(true)}
+          >
+            <PanelLeftOpen />
+          </Button>
+
+          {/* the full search bar needs room it does not have on a phone, so
+              below sm it falls back to the icon that opens the same palette */}
+          <Button variant="ghost" size="icon" className="sm:hidden" aria-label="Search" onClick={() => setPaletteOpen(true)}>
+            <Search />
+          </Button>
           <button
             onClick={() => setPaletteOpen(true)}
-            className="group flex h-9 w-full max-w-sm items-center gap-2.5 rounded-lg border border-border-strong/70 bg-bg-muted/60 px-3 text-left text-[13px] text-fg-subtle transition-colors hover:border-border-strong hover:bg-bg-muted"
+            className="group hidden h-9 w-full max-w-sm items-center gap-2.5 rounded-lg border border-border-strong/70 bg-bg-muted/60 px-3 text-left text-[13px] text-fg-subtle transition-colors hover:border-border-strong hover:bg-bg-muted sm:flex"
           >
             <Search className="size-4" />
             <span className="flex-1 truncate">Search jobs, containers, customers…</span>
@@ -257,7 +305,7 @@ export function AppShell() {
                 )}
               </Button>
             </MenuTrigger>
-            <MenuContent className="w-[360px]">
+            <MenuContent className="w-[min(360px,calc(100vw-24px))]">
               <MenuLabel>Live exceptions</MenuLabel>
               {exceptions.length === 0 && <p className="px-3 py-6 text-center text-[12.5px] text-fg-subtle">Nothing needs attention.</p>}
               <div className="scrollbar-thin max-h-80 overflow-y-auto">
@@ -323,7 +371,7 @@ export function AppShell() {
             </MenuContent>
           </Menu>
 
-          <Separator vertical className="h-6" />
+          <Separator vertical className="hidden h-6 sm:block" />
 
           <Menu>
             <MenuTrigger asChild>
@@ -414,7 +462,7 @@ export function AppShell() {
         </header>
 
         <main key={location.pathname} className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto flex min-h-full w-full max-w-[1560px] flex-col px-5 py-5 lg:px-7">
+          <div className="mx-auto flex min-h-full w-full max-w-[1560px] flex-col px-4 py-4 sm:px-5 sm:py-5 lg:px-7">
             <Outlet />
           </div>
         </main>

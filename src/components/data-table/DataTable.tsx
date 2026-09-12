@@ -15,6 +15,7 @@ import { Tooltip } from '@/components/ui/tooltip'
 import { ConfirmDelete } from '@/components/ui/confirm'
 import { ImportDialog } from './ImportDialog'
 import type { Column, ImportField, SortState, TableFilter } from './types'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 
 export interface DataTableProps<T> {
   data: T[]
@@ -134,6 +135,11 @@ export function DataTable<T>({
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
   const safePage = Math.min(page, totalPages)
+  /* Rendered, not merely hidden: keeping both a table and a card list in the
+     DOM duplicates every row's checkbox and label, which is noise for a screen
+     reader and for anything querying the page. */
+  const asCards = !useMediaQuery('(min-width: 640px)')
+
   const paged = sorted.slice((safePage - 1) * pageSize, safePage * pageSize)
 
   React.useEffect(() => setPage(1), [query, filters.map((f) => f.values.join()).join('|'), pageSize])
@@ -355,8 +361,9 @@ export function DataTable<T>({
         </div>
       )}
 
-      {/* ------------ table ------------ */}
-      <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-surface">
+      {/* ------------ table (sm and up) ------------ */}
+      {!asCards && (
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-surface">
         <div className="scrollbar-thin h-full overflow-auto">
           <table className="w-full border-separate border-spacing-0 text-[13px]">
             <thead>
@@ -531,6 +538,111 @@ export function DataTable<T>({
           )}
         </div>
       </div>
+
+      )}
+
+      {/* ------------ cards (below sm) ------------
+          A 1,900px-wide table inside a 356px phone shows one column at a time
+          and hides the rest behind a horizontal scroll nobody finds. The same
+          rows become cards instead: the identity column as the heading, every
+          other visible column as a labelled line, and the row actions in the
+          footer where a thumb can reach them. */}
+      {asCards && (
+      <div data-tour="table-cards" className="flex flex-col gap-2.5">
+        {paged.map((row) => {
+          const id = getId(row)
+          const isSelected = selected.has(id)
+          const [lead, ...rest] = visibleColumns
+          return (
+            <div
+              key={id}
+              onClick={() => onRowClick?.(row)}
+              className={cn(
+                'rounded-xl border bg-surface p-3.5 transition-colors',
+                isSelected ? 'border-primary bg-primary-soft/35' : 'border-border',
+                onRowClick && 'cursor-pointer active:bg-bg-muted/70',
+                rowTone?.(row),
+              )}
+            >
+              <div className="flex items-start gap-3">
+                <span onClick={(e) => e.stopPropagation()} className="pt-0.5">
+                  <Checkbox
+                    aria-label={`Select ${getLabel(row)}`}
+                    checked={isSelected}
+                    onChange={(next) => {
+                      const s = new Set(selected)
+                      if (next) s.add(id)
+                      else s.delete(id)
+                      setSelected(s)
+                    }}
+                  />
+                </span>
+                {/* cells are written to truncate inside a fixed table column;
+                    a card has the width to let them wrap instead */}
+                <div className="min-w-0 flex-1 text-[13px] text-fg [&_.truncate]:overflow-visible [&_.truncate]:whitespace-normal">
+                  {lead ? lead.cell(row) : getLabel(row)}
+                </div>
+              </div>
+
+              {rest.length > 0 && (
+                <dl className="mt-3 grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] gap-x-3 gap-y-1.5 border-t border-border pt-3">
+                  {rest.map((c) => (
+                    <React.Fragment key={c.key}>
+                      <dt className="text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
+                        {typeof c.header === 'string' ? c.header : c.key}
+                      </dt>
+                      <dd className="min-w-0 text-[12.5px] text-fg [&_.truncate]:overflow-visible [&_.truncate]:whitespace-normal">
+                        {c.cell(row)}
+                      </dd>
+                    </React.Fragment>
+                  ))}
+                </dl>
+              )}
+
+              {rowActions && (
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-3 flex items-center justify-end gap-1 border-t border-border pt-2.5"
+                >
+                  {rowActions(row)}
+                </div>
+              )}
+            </div>
+          )
+        })}
+
+        {paged.length === 0 && (
+          <div className="rounded-xl border border-border bg-surface">
+            <EmptyState
+              icon={<Inbox />}
+              title={query || activeFilterCount ? `No ${entityLabel} matches this view` : emptyTitle ?? `No ${entityLabel} yet`}
+              description={
+                query || activeFilterCount
+                  ? 'Try a broader search or reset the filters.'
+                  : emptyDescription ?? `Records you create will appear here.`
+              }
+              action={
+                query || activeFilterCount ? (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setQuery('')
+                      filters.forEach((f) => f.onChange([]))
+                    }}
+                  >
+                    Reset view
+                  </Button>
+                ) : (
+                  emptyAction
+                )
+              }
+            />
+          </div>
+        )}
+      </div>
+
+      )}
 
       {/* ------------ footer ------------ */}
       <div className="flex flex-wrap items-center gap-3 pt-3 text-[12.5px] text-fg-muted">

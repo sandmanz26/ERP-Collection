@@ -21,7 +21,15 @@ export function CardHeader({
   icon?: React.ReactNode
 }) {
   return (
-    <div className={cn('flex items-start justify-between gap-4 border-b border-border px-4 py-3', className)} {...props}>
+    /* below sm the actions drop under the title rather than squeezing it into
+       a column two words wide */
+    <div
+      className={cn(
+        'flex flex-col items-stretch gap-2 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4',
+        className,
+      )}
+      {...props}
+    >
       <div className="flex min-w-0 items-start gap-2.5">
         {icon && (
           <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-md bg-primary-soft text-primary-soft-fg [&_svg]:size-4">
@@ -33,7 +41,7 @@ export function CardHeader({
           {description && <p className="mt-0.5 text-[12.5px] leading-relaxed text-fg-muted">{description}</p>}
         </div>
       </div>
-      {actions && <div className="flex shrink-0 items-center gap-1.5">{actions}</div>}
+      {actions && <div className="flex shrink-0 flex-wrap items-center gap-1.5">{actions}</div>}
     </div>
   )
 }

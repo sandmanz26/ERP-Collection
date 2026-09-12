@@ -53,6 +53,14 @@ export const TOURS: Tour[] = [
         because: 'A quote at 20% that closes at 4% usually did so through charges nobody was watching.',
       },
       {
+        /* only rendered below the table's breakpoint, so this step appears on a
+           phone in place of the four that point at table columns */
+        target: 'table-cards',
+        title: 'One card per shipment',
+        body: 'On a narrow screen each job becomes a card: the stage it has reached, the next cut-off and how long is left, the units, the revenue and the margin. Tap one to open it.',
+        because: 'Amber inside three days of a cut-off, red inside one. Miss one and the container waits for the next vessel — the single most expensive mistake in the job.',
+      },
+      {
         target: 'table-search',
         title: 'Find anything by typing',
         body: 'Search matches the job number, the customer, the vessel, the ports and the commodity at once. Filters sit next to it for narrowing by status, type or destination.',
