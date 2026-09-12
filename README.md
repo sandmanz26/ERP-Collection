@@ -83,10 +83,22 @@ in the store. There is no hand-typed dashboard figure anywhere in the applicatio
 **Sales** — **Quotations** (weighted pipeline, margin floor, validity clock, loss reasons) · Sales orders (with the ATP promise, credit and deposit gates) · **Deliveries & packing** (surat jalan, container fill, the export document gate) · **Returns & claims** · Customers
 **Engineering** — Products · Bills of material (multi-level, yield, alternates, where-used) · Routings & work centres
 **Planning** — Master schedule · MRP run · Capacity & load
-**Production** — Work orders · Shop floor · Kiln drying · **Subcontracting** · **Maintenance** · Quality
-**Materials & Import** — Item master · Inventory & lots · **Material conversion** (raw into semi-finished, ours or a third party's) · **Offcuts & remnants** (bahan sisa) · Suppliers · **Requisitions** (the approval ladder) · Purchase orders · **Import shipments** · **Customs & permits** · **Landed cost**
+**Production** — Work orders · Shop floor · **Production reporting** (lapor produksi) · Kiln drying · **Subcontracting** · **Maintenance** · Quality
+**Materials & Import** — Item master · Inventory & lots · **Material conversion** (raw into semi-finished, ours or a third party's) · **Offcuts & remnants** (bahan sisa) · Suppliers (with qualification, certificates and the agreed price list) · **Requisitions** (the approval ladder) · Purchase orders · **Goods receipt** (penerimaan barang) · **Import shipments** · **Customs & permits** · **Landed cost**
 **Finance** — Costing & variance · Invoices & bills · **Receipts & payments** · General ledger · Chart of accounts · Financial reports
 **Insight** — Operations analytics · Settings & audit
+
+Arriving is not the same as being in stock. A **goods receipt** passes through counting, quarantine
+and put-away, and only the last of those makes anything issuable — which is also the only thing that
+moves a purchase order line, so until it happens MRP is right to keep counting the order as supply
+still to come. Every discrepancy has a name and somebody to charge it to, and timber that lands
+outside its moisture band is blocked at the kiln gate on arrival whatever the delivery note says.
+
+**Production reporting** is the other half of the same idea: until an operator books an output there
+is no scrap, no actual labour and no real yield, only a plan with a tick against it. A booking writes
+the scrap into the work order at the operation that caused it, the hours into its actual cost, and
+the output into stock — and material drawn and not used comes back, as stock if it is whole and onto
+the offcut rack if it is not.
 
 Between buying a cubic metre and building a wardrobe the material changes shape — ripped, nested,
 pressed, resawn or dried — and it does so on our own floor or at somebody else's. **Conversion**

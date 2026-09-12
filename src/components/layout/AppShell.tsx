@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { claimIsOpen, deliveryIsOpen, quoteIsLive } from '@/lib/commerce'
 import { maintenanceIsOpen, maintenanceStatusNow, subcontractIsOpen } from '@/lib/operations'
 import { conversionIsOpen, remnantState } from '@/lib/conversion'
+import { receiptIsOpen } from '@/data/reference'
 import { Segmented } from '@/components/ui/checkbox'
 import { useTheme } from '@/hooks/useTheme'
 import { useMfg } from '@/store/useMfg'
@@ -94,6 +95,8 @@ export function AppShell() {
     payments: store.payments.filter((p) => p.status === 'PENDING_APPROVAL' || p.status === 'BOUNCED').length,
     conversion: store.conversionOrders.filter((o) => conversionIsOpen(o.status)).length,
     remnants: store.remnants.filter((r) => remnantState(r).ageing).length,
+    receiving: store.goodsReceipts.filter((r) => receiptIsOpen(r.status)).length,
+    reporting: store.workOrders.filter((w) => w.status === 'IN_PROGRESS').length,
   }
 
   /* the rail says where you can go; the breadcrumb says where you are */
@@ -160,7 +163,7 @@ export function AppShell() {
               <div className="space-y-[3px]">
                 {group.items.map((item) => {
                   const count = item.badgeKey ? badges[item.badgeKey] : 0
-                  const loud = ['overdue', 'customs', 'exceptions', 'claims', 'maintenance', 'remnants'].includes(item.badgeKey ?? '')
+                  const loud = ['overdue', 'customs', 'exceptions', 'claims', 'maintenance', 'remnants', 'receiving'].includes(item.badgeKey ?? '')
                   const link = (
                     <NavLink
                       key={item.to}

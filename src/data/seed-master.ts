@@ -5,7 +5,7 @@
  */
 
 import type {
-  AppSettings, CompanyProfile, Customer, Item, Product, Supplier, Warehouse, WorkCentre,
+  AppSettings, CompanyProfile, Customer, Item, Product, Supplier, SupplierCertificate, Warehouse, WorkCentre,
 } from './types'
 import { FX_RATES, KPI_TARGETS_DEFAULT, NDPBM_RATES } from './reference'
 import { d } from './clock'
@@ -83,9 +83,21 @@ export const workCentres: WorkCentre[] = [
    Suppliers
    ================================================================== */
 
+/** A certificate, written relative to today so the expiry clock is always live. */
+const C = (kind: SupplierCertificate['kind'], number: string, issuer: string, issued: number, expires: number, note?: string): SupplierCertificate => ({
+  id: `cert_${kind.toLowerCase()}_${number.replace(/[^a-z0-9]/gi, '').slice(-6)}`,
+  kind, number, issuer, issuedAt: d(issued), expiresAt: d(expires), note,
+})
+
 export const suppliers: Supplier[] = [
   {
     id: 'sup_hettich', code: 'SUP-1001', name: 'Hettich Marketing und Vertriebs GmbH', kind: 'OVERSEAS',
+    approvalStatus: 'APPROVED', approvedAt: d(-1180), lastAuditAt: d(-214), nextAuditDue: d(516),
+    taxId: 'DE 811 907 980', bankName: 'Commerzbank AG', bankAccountNo: 'DE44 4908 0025 0219 8402 00',
+    certificates: [
+      C('ISO_9001', '12 100 41827 TMS', 'TÜV Süd', -418, 677),
+      C('FSC_COC', 'SGS-COC-006418', 'SGS', -302, 793),
+    ],
     country: 'DE', city: 'Kirchlengern', currency: 'EUR', incoterm: 'FOB', paymentInstrument: 'LC_SIGHT',
     paymentTermDays: 0, leadDays: 35, contact: 'Anke Brinkmann', email: 'export@hettich.example',
     laneHistory: { green: 14, yellow: 3, red: 1 }, avgClearanceDays: 2.4,
@@ -94,6 +106,13 @@ export const suppliers: Supplier[] = [
   },
   {
     id: 'sup_dtc', code: 'SUP-1002', name: 'Guangdong DTC Hardware Co., Ltd', kind: 'OVERSEAS',
+    approvalStatus: 'CONDITIONAL', approvedAt: d(-742), lastAuditAt: d(-96), nextAuditDue: d(269),
+    openFinding: 'Packing list and commercial invoice disagreed on four of the last nine consignments. Until three clean shipments run, every DTC consignment is counted line by line at the gate rather than sampled.',
+    taxId: '91440600MA4W1L2X8K', bankName: 'Bank of China, Foshan', bankAccountNo: '6215 8100 0004 9182',
+    certificates: [
+      C('ISO_9001', 'CN-QMS-20841', 'CQC', -601, 129),
+      C('BSCI', 'BSCI-CN-118204', 'amfori', -280, 85),
+    ],
     country: 'CN', city: 'Foshan', currency: 'USD', incoterm: 'FOB', paymentInstrument: 'TT_30',
     paymentTermDays: 30, leadDays: 28, contact: 'Vicky Lam', email: 'sales@dtc.example',
     laneHistory: { green: 9, yellow: 8, red: 4 }, avgClearanceDays: 5.8,
@@ -102,6 +121,13 @@ export const suppliers: Supplier[] = [
   },
   {
     id: 'sup_bison', code: 'SUP-1003', name: 'Bison Panel Sdn Bhd', kind: 'OVERSEAS',
+    approvalStatus: 'APPROVED', approvedAt: d(-968), lastAuditAt: d(-158), nextAuditDue: d(572),
+    taxId: '201801029184 (1288471-K)', bankName: 'Maybank Berhad', bankAccountNo: '5140 1822 9104',
+    certificates: [
+      C('CARB_P2', 'CARB-P2-TPC-8841', 'TPC Certification', -344, 386),
+      C('ISO_9001', 'MY-9001-44180', 'SIRIM QAS', -520, 210),
+      C('PEFC', 'PEFC/44-31-118', 'SGS Malaysia', -410, 320),
+    ],
     country: 'MY', city: 'Port Klang', currency: 'USD', incoterm: 'CFR', paymentInstrument: 'LC_USANCE_90',
     paymentTermDays: 90, leadDays: 21, contact: 'Lim Wei Sheng', email: 'export@bisonpanel.example',
     laneHistory: { green: 11, yellow: 5, red: 2 }, avgClearanceDays: 3.6,
@@ -110,6 +136,13 @@ export const suppliers: Supplier[] = [
   },
   {
     id: 'sup_baillie', code: 'SUP-1004', name: 'Baillie Lumber Co.', kind: 'OVERSEAS',
+    approvalStatus: 'APPROVED', approvedAt: d(-1420), lastAuditAt: d(-388), nextAuditDue: d(-23),
+    openFinding: 'Audit is twenty-three days overdue. Nothing is wrong with them — the visit simply has not been booked, and an expired qualification is an argument waiting to happen at an export buyer’s own audit.',
+    taxId: '16-0966444', bankName: 'M&T Bank', bankAccountNo: '9841 0022 7714',
+    certificates: [
+      C('FSC_COC', 'NC-COC-012844', 'NEPCon', -298, 432),
+      C('ISO_9001', 'US-QMS-72104', 'BSI Americas', -690, 40),
+    ],
     country: 'US', city: 'Hamburg, New York', currency: 'USD', incoterm: 'CIF', paymentInstrument: 'LC_SIGHT',
     paymentTermDays: 0, leadDays: 42, contact: 'Ryan Kessler', email: 'export@baillie.example',
     laneHistory: { green: 6, yellow: 4, red: 3 }, avgClearanceDays: 6.9,
@@ -118,6 +151,12 @@ export const suppliers: Supplier[] = [
   },
   {
     id: 'sup_sayerlack', code: 'SUP-1005', name: 'Sayerlack — Sherwin-Williams Italy S.r.l.', kind: 'OVERSEAS',
+    approvalStatus: 'APPROVED', approvedAt: d(-1102), lastAuditAt: d(-271), nextAuditDue: d(459),
+    taxId: 'IT 02241890374', bankName: 'Intesa Sanpaolo', bankAccountNo: 'IT60 X054 2811 1010 0000 0123 456',
+    certificates: [
+      C('ISO_9001', 'IT-9001-88210', 'Bureau Veritas', -380, 350),
+      C('ISO_14001', 'IT-14001-88211', 'Bureau Veritas', -380, 350),
+    ],
     country: 'IT', city: 'Pianoro', currency: 'EUR', incoterm: 'FOB', paymentInstrument: 'TT_ADVANCE',
     paymentTermDays: 0, leadDays: 38, contact: 'Giulia Ferrari', email: 'export@sayerlack.example',
     laneHistory: { green: 3, yellow: 6, red: 5 }, avgClearanceDays: 8.2,
@@ -126,6 +165,13 @@ export const suppliers: Supplier[] = [
   },
   {
     id: 'sup_foshanfab', code: 'SUP-1006', name: 'Foshan Yinlong Textile Co., Ltd', kind: 'OVERSEAS',
+    approvalStatus: 'PROBATION', approvedAt: d(-620), lastAuditAt: d(-44), nextAuditDue: d(136),
+    openFinding: 'Colour lots drifted outside the agreed Delta-E on two consecutive shipments, and eighteen metres were lost on their cutting plan at the maklon run. On probation: every delivery inspected in full, no sampling, until two consecutive clean receipts.',
+    taxId: '91440600MA51T8N24P', bankName: 'ICBC Foshan', bankAccountNo: '2010 0041 0920 1188',
+    certificates: [
+      C('BSCI', 'BSCI-CN-90412', 'amfori', -190, 175),
+      C('ISO_9001', 'CN-QMS-77120', 'CQC', -840, -44),
+    ],
     country: 'CN', city: 'Foshan', currency: 'CNY', incoterm: 'FOB', paymentInstrument: 'TT_30',
     paymentTermDays: 30, leadDays: 24, contact: 'Chen Hui', email: 'export@yinlong.example',
     laneHistory: { green: 7, yellow: 4, red: 1 }, avgClearanceDays: 3.9,
@@ -134,6 +180,12 @@ export const suppliers: Supplier[] = [
   },
   {
     id: 'sup_perhutani', code: 'SUP-2001', name: 'Perum Perhutani KPH Randublatung', kind: 'LOCAL',
+    approvalStatus: 'APPROVED', approvedAt: d(-1640), lastAuditAt: d(-121), nextAuditDue: d(609),
+    taxId: '01.001.634.1-093.000', bankName: 'Bank Mandiri', bankAccountNo: '140-00-0442118-3',
+    certificates: [
+      C('SVLK', 'SVLK-IDN-04418', 'PT Mutuagung Lestari', -412, 683, 'The chain of custody the whole export line stands on. Without it no DIPK, no Form D, and no V-Legal document on any container.'),
+      C('FSC_FM', 'SCS-FM/COC-004180', 'SCS Global', -300, 795),
+    ],
     country: 'ID', city: 'Blora', currency: 'IDR', incoterm: 'EXW', paymentInstrument: 'TT_ADVANCE',
     paymentTermDays: 0, leadDays: 14, contact: 'Pak Darmawan', email: 'penjualan@perhutani.example',
     laneHistory: { green: 0, yellow: 0, red: 0 }, avgClearanceDays: 0,
@@ -142,6 +194,10 @@ export const suppliers: Supplier[] = [
   },
   {
     id: 'sup_jatimakmur', code: 'SUP-2002', name: 'CV Jati Makmur Sentosa', kind: 'LOCAL',
+    approvalStatus: 'PENDING_AUDIT', approvedAt: d(-410), nextAuditDue: d(9),
+    openFinding: 'Community-forest timber with no SVLK of their own — we carry the chain of custody, which means we carry the risk. Qualification audit due in nine days and nothing may be ordered for the export line from them until it closes.',
+    taxId: '02.884.117.9-508.000', bankName: 'Bank BRI', bankAccountNo: '0084-01-002418-53-7',
+    certificates: [],
     country: 'ID', city: 'Jepara', currency: 'IDR', incoterm: 'DAP', paymentInstrument: 'OPEN_ACCOUNT',
     paymentTermDays: 30, leadDays: 10, contact: 'Pak Sugiyanto', email: 'sales@jatimakmur.example',
     laneHistory: { green: 0, yellow: 0, red: 0 }, avgClearanceDays: 0,
@@ -150,6 +206,9 @@ export const suppliers: Supplier[] = [
   },
   {
     id: 'sup_kemasan', code: 'SUP-2003', name: 'PT Indo Karton Prima', kind: 'LOCAL',
+    approvalStatus: 'APPROVED', approvedAt: d(-880), lastAuditAt: d(-204), nextAuditDue: d(526),
+    taxId: '01.774.208.4-092.000', bankName: 'Bank BCA', bankAccountNo: '084-3311-8842',
+    certificates: [C('ISO_9001', 'ID-9001-12048', 'SUCOFINDO', -466, 264)],
     country: 'ID', city: 'Ungaran', currency: 'IDR', incoterm: 'DAP', paymentInstrument: 'OPEN_ACCOUNT',
     paymentTermDays: 45, leadDays: 7, contact: 'Ibu Yuliana', email: 'order@indokarton.example',
     laneHistory: { green: 0, yellow: 0, red: 0 }, avgClearanceDays: 0,
@@ -158,6 +217,10 @@ export const suppliers: Supplier[] = [
   },
   {
     id: 'sup_ukirjaya', code: 'SUP-2004', name: 'UD Ukir Jaya (makloon ukir)', kind: 'LOCAL',
+    approvalStatus: 'PROBATION', approvedAt: d(-1240), lastAuditAt: d(-62), nextAuditDue: d(118),
+    openFinding: 'Sixty-eight per cent on time, and SC-2026-0081 is four days past due with eleven sets still on their floor. On probation: no new carving order is issued until the outstanding one comes back.',
+    taxId: '74.118.204.2-506.000', bankName: 'Bank BNI', bankAccountNo: '0118-4420-19',
+    certificates: [],
     country: 'ID', city: 'Jepara', currency: 'IDR', incoterm: 'EXW', paymentInstrument: 'OPEN_ACCOUNT',
     paymentTermDays: 14, leadDays: 12, contact: 'Pak Marno', email: '—',
     laneHistory: { green: 0, yellow: 0, red: 0 }, avgClearanceDays: 0,
@@ -166,6 +229,9 @@ export const suppliers: Supplier[] = [
   },
   {
     id: 'sup_kacapratama', code: 'SUP-2005', name: 'PT Kaca Pratama Nusantara', kind: 'LOCAL',
+    approvalStatus: 'APPROVED', approvedAt: d(-700), lastAuditAt: d(-171), nextAuditDue: d(559),
+    taxId: '31.442.118.0-411.000', bankName: 'Bank Permata', bankAccountNo: '4201-8841-02',
+    certificates: [C('SNI', 'SNI 15-0047-2005 / LSPro-014', 'BSN', -390, 340)],
     country: 'ID', city: 'Semarang', currency: 'IDR', incoterm: 'DAP', paymentInstrument: 'TT_30',
     paymentTermDays: 30, leadDays: 12, contact: 'Pak Iwan', email: 'sales@kacapratama.example',
     laneHistory: { green: 0, yellow: 0, red: 0 }, avgClearanceDays: 0,

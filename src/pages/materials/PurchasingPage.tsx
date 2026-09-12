@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { CheckCircle2, PackageSearch, Send, TriangleAlert } from 'lucide-react'
 import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { Because, StatusBadge } from '@/components/shared/status'
@@ -19,6 +19,7 @@ import { TODAY } from '@/data/clock'
 
 export function PurchasingPage() {
   const s = useMfg()
+  const navigate = useNavigate()
   const toast = useToast()
   const [status, setStatus] = React.useState<string[]>([])
   const [kind, setKind] = React.useState<string[]>([])
@@ -247,6 +248,7 @@ export function PurchasingPage() {
         entityLabel="purchase order"
         exportName="purchase-orders"
         storageKey="purchasing"
+        onRowClick={(p) => navigate(`/purchasing/${p.id}`)}
         searchText={(p) => `${p.code} ${s.suppliers.find((x) => x.id === p.supplierId)?.name ?? ''} ${p.note ?? ''}`}
         initialSort={{ key: 'required', dir: 'asc' }}
         rowTone={(p) => (!['CLOSED', 'CANCELLED'].includes(p.status) && !gateFor(p).ok ? 'bg-danger-soft/25' : undefined)}

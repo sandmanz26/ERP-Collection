@@ -14,6 +14,7 @@ import type {
   Supplier, Warehouse, WorkCentre, WorkOrder,
   BankAccount, Claim, Delivery, MaintenanceOrder, Payment, PurchaseRequisition, Quotation,
   SubcontractOrder, ConversionOrder, Remnant,
+  GoodsReceipt, MaterialReturn, ProductionEntry, SupplierItem,
 } from '@/data/types'
 import { company as seedCompany, customers as seedCustomers, defaultSettings, items as seedItems, products as seedProducts, suppliers as seedSuppliers, warehouses as seedWarehouses, workCentres as seedWorkCentres } from '@/data/seed-master'
 import { boms as seedBoms, routings as seedRoutings } from '@/data/seed-engineering'
@@ -23,6 +24,8 @@ import { accounts as seedAccounts, invoices as seedInvoices, journal as seedJour
 import { bankAccounts as seedBankAccounts, claims as seedClaims, deliveries as seedDeliveries, payments as seedPayments, quotations as seedQuotations } from '@/data/seed-commerce'
 import { maintenanceOrders as seedMaintenance, requisitions as seedRequisitions, subcontractOrders as seedSubcontract } from '@/data/seed-operations'
 import { conversionOrders as seedConversions, remnants as seedRemnants, semiFinishedLots as seedSemiLots } from '@/data/seed-conversion'
+import { goodsReceipts as seedReceipts, materialReturns as seedReturns, productionEntries as seedEntries, supplierItems as seedSupplierItems } from '@/data/seed-purchasing'
+import { applyReceiptsToOrders } from '@/lib/receiving'
 import { deliveryCountsAgainstOrder } from '@/data/reference'
 import { buildApprovals, requisitionValue } from '@/lib/operations'
 import { nextCode, uid } from '@/lib/utils'
@@ -50,6 +53,7 @@ export type EntityKey =
   | 'salesOrders' | 'workOrders' | 'kilnBatches' | 'qcRecords' | 'accounts' | 'journal' | 'invoices'
   | 'quotations' | 'deliveries' | 'claims' | 'payments' | 'bankAccounts' | 'requisitions'
   | 'maintenanceOrders' | 'subcontractOrders' | 'conversionOrders' | 'remnants'
+  | 'goodsReceipts' | 'supplierItems' | 'productionEntries' | 'materialReturns'
 
 interface MfgState {
   customers: Customer[]
@@ -82,6 +86,10 @@ interface MfgState {
   subcontractOrders: SubcontractOrder[]
   conversionOrders: ConversionOrder[]
   remnants: Remnant[]
+  goodsReceipts: GoodsReceipt[]
+  supplierItems: SupplierItem[]
+  productionEntries: ProductionEntry[]
+  materialReturns: MaterialReturn[]
   mrpRuns: MrpRun[]
   company: CompanyProfile
   settings: AppSettings
@@ -136,6 +144,19 @@ interface MfgState {
   consumeRemnant: (id: string) => void
   writeOffRemnant: (id: string, reason: string) => void
   releaseRemnant: (id: string) => void
+
+  /* receiving */
+  startCounting: (id: string) => void
+  recordReceiptLine: (receiptId: string, lineId: string, delivered: number, accepted: number, discrepancy: GoodsReceipt['lines'][number]['discrepancy'], note?: string) => void
+  acceptReceipt: (id: string) => void
+  passReceiptQc: (id: string) => void
+  putAwayReceipt: (id: string, warehouseId?: string) => void
+  rejectReceipt: (id: string, reason: string) => void
+
+  /* production reporting */
+  reportProduction: (entry: Omit<ProductionEntry, 'id' | 'code'>) => void
+  returnMaterial: (workOrderId: string, materialIssueId: string, quantity: number, reason: MaterialReturn['reason'], asRemnant: boolean) => void
+  setSupplierApproval: (id: string, status: Supplier['approvalStatus'], finding?: string) => void
   receiveSubcontract: (id: string, returned: Record<string, number>, loss: Record<string, number>) => void
   updateSettings: (patch: Partial<AppSettings>) => void
   updateCompany: (patch: Partial<CompanyProfile>) => void
@@ -146,6 +167,10 @@ interface MfgState {
 const newCollections = () => ({
   conversionOrders: seedConversions,
   remnants: seedRemnants,
+  goodsReceipts: seedReceipts,
+  supplierItems: seedSupplierItems,
+  productionEntries: seedEntries,
+  materialReturns: seedReturns,
   quotations: seedQuotations,
   deliveries: seedDeliveries,
   claims: seedClaims,
@@ -167,7 +192,8 @@ const seed = () => ({
   warehouses: seedWarehouses,
   lots: [...seedLots, ...seedSemiLots],
   movements: seedMovements,
-  purchaseOrders: seedPurchaseOrders,
+  /* the receipts are the truth; the orders are folded onto them so the two cannot drift */
+  purchaseOrders: applyReceiptsToOrders(seedPurchaseOrders, seedReceipts),
   shipments: seedShipments,
   permits: seedPermits,
   salesOrders: seedSalesOrders,
@@ -903,6 +929,292 @@ export const useMfg = create<MfgState>()(
           ),
         })),
 
+
+      /* ---------------- receiving ---------------- */
+
+      startCounting: (id) =>
+        set((s) => {
+          const r = s.goodsReceipts.find((x) => x.id === id)
+          if (r) get().log('Counting', 'Goods receipt', `${r.code} being checked against ${r.supplierDeliveryNote ?? 'the delivery note'}.`)
+          return { goodsReceipts: s.goodsReceipts.map((x) => (x.id === id ? { ...x, status: 'COUNTING' as const } : x)) }
+        }),
+
+      recordReceiptLine: (receiptId, lineId, delivered, accepted, discrepancy, note) =>
+        set((s) => ({
+          goodsReceipts: s.goodsReceipts.map((r) =>
+            r.id === receiptId
+              ? {
+                  ...r,
+                  lines: r.lines.map((l) =>
+                    l.id === lineId
+                      ? { ...l, deliveredQuantity: delivered, acceptedQuantity: accepted, rejectedQuantity: Math.max(0, delivered - accepted), discrepancy, discrepancyNote: note ?? l.discrepancyNote }
+                      : l,
+                  ),
+                }
+              : r,
+          ),
+        })),
+
+      /**
+       * Accepting takes the goods onto the books — but into quarantine, not into
+       * stock. An item that needs incoming inspection is inventory we own and
+       * cannot issue, and saying so is the whole point of having the state.
+       */
+      acceptReceipt: (id) =>
+        set((s) => {
+          const r = s.goodsReceipts.find((x) => x.id === id)
+          if (!r) return {}
+          get().log(
+            'Accepted', 'Goods receipt',
+            r.qcRequired
+              ? `${r.code} counted and taken into quarantine pending inspection.`
+              : `${r.code} counted. No incoming inspection needed, so it can be racked straight away.`,
+          )
+          return {
+            goodsReceipts: s.goodsReceipts.map((x) =>
+              x.id === id ? { ...x, status: 'AWAITING_QC' as const, qcPassedAt: r.qcRequired ? x.qcPassedAt : TODAY } : x,
+            ),
+          }
+        }),
+
+      passReceiptQc: (id) =>
+        set((s) => {
+          const r = s.goodsReceipts.find((x) => x.id === id)
+          if (r) get().log('Passed', 'Incoming QC', `${r.code} cleared inspection.`)
+          return { goodsReceipts: s.goodsReceipts.map((x) => (x.id === id ? { ...x, qcPassedAt: TODAY } : x)) }
+        }),
+
+      /**
+       * Put-away is the moment bought becomes owned *and* issuable: it creates the
+       * lot, writes the stock movement, and moves the purchase order line on. Until
+       * this runs, MRP is right to keep counting the order as supply still to come.
+       */
+      putAwayReceipt: (id, warehouseId) =>
+        set((s) => {
+          const r = s.goodsReceipts.find((x) => x.id === id)
+          if (!r) return {}
+          const accepted = r.lines.filter((l) => l.acceptedQuantity > 0)
+          const newLots: Lot[] = accepted.map((l) => {
+            const item = s.items.find((i) => i.id === l.itemId)
+            const wh = warehouseId ?? l.warehouseId ?? (item?.type === 'SOLID_TIMBER' ? 'wh_kiln' : 'wh_raw')
+            /* timber that landed outside its moisture band is blocked at the kiln
+               gate, whatever the paperwork says */
+            const outOfBand = l.moisturePercent !== undefined
+              && item?.targetMoistureMax !== undefined
+              && l.moisturePercent > item.targetMoistureMax
+            return {
+              id: uid('lot'),
+              code: `LOT-${r.code}-${l.id.slice(-2)}`,
+              itemId: l.itemId,
+              warehouseId: wh,
+              quantity: l.acceptedQuantity,
+              reserved: 0,
+              status: outOfBand ? ('BLOCKED_KILN' as const) : ('AVAILABLE' as const),
+              receivedAt: TODAY,
+              unitCost: l.orderUnitPrice,
+              costIsProvisional: !!r.shipmentId,
+              supplierId: r.supplierId,
+              shipmentId: r.shipmentId,
+              species: item?.species,
+              moisturePercent: l.moisturePercent,
+              note: outOfBand
+                ? `Landed at ${l.moisturePercent}% against a ${item?.targetMoistureMin}–${item?.targetMoistureMax}% band. Blocked until a kiln batch closes it inside the band.`
+                : `Put away from ${r.code}.`,
+            }
+          })
+
+          get().log('Put away', 'Goods receipt', `${r.code} racked — ${newLots.length} lot(s) created and now issuable.`)
+          return {
+            goodsReceipts: s.goodsReceipts.map((x) =>
+              x.id === id
+                ? {
+                    ...x,
+                    status: 'PUT_AWAY' as const,
+                    putAwayAt: TODAY,
+                    qcPassedAt: x.qcPassedAt ?? TODAY,
+                    lines: x.lines.map((l) => {
+                      const i = accepted.indexOf(l)
+                      return i < 0 ? l : { ...l, lotId: newLots[i].id, warehouseId: newLots[i].warehouseId }
+                    }),
+                  }
+                : x,
+            ),
+            lots: [...newLots, ...s.lots],
+            movements: [
+              ...accepted.map((l) => ({
+                id: uid('mv'), at: TODAY, kind: 'RECEIPT' as const, itemId: l.itemId,
+                warehouseId: warehouseId ?? l.warehouseId ?? 'wh_raw',
+                quantity: l.acceptedQuantity, unitCost: l.orderUnitPrice,
+                reference: r.code, shipmentId: r.shipmentId, actor: actor(),
+                note: l.discrepancy !== 'NONE' ? `${l.discrepancy.toLowerCase()} — ${l.discrepancyNote ?? ''}` : undefined,
+              })),
+              ...s.movements,
+            ],
+            /* and the order line finally moves, which is what stops MRP counting it twice */
+            purchaseOrders: s.purchaseOrders.map((po) => {
+              if (po.id !== r.purchaseOrderId) return po
+              const lines = po.lines.map((pl) => {
+                const got = accepted.filter((l) => l.itemId === pl.itemId).reduce((a, l) => a + l.acceptedQuantity, 0)
+                return got > 0 ? { ...pl, receivedQuantity: pl.receivedQuantity + got } : pl
+              })
+              const all = lines.every((l) => l.receivedQuantity >= l.quantity)
+              return { ...po, lines, status: all ? ('RECEIVED' as const) : ('PARTIALLY_RECEIVED' as const) }
+            }),
+          }
+        }),
+
+      rejectReceipt: (id, reason) =>
+        set((s) => {
+          const r = s.goodsReceipts.find((x) => x.id === id)
+          if (r) get().log('Rejected', 'Goods receipt', `${r.code} refused — ${reason}`)
+          return {
+            goodsReceipts: s.goodsReceipts.map((x) =>
+              x.id === id
+                ? { ...x, status: 'REJECTED' as const, note: reason, lines: x.lines.map((l) => ({ ...l, acceptedQuantity: 0, rejectedQuantity: l.deliveredQuantity })) }
+                : x,
+            ),
+          }
+        }),
+
+      /* ---------------- production reporting ---------------- */
+
+      /**
+       * The booking that makes every downstream number real. Before this existed
+       * an operation was ticked done and assumed 100% good — scrap could not be
+       * reported at all, and actual labour was the planned figure wearing a hat.
+       */
+      reportProduction: (entry) =>
+        set((s) => {
+          const code = nextCode('PR', s.productionEntries.map((e) => e.code), 4, true)
+          const row: ProductionEntry = { ...entry, id: uid('pe'), code }
+          const wo = s.workOrders.find((w) => w.id === entry.workOrderId)
+          const centre = s.workCentres.find((c) => c.id === entry.workCentreId)
+          get().log(
+            'Booked', 'Production',
+            `${code} on ${wo?.code ?? 'a work order'} op ${entry.operationNo}: ${entry.goodQuantity} good${entry.scrapQuantity ? `, ${entry.scrapQuantity} scrap` : ''}${entry.reworkQuantity ? `, ${entry.reworkQuantity} rework` : ''}.`,
+          )
+          return {
+            productionEntries: [row, ...s.productionEntries],
+            workOrders: s.workOrders.map((w) => {
+              if (w.id !== entry.workOrderId) return w
+              const operations = w.operations.map((op) =>
+                op.operationNo === entry.operationNo
+                  ? {
+                      ...op,
+                      quantityDone: op.quantityDone + entry.goodQuantity,
+                      quantityScrapped: op.quantityScrapped + entry.scrapQuantity,
+                      actualHours: (op.actualHours ?? 0) + entry.labourHours,
+                      actualStart: op.actualStart ?? TODAY,
+                      operator: entry.operator,
+                      status: op.quantityDone + entry.goodQuantity >= w.quantity - w.quantityScrapped - entry.scrapQuantity
+                        ? ('DONE' as const)
+                        : ('RUNNING' as const),
+                    }
+                  : op,
+              )
+              const last = w.operations[w.operations.length - 1]
+              const isFinal = entry.operationNo === last?.operationNo
+              const labour = entry.labourHours * (centre?.labourRatePerHour ?? 0)
+              const overhead = entry.labourHours * (centre?.overheadRatePerHour ?? 0)
+              return {
+                ...w,
+                operations,
+                quantityScrapped: w.quantityScrapped + entry.scrapQuantity,
+                quantityDone: isFinal ? w.quantityDone + entry.goodQuantity : w.quantityDone,
+                actualLabourCost: w.actualLabourCost + labour,
+                actualOverheadCost: w.actualOverheadCost + overhead,
+                actualStart: w.actualStart ?? TODAY,
+                status: w.status === 'RELEASED' || w.status === 'FIRM' ? ('IN_PROGRESS' as const) : w.status,
+              }
+            }),
+            movements: entry.goodQuantity > 0
+              ? [
+                  {
+                    id: uid('mv'), at: TODAY, kind: 'PRODUCTION_OUTPUT' as const,
+                    productId: wo?.productId, warehouseId: 'wh_wip',
+                    quantity: entry.goodQuantity, unitCost: 0,
+                    reference: code, workOrderId: entry.workOrderId, actor: actor(),
+                  },
+                  ...s.movements,
+                ]
+              : s.movements,
+          }
+        }),
+
+      /**
+       * Material drawn for a job and put back. Full pieces go back as stock;
+       * anything already cut goes on the offcut rack, because a cut board is not
+       * the same thing as the board it came from.
+       */
+      returnMaterial: (workOrderId, materialIssueId, quantity, reason, asRemnant) =>
+        set((s) => {
+          const wo = s.workOrders.find((w) => w.id === workOrderId)
+          const issue = wo?.materials.find((m) => m.id === materialIssueId)
+          if (!wo || !issue) return {}
+          const item = s.items.find((i) => i.id === issue.itemId)
+          const code = nextCode('MRT', s.materialReturns.map((r) => r.code), 4, true)
+          const row: MaterialReturn = {
+            id: uid('mr'), code, workOrderId, materialIssueId, itemId: issue.itemId,
+            description: item?.name ?? issue.itemId, quantity, uom: issue.uom,
+            unitCost: issue.unitCost, reason, asRemnant, warehouseId: 'wh_raw',
+            at: TODAY, returnedBy: actor(),
+          }
+          get().log('Returned', 'Material', `${code} — ${quantity} ${issue.uom} of ${item?.name ?? ''} back to the store.`)
+          return {
+            materialReturns: [row, ...s.materialReturns],
+            workOrders: s.workOrders.map((w) =>
+              w.id === workOrderId
+                ? {
+                    ...w,
+                    materials: w.materials.map((m) =>
+                      m.id === materialIssueId ? { ...m, issuedQuantity: Math.max(0, m.issuedQuantity - quantity) } : m,
+                    ),
+                    actualMaterialCost: Math.max(0, w.actualMaterialCost - quantity * issue.unitCost),
+                  }
+                : w,
+            ),
+            remnants: asRemnant
+              ? [
+                  {
+                    id: uid('rmn'), code: `RMN-${code}`, itemId: issue.itemId,
+                    offcutItemId: issue.uom === 'm2' || issue.uom === 'sheet' ? 'it_oc_sheet' : 'it_oc_solid',
+                    warehouseId: 'wh_raw', status: 'AVAILABLE' as const,
+                    sourceWorkOrderId: workOrderId, createdAt: TODAY,
+                    species: item?.species, quantity, uom: issue.uom,
+                    parentUnitCost: issue.unitCost, valueFactor: 0.6,
+                    note: `Came back off ${wo.code}, already cut. Racked at 60% rather than returned as full stock.`,
+                  },
+                  ...s.remnants,
+                ]
+              : s.remnants,
+            lots: asRemnant
+              ? s.lots
+              : s.lots.map((l) => (l.id === issue.lotId ? { ...l, quantity: l.quantity + quantity } : l)),
+            movements: [
+              {
+                id: uid('mv'), at: TODAY, kind: 'RETURN' as const, itemId: issue.itemId,
+                warehouseId: 'wh_raw', quantity, unitCost: issue.unitCost,
+                reference: code, workOrderId, actor: actor(),
+                note: asRemnant ? 'Already cut, so racked as an offcut rather than returned to stock.' : undefined,
+              },
+              ...s.movements,
+            ],
+          }
+        }),
+
+      setSupplierApproval: (id, status, finding) =>
+        set((s) => {
+          const sup = s.suppliers.find((x) => x.id === id)
+          if (sup) get().log('Qualification', 'Supplier', `${sup.name} set to ${status.replace(/_/g, ' ').toLowerCase()}.`)
+          return {
+            suppliers: s.suppliers.map((x) =>
+              x.id === id
+                ? { ...x, approvalStatus: status, openFinding: finding ?? x.openFinding, approvedAt: status === 'APPROVED' ? TODAY : x.approvedAt }
+                : x,
+            ),
+          }
+        }),
+
       recordMrpRun: (run) => set((s) => ({ mrpRuns: [run, ...s.mrpRuns].slice(0, 30) })),
 
       updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
@@ -912,14 +1224,14 @@ export const useMfg = create<MfgState>()(
     }),
     {
       name: 'wanakarya-mfg',
-      version: 2,
+      version: 3,
       /**
        * A book saved before the commercial and operations modules existed has no
        * quotations, deliveries or maintenance in it. Rather than discard the user's
        * edits, fold the new collections in from seed and keep everything else.
        */
       migrate: (persisted, from) => {
-        if (from >= 2) return persisted as MfgState
+        if (from >= 3) return persisted as MfgState
         return { ...seed(), ...(persisted as object), ...newCollections() } as MfgState
       },
     },

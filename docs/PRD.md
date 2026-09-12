@@ -101,8 +101,10 @@ The suite also carries the loops that turn those cores into a business anyone ca
 purchase order** (an approval ladder decided by value, and the lead time the waiting costs),
 **maintenance** (downtime netted off capacity before the schedule promises it) and
 **subcontracting** (our stock, on somebody else's floor), **conversion** (raw material changing
-shape into semi-finished, on our floor or a third party's) and the **offcut rack** (bahan sisa —
-material that is already cut and already paid for).
+shape into semi-finished, on our floor or a third party's), the **offcut rack** (bahan sisa —
+material that is already cut and already paid for), **goods receipt** (penerimaan barang — count,
+inspect, put away), **supplier qualification** (approval, certificates and the agreed price list)
+and **production reporting** (lapor produksi — output, scrap, hours and material returned).
 
 **Out.** No backend. Everything lives in the browser (Zustand + `localStorage`) against a seeded
 operating book. No real CEISA, SILK, INSW or bank integration — those are modelled as records and
@@ -370,6 +372,55 @@ not merely reported.
 45. **A delivery is full or it is partial, and the difference is recorded.** A partial load leaves a
     backorder with a reason attached, and the customer is told what follows and on which sailing.
 
+**Receiving**
+
+46. **Arriving is not the same as being in stock.** A receipt passes through counting, quarantine and
+    put-away, and only the last of those makes anything issuable. Material in quarantine is
+    inventory we own and cannot use — the worst of both, and the page says so.
+47. **A purchase order line moves when a receipt is put away, and at no other time.** Not when a
+    lorry arrives, not when a status is changed. Until then MRP is right to keep counting the order
+    as supply still to come.
+48. **Every discrepancy has a name and somebody to charge it to.** Short, over, damaged, wrong item,
+    off specification, late, paperwork missing — and damage is only the carrier's problem if it was
+    noted on the driver's copy before signing.
+49. **Timber that lands outside its moisture band is blocked at the kiln gate on receipt**, whatever
+    the delivery note says. Kiln-dried at origin to 7% does not survive a container crossing the
+    equator.
+50. **Three-way match.** Ordered, received, invoiced. A bill with no receipt behind it is not paid,
+    and a bill that exceeds what was accepted is queried before it is posted.
+
+**Supplier qualification and price**
+
+51. **A supplier is approved, conditional, pending audit, on probation or suspended** — and only the
+    first two may be ordered from. An order placed under a suspended qualification is the first
+    thing an export buyer's own audit finds.
+52. **A lapsed certificate blocks the order, not just the file.** Without SVLK in the chain there is
+    no V-Legal document and no container of wood leaves the country; without FSC chain of custody
+    the product cannot be sold as certified whatever the timber was.
+53. **The agreed price is not the standard cost**, and the gap between them is purchase price
+    variance. Beyond 8% it stops being a market move and becomes a costing problem, because the
+    product still reports the old figure and every quotation priced off it is wrong by that much.
+54. **An imported price is not comparable to a landed standard at all.** The agreed price is FOB at
+    the supplier's quay; the standard cost includes duty, freight, clearance and trucking. Judging
+    one against the other is how an import programme convinces itself it is buying twenty per cent
+    under standard while paying all of that on top.
+
+**Production reporting**
+
+55. **Nothing is true until it is booked.** Until an operator books an output there is no scrap, no
+    actual labour and no real yield — only a plan with a tick against it. A booking writes the scrap
+    into the work order, the hours into its actual cost and the output into stock.
+56. **Scrap is reported at the operation that caused it**, with a defect code. Scrap without a code
+    is a number nobody can act on, and scrap counted only at the end of a routing tells you the
+    order lost pieces without telling you where.
+57. **Hours are compared on the same basis or not at all.** Booked hours against the routing's
+    standard, pro-rated to what was actually produced — never against the whole batch.
+58. **Downtime is booked as well as output.** A centre standing still waiting on the previous
+    operation is capacity that was already promised to somebody in the order book.
+59. **Material comes back.** Full pieces return to stock; anything already cut goes on the offcut
+    rack at a fraction of its value. A high return rate is a picking list built on the wrong bill,
+    not a tidy storeman.
+
 ---
 
 ## 6. Domain model
@@ -453,6 +504,7 @@ ageing, trial balance, income statement and balance sheet.
 | | Capacity & Load | Load percentage per work centre per day |
 | **Production** | Work Orders | Release, schedule, progress by operation, cost |
 | | Shop Floor | One board per work centre: queued, running, blocked |
+| | **Production Reporting** | Lapor produksi: output, scrap by operation, hours by operator and shift, material returned |
 | | Kiln Drying | Batches, readings, the moisture gate |
 | | **Subcontracting** | Value out at a subcontractor, days late, loss against tolerance, PPh 23 |
 | | **Maintenance** | Preventive intervals, breakdowns, downtime netted off availability |
@@ -463,6 +515,9 @@ ageing, trial balance, income statement and balance sheet.
 | | **Offcuts & Remnants** | Bahan sisa: size, what it can still make, what it is worth, and how long it has been on the rack |
 | | Suppliers | Scorecards and lane history |
 | | **Requisitions** | The approval ladder by value, and the lead time the waiting costs |
+| | **Goods Receipt** | Penerimaan barang: count, quarantine, inspect, put away — and every discrepancy named |
+| | **Purchase Order detail** | Receipt progress, price variance, three-way match, the LARTAS gate |
+| | **Supplier detail** | Qualification, certificates with expiry, the agreed price list, what they actually deliver |
 | | Purchase Orders | Local and import, with the LARTAS release gate |
 | | **Import Shipments** | The eleven states, free time, demurrage accruing |
 | | **Customs & Permits** | PIB register, CEISA lane, SPPB, permit expiry |

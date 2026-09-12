@@ -43,8 +43,9 @@ export function useExceptions() {
         requisitions: s.requisitions, maintenanceOrders: s.maintenanceOrders,
         subcontractOrders: s.subcontractOrders,
         conversionOrders: s.conversionOrders, remnants: s.remnants,
+        goodsReceipts: s.goodsReceipts, productionEntries: s.productionEntries,
       }),
-    [s.shipments, s.purchaseOrders, s.suppliers, s.permits, s.items, s.lots, s.kilnBatches, s.workOrders, s.workCentres, s.qcRecords, s.salesOrders, s.customers, s.invoices, s.company, s.settings, mrpLines, s.quotations, s.deliveries, s.claims, s.payments, s.requisitions, s.maintenanceOrders, s.subcontractOrders, s.conversionOrders, s.remnants],
+    [s.shipments, s.purchaseOrders, s.suppliers, s.permits, s.items, s.lots, s.kilnBatches, s.workOrders, s.workCentres, s.qcRecords, s.salesOrders, s.customers, s.invoices, s.company, s.settings, mrpLines, s.quotations, s.deliveries, s.claims, s.payments, s.requisitions, s.maintenanceOrders, s.subcontractOrders, s.conversionOrders, s.remnants, s.goodsReceipts, s.productionEntries],
   )
 }
 

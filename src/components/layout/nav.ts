@@ -3,6 +3,7 @@ import {
   Combine, Container, Factory, FileSpreadsheet, FileText, Flame, Gauge, GitBranch, HandCoins,
   Handshake, Layers, LineChart, Package, PackageSearch, Receipt, Route, Settings, ShieldCheck,
   Ship, ShoppingCart, Stamp, Truck, Undo2, Warehouse, Wallet, Workflow, Wrench, Recycle,
+  ClipboardPen, PackageCheck,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -14,6 +15,7 @@ export interface NavItem {
     | 'exceptions' | 'shortages' | 'workOrders' | 'imports' | 'customs' | 'qc' | 'kiln'
     | 'orders' | 'overdue' | 'capacity' | 'quotations' | 'deliveries' | 'claims'
     | 'requisitions' | 'maintenance' | 'subcontract' | 'payments' | 'conversion' | 'remnants'
+    | 'receiving' | 'reporting'
   description?: string
 }
 
@@ -61,6 +63,7 @@ export const NAV: NavGroup[] = [
     items: [
       { to: '/work-orders', label: 'Work Orders', icon: Factory, badgeKey: 'workOrders', description: 'Release, progress by operation, cost' },
       { to: '/shopfloor', label: 'Shop Floor', icon: ClipboardCheck, description: 'One board per work centre' },
+      { to: '/reporting', label: 'Production Reporting', icon: ClipboardPen, badgeKey: 'reporting', description: 'Lapor produksi — output, scrap, hours, returns' },
       { to: '/kiln', label: 'Kiln Drying', icon: Flame, badgeKey: 'kiln', description: 'Batches, readings and the moisture gate' },
       { to: '/subcontract', label: 'Subcontracting', icon: Handshake, badgeKey: 'subcontract', description: 'Work that left the building, and the value with it' },
       { to: '/maintenance', label: 'Maintenance', icon: Wrench, badgeKey: 'maintenance', description: 'Downtime the plan has to net off before it promises' },
@@ -77,6 +80,7 @@ export const NAV: NavGroup[] = [
       { to: '/suppliers', label: 'Suppliers', icon: Truck, description: 'Scorecards and lane history' },
       { to: '/requisitions', label: 'Requisitions', icon: ClipboardList, badgeKey: 'requisitions', description: 'The ask, the ladder and the days it costs' },
       { to: '/purchasing', label: 'Purchase Orders', icon: PackageSearch, description: 'Local and import, with the LARTAS gate' },
+      { to: '/receiving', label: 'Goods Receipt', icon: PackageCheck, badgeKey: 'receiving', description: 'Penerimaan barang — count, inspect, put away' },
       { to: '/imports', label: 'Import Shipments', icon: Ship, badgeKey: 'imports', description: 'Eleven states, free time, demurrage accruing' },
       { to: '/customs', label: 'Customs & Permits', icon: Stamp, badgeKey: 'customs', description: 'PIB, CEISA lane, SPPB, permit expiry' },
       { to: '/landed-cost', label: 'Landed Cost', icon: Receipt, description: 'Allocation, provisional against final' },

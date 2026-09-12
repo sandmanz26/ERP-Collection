@@ -13,8 +13,15 @@ import type {
 } from '@/data/types'
 import {
   CLAIM_AGEING_DAYS, CONTAINER_FILL_FLOOR, deliveryCountsAgainstOrder, EXCEPTION_META,
-  LICENCE_WARNING_DAYS, REMNANT_AGEING_DAYS, REQUISITION_SLA_DAYS, SEVERITY_ORDER,
+  LICENCE_WARNING_DAYS, OPERATION_SCRAP_TOLERANCE, PRICE_VARIANCE_TOLERANCE, QUARANTINE_SLA_DAYS,
+  receiptIsOpen, REMNANT_AGEING_DAYS, REQUISITION_SLA_DAYS, SEVERITY_ORDER, supplierCanOrder,
+  SUPPLIER_CERT_WARNING_DAYS,
 } from '@/data/reference'
+import {
+  certificateStates, orderProgress, priceVariance, purchaseOrderIsOpen, receiptState,
+  supplierQualification,
+} from './receiving'
+import { scrapByOperation } from './reporting'
 import { conversionIsOpen, conversionYield, remnantState, remnantSummary } from './conversion'
 import {
   claimCost, claimIsOpen, deliveryDocGate, deliveryIsOpen, invoiceOutstanding, loadPlan,
@@ -55,6 +62,8 @@ export interface ExceptionInput {
   subcontractOrders: SubcontractOrder[]
   conversionOrders: import('@/data/types').ConversionOrder[]
   remnants: import('@/data/types').Remnant[]
+  goodsReceipts: import('@/data/types').GoodsReceipt[]
+  productionEntries: import('@/data/types').ProductionEntry[]
 }
 
 export function buildExceptions(x: ExceptionInput): SystemException[] {
@@ -532,6 +541,121 @@ export function buildExceptions(x: ExceptionInput): SystemException[] {
         detail: short.map((l) => `${l.description}: ${l.quantity} of ${l.orderedQuantity}. ${l.shortReason ?? ''}`).join(' '),
         remedy: 'Tell the customer what is following and on which sailing. A short delivery nobody warned them about is a claim waiting to be raised.',
         link: '/deliveries', entityLabel: dv.code,
+      })
+    })
+
+
+  /* ---------------- receiving ---------------- */
+  x.goodsReceipts.filter((r) => receiptIsOpen(r.status)).forEach((r) => {
+    const st = receiptState(r)
+    const supplierName = x.suppliers.find((sp) => sp.id === r.supplierId)?.name ?? 'the supplier'
+
+    if (st.quarantineOverdue) {
+      push({
+        id: `ex_qtn_${r.id}`, kind: 'RECEIPT_AWAITING_QC', severity: 'HIGH',
+        title: `${r.code} has sat in quarantine ${st.quarantineDays} days`,
+        detail: `${supplierName} — ${Math.round(st.acceptedValue).toLocaleString('en-US')} of material that is on the books and cannot be issued. ${r.note ?? ''}`,
+        remedy: `Inspect it or send it back. Past ${QUARANTINE_SLA_DAYS} days this stops being a quality queue and becomes a planning problem, because MRP counts it as stock and the floor cannot draw it.`,
+        moneyAtRisk: st.acceptedValue, daysLate: st.quarantineDays - QUARANTINE_SLA_DAYS,
+        link: '/receiving', entityLabel: r.code,
+      })
+    }
+
+    const bad = r.lines.filter((l) => l.discrepancy !== 'NONE')
+    if (bad.length > 0) {
+      const worst = bad[0]
+      push({
+        id: `ex_grn_${r.id}`, kind: 'RECEIPT_DISCREPANCY',
+        severity: bad.some((l) => l.discrepancy === 'WRONG_ITEM' || l.discrepancy === 'NO_DOCUMENT') ? 'HIGH' : 'MEDIUM',
+        title: `${r.code} does not match its order — ${bad.map((l) => l.discrepancy.toLowerCase().replace(/_/g, ' ')).join(', ')}`,
+        detail: `${supplierName}. ${worst.discrepancyNote ?? ''}`,
+        remedy: worst.discrepancy === 'SHORT'
+          ? 'Raise the shortfall with the supplier today and tell planning — a short receipt is a plan that is short by exactly this, now, and the next MRP run needs to see it.'
+          : worst.discrepancy === 'DAMAGED'
+            ? 'Note it on the driver’s copy before signing, or it stops being the carrier’s problem and becomes ours.'
+            : 'Do not put it away. A wrong or off-specification item racked is a wrong item issued three weeks later, by somebody who had no way of knowing.',
+        moneyAtRisk: st.rejectedValue || undefined,
+        link: '/receiving', entityLabel: r.code,
+      })
+    }
+  })
+
+  /* ---------------- purchasing ---------------- */
+  x.purchaseOrders.filter((po) => purchaseOrderIsOpen(po.status)).forEach((po) => {
+    const supplier = x.suppliers.find((sp) => sp.id === po.supplierId)
+    const prog = orderProgress(po)
+
+    if (prog.late) {
+      push({
+        id: `ex_pod_${po.id}`, kind: 'PO_OVERDUE',
+        severity: prog.daysLate > 14 ? 'HIGH' : 'MEDIUM',
+        title: `${po.code} is ${prog.daysLate} day${prog.daysLate === 1 ? '' : 's'} past its date`,
+        detail: `${supplier?.name ?? 'Supplier'} — ${Math.round(prog.outstandingValue).toLocaleString('en-US')} still to arrive against a date of ${prog.nextDue}. ${Math.round(prog.percent)}% received so far.`,
+        remedy: 'Chase it and re-promise the date, then let the planner net it again. An order whose date has passed is still counted as supply arriving on that date until somebody moves it.',
+        moneyAtRisk: prog.outstandingValue, daysLate: prog.daysLate,
+        link: `/purchasing/${po.id}`, entityLabel: po.code,
+      })
+    }
+
+    if (supplier && !supplierCanOrder(supplier.approvalStatus)) {
+      push({
+        id: `ex_sup_${po.id}`, kind: 'SUPPLIER_UNAPPROVED', severity: 'HIGH',
+        title: `${po.code} is on a supplier who is not clear to be ordered from`,
+        detail: `${supplier.name} is ${supplier.approvalStatus.replace(/_/g, ' ').toLowerCase()}. ${supplier.openFinding ?? ''}`,
+        remedy: 'Close the finding or move the line to an approved source. An order placed under a suspended qualification is the first thing an export buyer’s own audit finds.',
+        moneyAtRisk: prog.outstandingValue,
+        link: `/suppliers/${supplier.id}`, entityLabel: supplier.name,
+      })
+    }
+
+    po.lines.forEach((l) => {
+      const v = priceVariance(l, x.items, po.fxRateAtOrder)
+      if (!v.beyondTolerance || v.variance <= 0) return
+      const exposure = v.variance * l.quantity
+      if (exposure < 5_000_000) return
+      push({
+        id: `ex_ppv_${l.id}`, kind: 'PRICE_VARIANCE',
+        severity: exposure > 50_000_000 ? 'HIGH' : 'MEDIUM',
+        title: `${po.code} buys ${x.items.find((i) => i.id === l.itemId)?.code ?? 'a line'} ${v.variancePercent.toFixed(1)}% above standard`,
+        detail: v.note,
+        remedy: `Either re-agree the price or move the standard cost. Beyond ${Math.round(PRICE_VARIANCE_TOLERANCE * 100)}% the product still reports the old figure, so every quotation priced off it is wrong by exactly this much.`,
+        moneyAtRisk: exposure,
+        link: `/purchasing/${po.id}`, entityLabel: po.code,
+      })
+    })
+  })
+
+  /* ---------------- supplier qualification ---------------- */
+  x.suppliers.filter((sp) => sp.active).forEach((sp) => {
+    const certs = certificateStates(sp)
+    const bad = certs.filter((c) => c.expired || c.expiring)
+    if (!bad.length) return
+    const qual = supplierQualification(sp)
+    const worst = bad[0]
+    push({
+      id: `ex_cert_${sp.id}`, kind: 'SUPPLIER_CERT_EXPIRING',
+      severity: worst.expired ? 'HIGH' : 'MEDIUM',
+      title: worst.expired
+        ? `${sp.name} — ${worst.certificate.kind.replace(/_/g, ' ')} lapsed ${Math.abs(worst.daysLeft)} days ago`
+        : `${sp.name} — ${worst.certificate.kind.replace(/_/g, ' ')} expires in ${worst.daysLeft} days`,
+      detail: `${worst.certificate.number}, ${worst.certificate.issuer}. ${qual.verdict}`,
+      remedy: `Get the renewal on file before the next order. A certificate that lapses inside ${SUPPLIER_CERT_WARNING_DAYS} days will lapse mid-consignment, and a container bought under a lapsed chain of custody cannot be sold as certified whatever the timber was.`,
+      link: `/suppliers/${sp.id}`, entityLabel: sp.name,
+    })
+  })
+
+  /* ---------------- what the floor is losing ---------------- */
+  scrapByOperation(x.productionEntries, x.workOrders)
+    .filter((r) => r.scrapPercent > OPERATION_SCRAP_TOLERANCE * 100 && r.value > 1_000_000)
+    .forEach((r) => {
+      push({
+        id: `ex_scrap_${r.workOrderId}_${r.operationNo}`, kind: 'SCRAP_SPIKE',
+        severity: r.scrapPercent > OPERATION_SCRAP_TOLERANCE * 200 ? 'HIGH' : 'MEDIUM',
+        title: `${r.workOrderCode} is losing ${r.scrapPercent.toFixed(1)}% at operation ${r.operationNo}`,
+        detail: `${r.operationName} — ${r.scrap} of ${r.produced} pieces, worth ${Math.round(r.value).toLocaleString('en-US')}.${r.defectCode ? ` Booked as ${r.defectCode.replace(/_/g, ' ').toLowerCase()}.` : ' No defect code was recorded, which makes it a number nobody can act on.'}`,
+        remedy: `Tolerance at a single operation is ${Math.round(OPERATION_SCRAP_TOLERANCE * 100)}%. Beyond that it is the process, not the day — stand at that machine tomorrow morning rather than reading the report next month.`,
+        moneyAtRisk: r.value,
+        link: '/reporting', entityLabel: r.workOrderCode,
       })
     })
 

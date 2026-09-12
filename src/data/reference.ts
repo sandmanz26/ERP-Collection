@@ -13,6 +13,8 @@ import type {
   LostReason, MaintenanceKind, MaintenanceStatus, PaymentMethod, PaymentStatus, QuotationStatus,
   RequisitionOrigin, RequisitionStatus, SubcontractStatus,
   ConversionKind, ConversionRoute, ConversionStatus, DeliveryPurpose, RemnantStatus,
+  MaterialReturnReason, ProductionEntryKind, ReceiptDiscrepancy, ReceiptStatus,
+  SupplierApproval, SupplierCertKind,
 } from './types'
 
 /* ==================================================================
@@ -512,6 +514,13 @@ export const EXCEPTION_META: Record<ExceptionKind, { label: string; group: strin
   CONVERSION_OVERDUE: { label: 'Conversion overdue', group: 'Materials' },
   REMNANT_AGEING: { label: 'Offcuts ageing towards write-off', group: 'Materials' },
   ORDER_BACKORDER: { label: 'Order part delivered', group: 'Logistics' },
+  RECEIPT_DISCREPANCY: { label: 'Receipt does not match the order', group: 'Materials' },
+  RECEIPT_AWAITING_QC: { label: 'Stock stuck in quarantine', group: 'Materials' },
+  PRICE_VARIANCE: { label: 'Bought above standard cost', group: 'Finance' },
+  SUPPLIER_UNAPPROVED: { label: 'Ordering from an unapproved supplier', group: 'Compliance' },
+  SUPPLIER_CERT_EXPIRING: { label: 'Supplier certificate expiring', group: 'Compliance' },
+  PO_OVERDUE: { label: 'Purchase order past its date', group: 'Materials' },
+  SCRAP_SPIKE: { label: 'Scrap beyond tolerance at an operation', group: 'Quality' },
 }
 
 export const SEVERITY_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 } as const
@@ -893,3 +902,98 @@ export const REMNANT_VALUE_FACTORS: { kind: string; factor: number; hint: string
 export const REMNANT_AGEING_DAYS = 90
 /** Minimum size worth racking at all — below it, the handling costs more than the wood. */
 export const REMNANT_MIN_LENGTH_MM = 300
+
+/* ==================================================================
+   Goods receipt, supplier qualification, production reporting
+   ================================================================== */
+
+export const RECEIPT_STATUSES: { value: ReceiptStatus; label: string; indonesian: string; hint: string }[] = [
+  { value: 'DRAFT', label: 'At the gate', indonesian: 'Di gerbang', hint: 'The lorry has arrived and nothing has been counted. Nothing exists in stock yet.' },
+  { value: 'COUNTING', label: 'Counting', indonesian: 'Penghitungan', hint: 'Being checked against the supplier’s delivery note, line by line.' },
+  { value: 'AWAITING_QC', label: 'In quarantine', indonesian: 'Karantina', hint: 'Counted and taken in, but sitting in the quarantine store. It is on the books and it is not issuable.' },
+  { value: 'PUT_AWAY', label: 'Put away', indonesian: 'Sudah disimpan', hint: 'Inspected, racked and issuable. This — not the arrival — is the moment it becomes stock.' },
+  { value: 'REJECTED', label: 'Rejected', indonesian: 'Ditolak', hint: 'Going back the way it came, with a debit note behind it.' },
+  { value: 'CANCELLED', label: 'Cancelled', indonesian: 'Dibatalkan', hint: 'Stood down before anything was counted.' },
+]
+
+export const receiptStatusMeta = (s: ReceiptStatus) => RECEIPT_STATUSES.find((x) => x.value === s)
+export const receiptIsOpen = (s: ReceiptStatus) => !['PUT_AWAY', 'REJECTED', 'CANCELLED'].includes(s)
+
+export const RECEIPT_DISCREPANCIES: { value: ReceiptDiscrepancy; label: string; hint: string; chargeable: boolean }[] = [
+  { value: 'NONE', label: 'Matches', hint: 'What arrived is what was ordered.', chargeable: false },
+  { value: 'SHORT', label: 'Short', hint: 'Fewer than the note says. The plan is short by exactly this, today, and the MRP run has to know before the next netting.', chargeable: true },
+  { value: 'OVER', label: 'Over', hint: 'More than ordered. Accept it only if the tolerance allows, because anything above it is stock we did not agree to pay for.', chargeable: false },
+  { value: 'DAMAGED', label: 'Damaged', hint: 'Arrived broken. Note it on the driver’s copy before signing, or it stops being the carrier’s problem.', chargeable: true },
+  { value: 'WRONG_ITEM', label: 'Wrong item', hint: 'Not what was ordered. Do not put it away — a wrong item racked is a wrong item issued three weeks later.', chargeable: true },
+  { value: 'WRONG_SPEC', label: 'Off specification', hint: 'The right item, outside its specification: moisture out of band, colour lot drifted, thickness under tolerance.', chargeable: true },
+  { value: 'LATE', label: 'Late', hint: 'Right and complete, but after the date the plan was built on.', chargeable: false },
+  { value: 'NO_DOCUMENT', label: 'Paperwork missing', hint: 'No certificate, no mill test, no SVLK document. For a forestry line that is a receipt that cannot legally be put away.', chargeable: true },
+]
+
+export const discrepancyMeta = (d: ReceiptDiscrepancy) => RECEIPT_DISCREPANCIES.find((x) => x.value === d)
+
+/** How much over the ordered quantity a receipt may run before it needs a decision. */
+export const RECEIPT_OVER_TOLERANCE = 0.05
+/** How long stock may sit in quarantine before it is a planning problem rather than a QC one. */
+export const QUARANTINE_SLA_DAYS = 3
+
+export const SUPPLIER_APPROVALS: { value: SupplierApproval; label: string; tone: string; hint: string; canOrder: boolean }[] = [
+  { value: 'APPROVED', label: 'Approved', tone: 'success', canOrder: true, hint: 'Qualified, audited and clear to order from.' },
+  { value: 'CONDITIONAL', label: 'Conditional', tone: 'warning', canOrder: true, hint: 'Orderable, but with an open finding against them and tighter incoming inspection until it closes.' },
+  { value: 'PENDING_AUDIT', label: 'Pending audit', tone: 'info', canOrder: false, hint: 'Being qualified. Nothing for a certified line may be ordered until the audit closes.' },
+  { value: 'PROBATION', label: 'On probation', tone: 'warning', canOrder: false, hint: 'On notice after a failure. No new orders until the outstanding one is settled.' },
+  { value: 'SUSPENDED', label: 'Suspended', tone: 'danger', canOrder: false, hint: 'No new orders at all until something changes.' },
+]
+
+export const supplierApprovalMeta = (a: SupplierApproval) => SUPPLIER_APPROVALS.find((x) => x.value === a)
+export const supplierCanOrder = (a: SupplierApproval) => supplierApprovalMeta(a)?.canOrder ?? false
+
+export const SUPPLIER_CERT_KINDS: { value: SupplierCertKind; label: string; hint: string; criticalFor: string }[] = [
+  { value: 'SVLK', label: 'SVLK', criticalFor: 'Every timber line', hint: 'Indonesian timber legality. Without a valid SVLK in the chain there is no V-Legal document, and without that no container of wood leaves the country.' },
+  { value: 'FSC_FM', label: 'FSC Forest Management', criticalFor: 'Certified oak and teak', hint: 'The forest end of the chain. An export buyer who sells FSC needs this to exist upstream of us.' },
+  { value: 'FSC_COC', label: 'FSC Chain of Custody', criticalFor: 'Certified oak and teak', hint: 'The handling end. A break anywhere in the chain and the product cannot be sold as certified, whatever the timber was.' },
+  { value: 'PEFC', label: 'PEFC', criticalFor: 'European buyers', hint: 'The other certification scheme. Some buyers accept either; some name one.' },
+  { value: 'ISO_9001', label: 'ISO 9001', criticalFor: 'Contract and FF&E work', hint: 'Quality management. Usually a tender requirement rather than a technical one.' },
+  { value: 'ISO_14001', label: 'ISO 14001', criticalFor: 'Finishing chemistry', hint: 'Environmental management. Matters most where solvents do.' },
+  { value: 'BSCI', label: 'amfori BSCI', criticalFor: 'Retail chains', hint: 'Social compliance audit. Retail buyers audit their suppliers’ suppliers, which means us and then them.' },
+  { value: 'CARB_P2', label: 'CARB Phase 2', criticalFor: 'Panel to North America', hint: 'Formaldehyde emission limit. A panel without it cannot go into furniture bound for California.' },
+  { value: 'ISPM_15', label: 'ISPM 15', criticalFor: 'Export packing', hint: 'Heat treatment of solid-wood packing. Australia and the EU refuse a container without the stamp.' },
+  { value: 'HALAL', label: 'Halal', criticalFor: 'Adhesives and finishes', hint: 'Asked for on some domestic contract work.' },
+  { value: 'SNI', label: 'SNI', criticalFor: 'Glass and regulated goods', hint: 'Indonesian national standard, mandatory on the regulated item list.' },
+]
+
+export const certKindMeta = (k: SupplierCertKind) => SUPPLIER_CERT_KINDS.find((x) => x.value === k)
+/** How long before a supplier certificate lapses that it starts asking to be chased. */
+export const SUPPLIER_CERT_WARNING_DAYS = 60
+
+/** Buying this far above standard cost stops being a market move and becomes a costing problem. */
+export const PRICE_VARIANCE_TOLERANCE = 0.08
+
+export const SHIFTS: { value: 'PAGI' | 'SIANG' | 'MALAM'; label: string; hours: string }[] = [
+  { value: 'PAGI', label: 'Pagi', hours: '07:00 – 15:00' },
+  { value: 'SIANG', label: 'Siang', hours: '15:00 – 23:00' },
+  { value: 'MALAM', label: 'Malam', hours: '23:00 – 07:00' },
+]
+
+export const PRODUCTION_ENTRY_KINDS: { value: ProductionEntryKind; label: string; hint: string }[] = [
+  { value: 'OUTPUT', label: 'Output', hint: 'Pieces off an operation: what passed, what was scrapped, what is going back for rework.' },
+  { value: 'SETUP', label: 'Setup', hint: 'Hours spent getting ready rather than producing. Real, and the first thing a batch-size argument needs.' },
+  { value: 'DOWNTIME', label: 'Downtime', hint: 'The centre stood still. Where it was a breakdown it belongs to maintenance as well.' },
+  { value: 'REWORK', label: 'Rework', hint: 'Hours spent doing something twice. It is cost of poor quality even when the piece is saved.' },
+]
+
+export const DOWNTIME_REASONS = [
+  'Waiting on material', 'Waiting on the previous operation', 'Machine breakdown', 'Tool change',
+  'Waiting on a QC decision', 'Power interruption', 'Operator absent', 'Waiting on a drawing or sample',
+]
+
+export const MATERIAL_RETURN_REASONS: { value: MaterialReturnReason; label: string; hint: string }[] = [
+  { value: 'OVER_ISSUED', label: 'Over-issued', hint: 'More was drawn than the job needed. Routine on sheet goods, and the single most common reason stock records drift.' },
+  { value: 'WRONG_ITEM', label: 'Wrong item drawn', hint: 'Picked from the wrong bay. Put it back before it gets cut.' },
+  { value: 'ORDER_CANCELLED', label: 'Order stood down', hint: 'The work order was cancelled or put on hold with material already out.' },
+  { value: 'SPEC_CHANGE', label: 'Specification changed', hint: 'The drawing moved after the material was drawn.' },
+  { value: 'SURPLUS_AT_CLOSE', label: 'Surplus at close', hint: 'What was left when the job finished. Full pieces go back to stock; anything cut goes on the offcut rack.' },
+]
+
+/** Scrap at a single operation beyond this is a problem with the process, not the day. */
+export const OPERATION_SCRAP_TOLERANCE = 0.03

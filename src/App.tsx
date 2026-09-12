@@ -35,6 +35,10 @@ import { PaymentsPage } from '@/pages/commerce/PaymentsPage'
 import { RequisitionsPage } from '@/pages/operations/RequisitionsPage'
 import { MaintenancePage } from '@/pages/operations/MaintenancePage'
 import { SubcontractPage } from '@/pages/operations/SubcontractPage'
+import { ReceivingPage } from '@/pages/materials/ReceivingPage'
+import { PurchaseOrderDetailPage } from '@/pages/materials/PurchaseOrderDetailPage'
+import { SupplierDetailPage } from '@/pages/materials/SupplierDetailPage'
+import { ReportingPage } from '@/pages/production/ReportingPage'
 import { ConversionPage } from '@/pages/materials/ConversionPage'
 import { RemnantsPage } from '@/pages/materials/RemnantsPage'
 import { FlowPage } from '@/pages/flow/FlowPage'
@@ -87,6 +91,7 @@ export default function App() {
                   <Route path="/work-orders" element={<WorkOrdersPage />} />
                   <Route path="/work-orders/:id" element={<WorkOrderDetailPage />} />
                   <Route path="/shopfloor" element={<ShopFloorPage />} />
+                  <Route path="/reporting" element={<ReportingPage />} />
                   <Route path="/kiln" element={<KilnPage />} />
                   <Route path="/quality" element={<QualityPage />} />
                   <Route path="/subcontract" element={<SubcontractPage />} />
@@ -97,9 +102,12 @@ export default function App() {
                   <Route path="/inventory" element={<InventoryPage />} />
                   <Route path="/conversion" element={<ConversionPage />} />
                   <Route path="/remnants" element={<RemnantsPage />} />
+                  <Route path="/receiving" element={<ReceivingPage />} />
                   <Route path="/suppliers" element={<SuppliersPage />} />
+                  <Route path="/suppliers/:id" element={<SupplierDetailPage />} />
                   <Route path="/requisitions" element={<RequisitionsPage />} />
                   <Route path="/purchasing" element={<PurchasingPage />} />
+                  <Route path="/purchasing/:id" element={<PurchaseOrderDetailPage />} />
                   <Route path="/imports" element={<ImportsPage />} />
                   <Route path="/imports/:id" element={<ImportDetailPage />} />
                   <Route path="/customs" element={<CustomsPage />} />

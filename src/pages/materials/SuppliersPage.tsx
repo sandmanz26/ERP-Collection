@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Ship, Truck, TriangleAlert } from 'lucide-react'
 import { PageHeader, KpiCard } from '@/components/shared/PageHeader'
 import { Because } from '@/components/shared/status'
@@ -15,6 +16,7 @@ import { fmtCurrency, fmtNumber, fmtPercent } from '@/lib/format'
 
 export function SuppliersPage() {
   const s = useMfg()
+  const navigate = useNavigate()
   const [kind, setKind] = React.useState<string[]>([])
   const cards = supplierScorecards(s.suppliers, s.shipments, s.purchaseOrders)
   const byId = new Map(cards.map((c) => [c.supplier.id, c]))
@@ -193,6 +195,7 @@ export function SuppliersPage() {
         entityLabel="supplier"
         exportName="suppliers"
         storageKey="suppliers"
+        onRowClick={(x) => navigate(`/suppliers/${x.id}`)}
         searchText={(x) => `${x.code} ${x.name} ${x.city} ${x.contact} ${x.note ?? ''}`}
         initialSort={{ key: 'score', dir: 'desc' }}
         filters={[

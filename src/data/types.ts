@@ -262,6 +262,18 @@ export interface Supplier {
   code: string
   name: string
   kind: SupplierKind
+  /** whether we are allowed to order from them at all, and on what footing */
+  approvalStatus: SupplierApproval
+  approvedAt?: ISODate
+  /** when somebody last actually went and looked at their works */
+  lastAuditAt?: ISODate
+  nextAuditDue?: ISODate
+  /** the open finding a conditional approval hangs on */
+  openFinding?: string
+  certificates: SupplierCertificate[]
+  bankName?: string
+  bankAccountNo?: string
+  taxId?: string
   country: string
   city: string
   currency: Currency
@@ -925,6 +937,8 @@ export type ExceptionKind =
   | 'QUOTE_EXPIRING' | 'DELIVERY_UNDERLOADED' | 'DELIVERY_DOCS_MISSING' | 'CLAIM_OPEN'
   | 'PAYMENT_OVERDUE' | 'REQUISITION_WAITING' | 'MAINTENANCE_OVERDUE' | 'SUBCONTRACT_OVERDUE'
   | 'CONVERSION_YIELD' | 'CONVERSION_OVERDUE' | 'REMNANT_AGEING' | 'ORDER_BACKORDER'
+  | 'RECEIPT_DISCREPANCY' | 'RECEIPT_AWAITING_QC' | 'PRICE_VARIANCE' | 'SUPPLIER_UNAPPROVED'
+  | 'SUPPLIER_CERT_EXPIRING' | 'PO_OVERDUE' | 'SCRAP_SPIKE'
 
 export type ExceptionSeverity = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
 
@@ -1448,5 +1462,177 @@ export interface Remnant {
   reservedForConversionId?: ID
   consumedAt?: ISODate
   writtenOffAt?: ISODate
+  note?: string
+}
+
+/* ==================================================================
+   18 · Goods receipt — the moment bought becomes owned
+   ================================================================== */
+
+export type ReceiptStatus =
+  | 'DRAFT'            /* the lorry is at the gate, nothing counted */
+  | 'COUNTING'         /* being checked against the packing slip */
+  | 'AWAITING_QC'      /* counted, in quarantine, waiting on incoming inspection */
+  | 'PUT_AWAY'         /* inspected and racked — this is when it becomes issuable stock */
+  | 'REJECTED'         /* going back the way it came */
+  | 'CANCELLED'
+
+export type ReceiptDiscrepancy =
+  | 'NONE' | 'SHORT' | 'OVER' | 'DAMAGED' | 'WRONG_ITEM' | 'WRONG_SPEC' | 'LATE' | 'NO_DOCUMENT'
+
+export interface GoodsReceiptLine {
+  id: ID
+  purchaseOrderLineId?: ID
+  itemId: ID
+  description: string
+  /** what the order said */
+  orderedQuantity: number
+  /** what had already been received against that line before this note */
+  previouslyReceived: number
+  /** what the lorry actually brought */
+  deliveredQuantity: number
+  /** what we took in after counting and looking at it */
+  acceptedQuantity: number
+  /** what we refused, and why */
+  rejectedQuantity: number
+  discrepancy: ReceiptDiscrepancy
+  discrepancyNote?: string
+  uom: string
+  /** the price on the order — carried so the receipt can be matched to the bill */
+  orderUnitPrice: number
+  /** the lot this line created once it was put away */
+  lotId?: ID
+  /** where it went */
+  warehouseId?: ID
+  /** supplier's own batch or heat number, where they give one */
+  supplierBatchNo?: string
+  /** timber that lands wet cannot be issued, whatever the paperwork says */
+  moisturePercent?: number
+  qcRecordId?: ID
+}
+
+export interface GoodsReceipt {
+  id: ID
+  code: string
+  status: ReceiptStatus
+  /** a local purchase order, or an import consignment that has cleared */
+  purchaseOrderId?: ID
+  shipmentId?: ID
+  supplierId: ID
+  /** the supplier's own delivery note number — the one the driver hands over */
+  supplierDeliveryNote?: string
+  receivedAt: ISODate
+  receivedBy: string
+  /** the gate the goods physically came through */
+  warehouseId: ID
+  lines: GoodsReceiptLine[]
+  /** inspection is a gate, not a report: nothing is issuable until it passes */
+  qcRequired: boolean
+  qcPassedAt?: ISODate
+  putAwayAt?: ISODate
+  /** the supplier's invoice this receipt was matched against */
+  invoiceId?: ID
+  note?: string
+}
+
+/* ==================================================================
+   19 · Supplier qualification and the agreed price
+   ================================================================== */
+
+export type SupplierApproval =
+  | 'APPROVED'          /* qualified, audited, and clear to order from */
+  | 'CONDITIONAL'       /* orderable, but with an open finding against them */
+  | 'PENDING_AUDIT'     /* in the process of being qualified */
+  | 'PROBATION'         /* on notice after a failure */
+  | 'SUSPENDED'         /* no new orders until something changes */
+
+export type SupplierCertKind = 'SVLK' | 'FSC_FM' | 'FSC_COC' | 'PEFC' | 'ISO_9001' | 'ISO_14001' | 'BSCI' | 'CARB_P2' | 'ISPM_15' | 'HALAL' | 'SNI'
+
+export interface SupplierCertificate {
+  id: ID
+  kind: SupplierCertKind
+  number: string
+  issuer: string
+  issuedAt: ISODate
+  expiresAt: ISODate
+  /** an export buyer's compliance desk asks for this by name */
+  note?: string
+}
+
+/**
+ * The price we actually agreed with a supplier for an item, as opposed to the
+ * standard cost the bill of material is costed at. The gap between the two is
+ * purchase price variance, and it is where a quotation's margin quietly goes.
+ */
+export interface SupplierItem {
+  id: ID
+  supplierId: ID
+  itemId: ID
+  /** their part number, which is what goes on the purchase order */
+  supplierPartNo?: string
+  agreedPrice: number
+  currency: Currency
+  /** the price list this was agreed under, and when it lapses */
+  priceValidUntil?: ISODate
+  minimumOrderQuantity: number
+  /** their own quoted lead time, which is rarely the one they achieve */
+  quotedLeadDays: number
+  /** what they have actually achieved, from the receipts */
+  lastPurchasePrice?: number
+  lastPurchasedAt?: ISODate
+  preferred: boolean
+  note?: string
+}
+
+/* ==================================================================
+   20 · Production reporting — what the floor actually did
+   ================================================================== */
+
+export type ProductionEntryKind = 'OUTPUT' | 'SETUP' | 'DOWNTIME' | 'REWORK'
+
+export interface ProductionEntry {
+  id: ID
+  code: string
+  workOrderId: ID
+  operationNo: number
+  workCentreId: ID
+  kind: ProductionEntryKind
+  at: ISODate
+  shift: 'PAGI' | 'SIANG' | 'MALAM'
+  operator: string
+  /** pieces that passed */
+  goodQuantity: number
+  /** pieces that did not, and are not worth fixing */
+  scrapQuantity: number
+  /** pieces that did not, and are */
+  reworkQuantity: number
+  defectCode?: DefectCode
+  /** hours actually booked — the other half of the labour variance */
+  labourHours: number
+  /** hours the centre stood still inside this booking, and why */
+  downtimeHours: number
+  downtimeReason?: string
+  note?: string
+}
+
+export type MaterialReturnReason = 'OVER_ISSUED' | 'WRONG_ITEM' | 'ORDER_CANCELLED' | 'SPEC_CHANGE' | 'SURPLUS_AT_CLOSE'
+
+/** Material drawn for a job and put back. Routine, and almost never modelled. */
+export interface MaterialReturn {
+  id: ID
+  code: string
+  workOrderId: ID
+  materialIssueId: ID
+  itemId: ID
+  description: string
+  quantity: number
+  uom: string
+  unitCost: number
+  reason: MaterialReturnReason
+  /** offcuts come back as remnants rather than as full stock */
+  asRemnant: boolean
+  warehouseId: ID
+  at: ISODate
+  returnedBy: string
   note?: string
 }
