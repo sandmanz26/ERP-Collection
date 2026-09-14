@@ -1013,6 +1013,17 @@ export const useErp = create<ErpState>()(
 
       resetDemoData: () => set({ ...seedState() }),
     }),
-    { name: 'tata-gemilang-erp', version: 5 },
+    {
+      name: 'tata-gemilang-erp',
+      version: 5,
+      /**
+       * A browser that used an earlier build is holding an earlier book, and the
+       * persisted collections would otherwise win over the seed — so a new module
+       * would appear empty and a changed seed would never show up at all. This is
+       * a demo: the seeded book *is* the product, so a version bump reseeds rather
+       * than trying to reconcile two shapes that were never meant to meet.
+       */
+      migrate: () => seedState(),
+    },
   ),
 )
