@@ -217,6 +217,163 @@ export function suppliersForItem(itemId: string, items: InventoryItem[], supplie
     .sort((a, b) => b.rating - a.rating)
 }
 
+/**
+ * Everyone who could take this line, in two tiers. The approved list is the
+ * one purchasing should buy from; the rest are real suppliers who simply have
+ * not been approved for this category yet, and an item nobody is approved for
+ * would otherwise be unbuyable — which is not a rule, it is a dead end.
+ */
+export function supplierChoices(itemId: string, items: InventoryItem[], suppliers: Supplier[]) {
+  const item = items.find((i) => i.id === itemId)
+  if (!item) return { approved: [], others: [] }
+  const live = suppliers.filter((s) => s.status !== 'BLACKLISTED')
+  return {
+    approved: live.filter((s) => s.categories.includes(item.category)).sort((a, b) => b.rating - a.rating),
+    others: live.filter((s) => !s.categories.includes(item.category)).sort((a, b) => b.rating - a.rating),
+  }
+}
+
+export const isApprovedFor = (supplier: Supplier, item?: InventoryItem) =>
+  !!item && supplier.categories.includes(item.category)
+
+/* ================================================================
+   The final check before a request becomes orders
+   ================================================================ */
+
+export type CheckSeverity = 'BLOCKER' | 'WARNING'
+
+export interface PrCheck {
+  lineId?: string
+  supplierId?: string
+  severity: CheckSeverity
+  label: string
+  detail: string
+}
+
+/** A price this far above the last one paid is worth a second look before ordering. */
+export const PRICE_JUMP_PCT = 10
+
+/**
+ * What purchasing has to satisfy itself about before the request turns into
+ * orders somebody outside the company can act on. Blockers stop the approval;
+ * warnings are judgement calls that should be seen rather than enforced.
+ */
+export function finalCheck(
+  pr: PurchaseRequest,
+  prices: PurchasePrice[],
+  items: InventoryItem[],
+  suppliers: Supplier[],
+): { checks: PrCheck[]; blockers: PrCheck[]; warnings: PrCheck[]; ok: boolean } {
+  const checks: PrCheck[] = []
+
+  pr.lines.forEach((line) => {
+    const item = items.find((i) => i.id === line.itemId)
+    const name = item?.name ?? 'Removed item'
+    const supplier = suppliers.find((s) => s.id === line.supplierId)
+
+    if (!supplier) {
+      checks.push({
+        lineId: line.id,
+        severity: 'BLOCKER',
+        label: `${name} has no supplier`,
+        detail: 'Nothing can be ordered against a line nobody has been asked to supply.',
+      })
+      return
+    }
+
+    if (supplier.status === 'BLACKLISTED' || supplier.status === 'ON_HOLD') {
+      checks.push({
+        lineId: line.id,
+        supplierId: supplier.id,
+        severity: 'BLOCKER',
+        label: `${supplier.brandName ?? supplier.legalName} is ${supplier.status.replace('_', ' ').toLowerCase()}`,
+        detail: `${name} is assigned to a supplier the company is not buying from. Reassign the line.`,
+      })
+    }
+
+    if (!isApprovedFor(supplier, item)) {
+      checks.push({
+        lineId: line.id,
+        supplierId: supplier.id,
+        severity: 'WARNING',
+        label: `${supplier.brandName ?? supplier.legalName} is not approved for ${item?.category.replace(/_/g, ' ').toLowerCase()}`,
+        detail: `They can still take ${name}, but the category is outside what they were vetted for.`,
+      })
+    }
+
+    const price = prLinePrice(line, prices, items)
+    const WEAK: Partial<Record<PriceBasis, string>> = {
+      LAST_FROM_ANYONE: 'the last price a different supplier charged',
+      DIVISION_ESTIMATE: "the division's own estimate",
+      STANDARD_COST: 'the item master standard cost',
+      NONE: 'nothing at all',
+    }
+    const weak = WEAK[price.basis]
+    if (weak) {
+      checks.push({
+        lineId: line.id,
+        supplierId: supplier.id,
+        severity: 'WARNING',
+        label: `${name} has no price from this supplier`,
+        detail: `Valued at ${weak} — worth asking ${supplier.brandName ?? supplier.legalName} for a number before the order goes out.`,
+      })
+    }
+
+    const last = lastPurchase(line.itemId, supplier.id, prices)
+    if (last && line.agreedUnitPrice !== undefined) {
+      const jump = ((line.agreedUnitPrice - last.unitPrice) / last.unitPrice) * 100
+      if (jump > PRICE_JUMP_PCT) {
+        checks.push({
+          lineId: line.id,
+          supplierId: supplier.id,
+          severity: 'WARNING',
+          label: `${name} is ${jump.toFixed(0)}% above the last price paid`,
+          detail: `Last bought at ${Math.round(last.unitPrice).toLocaleString('en-US')} on ${last.purchasedAt.slice(0, 10)}; this order is at ${Math.round(line.agreedUnitPrice).toLocaleString('en-US')}.`,
+        })
+      }
+    }
+  })
+
+  /* Minimum order values bite per supplier, not per line. */
+  linesBySupplier(pr, prices, items)
+    .filter((bucket) => bucket.supplierId !== '__unassigned')
+    .forEach((bucket) => {
+      const supplier = suppliers.find((s) => s.id === bucket.supplierId)
+      if (!supplier?.minOrderValue) return
+      if (bucket.value < supplier.minOrderValue) {
+        checks.push({
+          supplierId: supplier.id,
+          severity: 'WARNING',
+          label: `${supplier.brandName ?? supplier.legalName} is below its minimum order`,
+          detail: `${Math.round(bucket.value).toLocaleString('en-US')} against a minimum of ${Math.round(supplier.minOrderValue).toLocaleString('en-US')} — expect a surcharge, or move more lines here.`,
+        })
+      }
+    })
+
+  const blockers = checks.filter((c) => c.severity === 'BLOCKER')
+  const warnings = checks.filter((c) => c.severity === 'WARNING')
+  return { checks, blockers, warnings, ok: blockers.length === 0 }
+}
+
+/**
+ * Which divisions are waiting on a given set of lines, and for how much.
+ * Information only: an order is placed with a supplier, not with a division.
+ */
+export function divisionsBehind(lines: PurchaseRequestLine[], prices: PurchasePrice[], items: InventoryItem[]) {
+  const map = new Map<string, { divisionId: string; lines: number; qty: number; value: number }>()
+  lines.forEach((line) => {
+    const unit = prLinePrice(line, prices, items).unitPrice
+    line.sources.forEach((src) => {
+      const bucket = map.get(src.divisionId) ?? { divisionId: src.divisionId, lines: 0, qty: 0, value: 0 }
+      bucket.lines += 1
+      bucket.qty += src.qty
+      bucket.value += src.qty * unit
+      map.set(src.divisionId, bucket)
+    })
+  })
+  return Array.from(map.values()).sort((a, b) => b.value - a.value)
+}
+
 /** Lines grouped by the supplier they were assigned to — how the order is actually placed. */
 export function linesBySupplier(pr: PurchaseRequest, prices: PurchasePrice[], items: InventoryItem[]) {
   const map = new Map<string, { supplierId: string; lines: PurchaseRequestLine[]; value: number }>()

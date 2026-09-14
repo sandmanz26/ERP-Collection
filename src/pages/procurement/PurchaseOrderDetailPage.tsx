@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
-  AlertTriangle, ArrowLeft, Ban, PackageCheck, Receipt, ShoppingCart, Truck, Wallet,
+  AlertTriangle, ArrowLeft, Ban, Building2, PackageCheck, Receipt, ShoppingCart, Truck, Wallet,
 } from 'lucide-react'
 import type { GoodsReceipt, GoodsReceiptLine, PaymentMethod, PurchaseOrder, SupplierPayment } from '@/data/types'
 import { useErp } from '@/store/useErp'
@@ -25,6 +25,7 @@ import { fmtCurrency, fmtDate, fmtNumber } from '@/lib/format'
 import {
   acceptsReceipt, daysLate, outstandingQty, paymentState, poLineTotal, poTotals, receiptProgress,
 } from '@/lib/purchasing'
+import { divisionsBehind } from '@/lib/procurement'
 
 const TH = 'whitespace-nowrap border-b border-border bg-surface-sunken px-3 py-2 text-left text-[11.5px] font-semibold uppercase tracking-[0.055em] text-fg-muted'
 const TD = 'border-b border-border px-3 py-2.5 align-top'
@@ -437,7 +438,7 @@ export function PurchaseOrderDetailPage() {
   const can = useCan()
   const {
     purchaseOrders, suppliers, items, warehouses, goodsReceipts, payments, purchaseRequests, divisions,
-    closePurchaseOrder,
+    purchasePrices, closePurchaseOrder,
   } = useErp()
 
   const [tab, setTab] = React.useState<'lines' | 'receipts' | 'payments'>('lines')
@@ -470,20 +471,21 @@ export function PurchaseOrderDetailPage() {
     .sort((a, b) => b.receivedAt.localeCompare(a.receivedAt))
   const late = daysLate(po)
 
-  /** Which divisions are waiting on this order — the way back to who asked. */
-  const waitingDivisions = (() => {
+  /**
+   * Which divisions are waiting on this order, and for how much of it. Purely
+   * informational: an order is placed with a supplier, and a division has no
+   * standing in it — but the storekeeper still gets asked "who is this for".
+   */
+  const waiting = (() => {
     if (!pr) return []
-    const codes = new Set<string>()
-    po.lines.forEach((line) => {
-      pr.lines
-        .find((l) => l.id === line.prLineId)
-        ?.sources.forEach((src) => {
-          const division = divisions.find((d) => d.id === src.divisionId)
-          if (division) codes.add(division.code)
-        })
-    })
-    return Array.from(codes).sort()
+    const prLines = po.lines
+      .map((line) => pr.lines.find((l) => l.id === line.prLineId))
+      .filter((l): l is NonNullable<typeof l> => !!l)
+    return divisionsBehind(prLines, purchasePrices, items)
   })()
+  const waitingDivisions = waiting
+    .map((row) => divisions.find((d) => d.id === row.divisionId)?.code)
+    .filter(Boolean) as string[]
 
   const close = () => {
     if (!closing || !closeReason.trim()) return
@@ -669,6 +671,53 @@ export function PurchaseOrderDetailPage() {
                   <td className="tnum whitespace-nowrap px-3 py-2.5 text-right text-[14px] font-semibold text-fg">{fmtCurrency(totals.total, 'IDR')}</td>
                 </tr>
               </tfoot>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {tab === 'lines' && waiting.length > 0 && (
+        <Card className="mt-4">
+          <CardHeader
+            icon={<Building2 />}
+            title="Divisions waiting on this order"
+            description="Who asked for what is on it, taken from the purchase request. Information only — the order is placed with the supplier."
+          />
+          <div className="scrollbar-thin overflow-x-auto">
+            <table className="w-full border-separate border-spacing-0 text-[13px]">
+              <thead>
+                <tr>
+                  <th className={TH}>Division</th>
+                  <th className={`${TH} text-right`}>Lines</th>
+                  <th className={`${TH} text-right`}>Units</th>
+                  <th className={TH}>Share of this order</th>
+                </tr>
+              </thead>
+              <tbody>
+                {waiting.map((row) => {
+                  const division = divisions.find((d) => d.id === row.divisionId)
+                  const totalQty = waiting.reduce((a, x) => a + x.qty, 0)
+                  const share = totalQty ? Math.round((row.qty / totalQty) * 100) : 0
+                  return (
+                    <tr key={row.divisionId}>
+                      <td className={TD}>
+                        <p className="font-medium text-fg">{division?.name ?? 'Unknown division'}</p>
+                        <p className="text-[11px] text-fg-subtle">{division?.code} · {division?.headName}</p>
+                      </td>
+                      <td className={`${TD} tnum text-right text-fg-muted`}>{row.lines}</td>
+                      <td className={`${TD} tnum text-right font-medium text-fg`}>{fmtNumber(row.qty)}</td>
+                      <td className={TD}>
+                        <div className="w-[180px]">
+                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-soft">
+                            <div className="h-full rounded-full bg-primary" style={{ width: `${share}%` }} />
+                          </div>
+                          <p className="tnum mt-1 text-[11px] text-fg-subtle">{share}% of the units</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
             </table>
           </div>
         </Card>

@@ -140,7 +140,8 @@ many could, what the lines add up to, and how many items the merge will produce.
 
 **The division head's page** (`/mr/my`) shows one thing: this division's request in the session that
 is open right now. **Only items the warehouse already holds can be requested** — 69 of the 70 master
-items qualify — with the available quantity shown against each. The estimated unit price is optional;
+items qualify — with the available quantity shown against each, and a category filter so seventy
+items are a search rather than a scroll. The estimated unit price is optional;
 where it is left out the item's standard cost stands in, marked as such so nobody mistakes it for a
 quote. Once submitted, the form is read-only until purchasing sends it back with a reason.
 
@@ -165,9 +166,28 @@ along with *on what authority*, in descending order of trust:
 | `Division estimate` | Nobody has bought it; the highest estimate a division gave |
 | `Standard cost` | Nothing but the item master to go on |
 
+A line with no approved supplier is a dead end rather than a rule, so the picker offers two tiers —
+approved for the category, then everyone else — and buying outside the approved list is allowed once
+it is said out loud: a dialog names the mismatch and offers to add the category to that supplier's
+record. A supplier that does not exist yet can be registered from the line itself, in the same step
+that assigns it.
+
 Draft and assigned are derived, not chosen: a request becomes `ASSIGNED` when every line has a
-supplier and falls back to `DRAFT` the moment one loses it. Approval is refused while any line is
-unassigned, and freezes suppliers and prices. Three views of the same recap — by line, **by supplier**
+supplier and falls back to `DRAFT` the moment one loses it.
+
+**The final check** is the step between a recap and an order. It states what purchasing has to satisfy
+itself about, separating what stops the approval from what is merely worth seeing:
+
+| Blocker | Warning |
+| --- | --- |
+| A line with no supplier | A supplier not approved for the item's category |
+| A supplier on hold or blacklisted | A price with no purchase from *that* supplier behind it |
+| | A price more than 10% above the last one paid |
+| | A supplier bucket under its minimum order value |
+
+Approval is refused while any blocker stands, and the button carries the count. Once approved, the
+same panel offers the next step — issuing one purchase order per supplier — and the order itself
+carries a note of which divisions are waiting on it, with their share of the units. Three views of the same recap — by line, **by supplier**
 (how the order is actually placed, with a warning when a bucket sits below that supplier's minimum
 order), and **by division** (who is carrying what share of the value, and which request it came from).
 

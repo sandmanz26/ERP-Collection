@@ -161,9 +161,21 @@ last purchase from the assigned supplier → last purchase from anyone → the h
 the item's standard cost. The basis is shown next to the figure, with the date of the purchase it came
 from.
 
-**R21 — A supplier may only be assigned for a category it is approved for, and not while
-blacklisted.** Changing the supplier on a line clears the agreed price, because that price belonged to
-the previous one.
+**R21 — A supplier outside the approved categories may be assigned, but never silently.** The picker
+separates approved suppliers from the rest; choosing from the rest names the mismatch and offers to
+add the category to that supplier's record, so the next request does not ask again. A blacklisted
+supplier is never offered, and one on hold cannot be picked. Changing the supplier on a line clears
+the agreed price, because that price belonged to the previous one.
+
+**R21a — A line with no approved supplier is a dead end, not a rule.** A supplier can be registered
+from the purchase request line itself — enough of a record to place an order, completed later on the
+supplier page — and is assigned in the same step.
+
+**R21b — Approval is a final check with stated criteria.** Blockers stop it: a line with no supplier,
+or a supplier on hold or blacklisted. Warnings are shown but never enforced: a supplier outside the
+category, a price with no purchase from that supplier behind it, a price more than 10% above the last
+one paid, and a supplier bucket under its minimum order value. Once approved, the next step is
+issuing the orders, offered from the same panel.
 
 **R22 — Draft and assigned are derived, not chosen.** A purchase request becomes `ASSIGNED` when every
 line carries a supplier and returns to `DRAFT` the moment one loses it. Approval is refused while any
@@ -306,7 +318,8 @@ to bill for work already done helps nobody.
   purchase request it produced. The register shows filed against eligible divisions, total lines, the
   number of items the merge will produce, and the estimated value.
 - **The division head's page** — this division's request in the open session: add a line (item from
-  the requestable catalogue, quantity, purpose, optional estimated unit price), save as draft, submit.
+  the requestable catalogue, filtered by category, quantity, purpose, optional estimated unit price),
+  save as draft, submit.
   Read-only once submitted; a returned request shows the reason and can be revised and resubmitted.
 - **Purchasing's session view** — every division's request side by side with approve and return, the
   divisions that have not filed, a preview of the recap exactly as the lock would build it, and the
@@ -316,12 +329,14 @@ to bill for work already done helps nobody.
   progress, agreed prices, value) and the detail: lines with their division sources, per-line supplier
   assignment surfacing that supplier's last purchase price and its date, the full purchase history for
   the item, an agreed price that overrides it, and the same recap grouped by supplier (with a minimum
-  order warning) and by division (with each one's share of the value).
+  order warning) and by division (with each one's share of the value). A **final check** tab lists the
+  blockers and warnings above before approval, and the divisions behind the request as information.
 
 ### 5.8 Purchasing
 
 - **Purchase orders** — one per supplier, split from an approved request: lines with ordered
-  quantity, unit price and a running received total; delivery warehouse; ordered and expected dates;
+  quantity, unit price and a running received total; which divisions are waiting on the order and for
+  what share of it, as information; delivery warehouse; ordered and expected dates;
   the supplier's payment term and the PPN rate copied at issue. An order can be closed short or
   cancelled, with a reason. The register shows delivery progress, payment state, days late and days
   overdue.

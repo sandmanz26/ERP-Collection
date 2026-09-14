@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 import {
   AlertTriangle, CalendarRange, CheckCircle2, ClipboardList, CornerUpLeft, Package, Plus, Send, Trash2,
 } from 'lucide-react'
-import type { MrRequest, MrRequestLine } from '@/data/types'
-import { monthLabel } from '@/data/reference'
+import type { ItemCategory, MrRequest, MrRequestLine } from '@/data/types'
+import { itemCategoryLabel, monthLabel } from '@/data/reference'
 import { useErp } from '@/store/useErp'
 import { useCurrentUser } from '@/store/useAuth'
 import { KpiCard, PageHeader } from '@/components/shared/PageHeader'
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Field } from '@/components/ui/field'
 import { Input, Textarea } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
+import { MultiSelect, Select } from '@/components/ui/select'
 import { EmptyState } from '@/components/ui/misc'
 import { Tooltip } from '@/components/ui/tooltip'
 import { useToast } from '@/components/ui/toast'
@@ -34,6 +34,7 @@ export function MyRequestPage() {
   const me = useCurrentUser()
   const { mrSessions, mrRequests, divisions, items, stock, upsertMrRequest, submitMrRequest } = useErp()
   const [draft, setDraft] = React.useState<MrRequest | null>(null)
+  const [category, setCategory] = React.useState<string[]>([])
 
   /* The division this account speaks for: the one it belongs to, or the one it heads. */
   const myDivision = React.useMemo(
@@ -68,6 +69,16 @@ export function MyRequestPage() {
   }, [existing, session, myDivision])
 
   const catalogue = React.useMemo(() => requestableItems(items, stock), [items, stock])
+
+  /* Seventy items in one dropdown is a scroll, not a search. The filter narrows
+     both the picker and the "add a line" default to one category at a time. */
+  const categories = React.useMemo(
+    () => Array.from(new Set(catalogue.map((i) => i.category))).sort(),
+    [catalogue],
+  )
+  const inCategory = (itemId: string) =>
+    category.length === 0 || category.includes(items.find((i) => i.id === itemId)?.category ?? '')
+  const filtered = catalogue.filter((i) => inCategory(i.id))
   const availableOf = (itemId: string) => stock.filter((s) => s.itemId === itemId).reduce((a, s) => a + availableQty(s), 0)
 
   if (!myDivision) {
@@ -108,9 +119,16 @@ export function MyRequestPage() {
     setDraft((d) => (d ? { ...d, lines: d.lines.map((l) => (l.id === lineId ? { ...l, ...patch } : l)) } : d))
 
   const addLine = () => {
-    const first = catalogue.find((i) => !draft.lines.some((l) => l.itemId === i.id))
+    const pool = filtered.length ? filtered : catalogue
+    const first = pool.find((i) => !draft.lines.some((l) => l.itemId === i.id))
     if (!first) {
-      toast.push({ tone: 'warning', title: 'Nothing left to add', description: 'Every item the warehouse holds is already on this request.' })
+      toast.push({
+        tone: 'warning',
+        title: 'Nothing left to add',
+        description: category.length
+          ? 'Every item in the categories you filtered to is already on this request.'
+          : 'Every item the warehouse holds is already on this request.',
+      })
       return
     }
     setDraft((d) =>
@@ -224,9 +242,23 @@ export function MyRequestPage() {
           description="One line per item. Purchasing merges your line with the other divisions asking for the same thing."
           actions={
             !locked ? (
-              <Button variant="secondary" size="sm" onClick={addLine}>
-                <Plus /> Add a line
-              </Button>
+              <div className="flex items-center gap-2">
+                <MultiSelect
+                  values={category}
+                  onChange={setCategory}
+                  size="sm"
+                  className="w-[232px]"
+                  placeholder="All categories"
+                  options={categories.map((c) => ({
+                    value: c,
+                    label: itemCategoryLabel(c as ItemCategory),
+                    meta: <span className="tnum text-[11px] text-fg-subtle">{catalogue.filter((i) => i.category === c).length}</span>,
+                  }))}
+                />
+                <Button variant="secondary" size="sm" onClick={addLine}>
+                  <Plus /> Add a line
+                </Button>
+              </div>
             ) : undefined
           }
         />
@@ -270,11 +302,13 @@ export function MyRequestPage() {
                             className="min-w-[260px]"
                             value={line.itemId}
                             onChange={(v) => patchLine(line.id, { itemId: v })}
-                            options={catalogue.map((i) => ({
+                            options={catalogue
+                              .filter((i) => i.id === line.itemId || inCategory(i.id))
+                              .map((i) => ({
                               value: i.id,
                               label: i.name,
                               description: `${i.sku} · ${i.uom} · ${fmtNumber(availableOf(i.id))} available`,
-                              group: i.category.replace(/_/g, ' ').toLowerCase(),
+                              group: itemCategoryLabel(i.category),
                               disabled: i.id !== line.itemId && draft.lines.some((l) => l.itemId === i.id),
                             }))}
                           />
