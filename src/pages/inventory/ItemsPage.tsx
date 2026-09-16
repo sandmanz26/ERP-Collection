@@ -39,12 +39,12 @@ export function ItemsPage() {
 
   const columns: Column<InventoryItem>[] = [
     {
-      key: 'sku', header: 'SKU', width: 'w-[136px]', pinned: true, sortable: true,
+      key: 'sku', primary: true, header: 'SKU', width: 'w-[136px]', pinned: true, sortable: true,
       sortValue: (r) => r.sku, exportValue: (r) => r.sku,
       cell: (r) => <span className="font-mono text-[12px] font-medium text-fg-muted">{r.sku}</span>,
     },
     {
-      key: 'name', header: 'Item', width: 'w-[270px] max-w-[270px]', sortable: true,
+      key: 'name', primary: true, header: 'Item', width: 'w-[270px] max-w-[270px]', sortable: true,
       sortValue: (r) => r.name, exportValue: (r) => r.name,
       cell: (r) => (
         <div className="min-w-0">
@@ -56,7 +56,7 @@ export function ItemsPage() {
       ),
     },
     {
-      key: 'category', header: 'Category', width: 'w-[164px]', sortable: true,
+      key: 'category', primary: true, header: 'Category', width: 'w-[164px]', sortable: true,
       sortValue: (r) => r.category, exportValue: (r) => r.category,
       cell: (r) => <Badge tone="outline" size="sm">{itemCategoryLabel(r.category)}</Badge>,
     },
@@ -85,7 +85,7 @@ export function ItemsPage() {
       },
     },
     {
-      key: 'available', header: 'Available', width: 'w-[132px]', align: 'right', sortable: true,
+      key: 'available', primary: true, header: 'Available', width: 'w-[132px]', align: 'right', sortable: true,
       sortValue: (r) => totalsOf(r).available, exportValue: (r) => totalsOf(r).available,
       cell: (r) => {
         const t = totalsOf(r)
@@ -181,7 +181,7 @@ export function ItemsPage() {
       ),
     },
     {
-      key: 'status', header: 'Status', width: 'w-[132px]', sortable: true,
+      key: 'status', primary: true, header: 'Status', width: 'w-[132px]', sortable: true,
       sortValue: (r) => r.status, exportValue: (r) => r.status,
       cell: (r) => <StatusBadge value={r.status} size="sm" />,
     },

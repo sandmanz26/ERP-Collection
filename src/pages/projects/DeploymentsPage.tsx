@@ -54,7 +54,7 @@ export function DeploymentsPage() {
 
   const columns: Column<DeploymentRow>[] = [
     {
-      key: 'project', header: 'Project', width: 'w-[190px] max-w-[190px]', pinned: true, sortable: true,
+      key: 'project', primary: true, header: 'Project', width: 'w-[190px] max-w-[190px]', pinned: true, sortable: true,
       sortValue: (r) => r.project.code, exportValue: (r) => r.project.code,
       cell: (r) => (
         <div className="min-w-0">
@@ -75,7 +75,7 @@ export function DeploymentsPage() {
       cell: (r) => <p className="truncate text-[12.5px] text-fg">{r.client?.brandName ?? r.client?.legalName ?? '—'}</p>,
     },
     {
-      key: 'building', header: 'Building', width: 'w-[160px] max-w-[160px]', sortable: true, defaultHidden: true,
+      key: 'building', primary: true, header: 'Building', width: 'w-[160px] max-w-[160px]', sortable: true, defaultHidden: true,
       sortValue: (r) => r.building?.name ?? '', exportValue: (r) => r.building?.name ?? '',
       cell: (r) => (
         <div className="min-w-0">
@@ -85,7 +85,7 @@ export function DeploymentsPage() {
       ),
     },
     {
-      key: 'position', header: 'Position', width: 'w-[170px] max-w-[170px]', sortable: true,
+      key: 'position', primary: true, header: 'Position', width: 'w-[170px] max-w-[170px]', sortable: true,
       sortValue: (r) => r.position?.name ?? '', exportValue: (r) => r.position?.name ?? '',
       cell: (r) => (
         <div className="min-w-0">
@@ -121,7 +121,7 @@ export function DeploymentsPage() {
       cell: (r) => <span className="tnum text-[12.5px] text-fg-muted">{r.requirement.deployed}</span>,
     },
     {
-      key: 'gap', header: 'Gap', width: 'w-[84px]', align: 'right', sortable: true,
+      key: 'gap', primary: true, header: 'Gap', width: 'w-[84px]', align: 'right', sortable: true,
       sortValue: (r) => (isStaffedProject(r.project) ? r.requirement.headcount - r.requirement.deployed : -1),
       exportValue: (r) => (isStaffedProject(r.project) ? Math.max(0, r.requirement.headcount - r.requirement.deployed) : 0),
       cell: (r) => {
@@ -138,7 +138,7 @@ export function DeploymentsPage() {
       },
     },
     {
-      key: 'fulfilment', header: 'Fulfilment', width: 'w-[142px]', sortable: true,
+      key: 'fulfilment', primary: true, header: 'Fulfilment', width: 'w-[142px]', sortable: true,
       sortValue: (r) => (isStaffedProject(r.project) && r.requirement.headcount ? r.requirement.deployed / r.requirement.headcount : 2),
       exportValue: (r) => `${Math.round((r.requirement.deployed / Math.max(1, r.requirement.headcount)) * 100)}%`,
       cell: (r) =>

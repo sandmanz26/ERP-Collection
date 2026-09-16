@@ -1,7 +1,7 @@
 import * as React from 'react'
 import {
-  ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsUpDown, Columns3, Download, FileJson,
-  FileSpreadsheet, Filter, Inbox, Rows3, Search, SlidersHorizontal, Trash2, Upload, X,
+  ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, Columns3, Download,
+  FileJson, FileSpreadsheet, Filter, Inbox, Rows3, Search, SlidersHorizontal, Trash2, Upload, X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { exportCsv, exportJson } from '@/lib/csv'
@@ -14,6 +14,7 @@ import { EmptyState, Separator } from '@/components/ui/misc'
 import { Tooltip } from '@/components/ui/tooltip'
 import { ConfirmDelete } from '@/components/ui/confirm'
 import { ImportDialog } from './ImportDialog'
+import { useTableStyle } from '@/store/useTableStyle'
 import type { Column, ImportField, SortState, TableFilter } from './types'
 
 export interface DataTableProps<T> {
@@ -108,6 +109,40 @@ export function DataTable<T>({
   const activeFilterCount = filters.reduce((a, f) => a + (f.values.length ? 1 : 0), 0)
   const visibleColumns = columns.filter((c) => !hidden.has(c.key))
 
+  /**
+   * The relaxed presentation shows only the columns that decide something and
+   * moves the rest behind a per-row expander. A column earns its place by
+   * declaring `primary`; where a register has not said, the first four stand
+   * in, since those are the ones a page puts first for a reason.
+   */
+  const { mode, addTable, removeTable } = useTableStyle()
+  const relaxed = mode === 'relaxed'
+
+  /* Let the floating control know there is a table here to talk to. */
+  React.useEffect(() => {
+    addTable()
+    return removeTable
+  }, [addTable, removeTable])
+
+  const declaredPrimary = visibleColumns.filter((c) => c.primary)
+  const primaryColumns = declaredPrimary.length > 0 ? declaredPrimary : visibleColumns.slice(0, 4)
+  const shownColumns = relaxed ? primaryColumns : visibleColumns
+  const foldedColumns = relaxed ? visibleColumns.filter((c) => !shownColumns.includes(c)) : []
+  const [expanded, setExpanded] = React.useState<Set<string>>(new Set())
+
+  /* Switching back to the detailed table leaves no half-open rows behind. */
+  React.useEffect(() => {
+    if (!relaxed) setExpanded(new Set())
+  }, [relaxed])
+
+  const toggleExpanded = (id: string) =>
+    setExpanded((s) => {
+      const next = new Set(s)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
   const filtered = React.useMemo(() => {
     let rows = data
     if (query.trim()) {
@@ -172,7 +207,9 @@ export function DataTable<T>({
     else exportJson(exportName, payload)
   }
 
-  const cellPad = dense ? 'px-3 py-1.5' : 'px-3 py-2.5'
+  /* Relaxed rows breathe: fewer columns means the space can go to the rows. */
+  const cellPad = dense ? 'px-3 py-1.5' : relaxed ? 'px-4 py-3.5' : 'px-3 py-2.5'
+  const headPad = dense ? 'px-3 py-1.5' : relaxed ? 'px-4 py-2.5' : 'px-3 py-2'
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -381,14 +418,14 @@ export function DataTable<T>({
                     onChange={toggleAllOnPage}
                   />
                 </th>
-                {visibleColumns.map((c, i) => {
+                {shownColumns.map((c, i) => {
                   const isSorted = sort?.key === c.key
                   return (
                     <th
                       key={c.key}
                       className={cn(
                         'sticky top-0 z-20 whitespace-nowrap border-b border-border bg-surface-sunken text-left font-semibold text-fg-muted',
-                        dense ? 'px-3 py-1.5' : 'px-3 py-2',
+                        headPad,
                         c.width,
                         c.align === 'right' && 'text-right',
                         c.align === 'center' && 'text-center',
@@ -423,12 +460,22 @@ export function DataTable<T>({
                     </th>
                   )
                 })}
+                {foldedColumns.length > 0 && (
+                  <th
+                    className={cn(
+                      'sticky top-0 z-20 w-10 border-b border-border bg-surface-sunken',
+                      dense ? 'px-2 py-1.5' : 'px-2 py-2',
+                    )}
+                  >
+                    <span className="sr-only">Show the remaining {foldedColumns.length} fields</span>
+                  </th>
+                )}
                 {rowActions && (
                   <th
                     data-tour="table-actions"
                     className={cn(
                       'sticky top-0 z-30 w-[92px] border-b border-border bg-surface-sunken text-right text-[11.5px] font-semibold uppercase tracking-[0.055em] text-fg-muted',
-                      dense ? 'px-3 py-1.5' : 'px-3 py-2',
+                      headPad,
                       stickyActions && 'right-0 border-l border-border shadow-sticky-l',
                     )}
                   >
@@ -441,9 +488,10 @@ export function DataTable<T>({
               {paged.map((row) => {
                 const id = getId(row)
                 const isSelected = selected.has(id)
+                const isOpen = expanded.has(id)
                 return (
+                  <React.Fragment key={id}>
                   <tr
-                    key={id}
                     onClick={() => onRowClick?.(row)}
                     className={cn(
                       'group transition-colors',
@@ -455,6 +503,7 @@ export function DataTable<T>({
                     <td
                       className={cn(
                         'sticky left-0 z-10 w-10 border-b border-border px-3',
+                        isOpen && 'border-b-transparent',
                         dense ? 'py-1.5' : 'py-2.5',
                         isSelected ? 'bg-[hsl(var(--primary-soft))]' : 'bg-surface group-hover:bg-[hsl(var(--bg-muted))]',
                       )}
@@ -471,11 +520,12 @@ export function DataTable<T>({
                         }}
                       />
                     </td>
-                    {visibleColumns.map((c) => (
+                    {shownColumns.map((c) => (
                       <td
                         key={c.key}
                         className={cn(
                           'whitespace-nowrap border-b border-border align-middle text-fg',
+                          isOpen && 'border-b-transparent',
                           cellPad,
                           c.width,
                           c.align === 'right' && 'text-right',
@@ -490,11 +540,35 @@ export function DataTable<T>({
                         {c.cell(row)}
                       </td>
                     ))}
+                    {foldedColumns.length > 0 && (
+                      <td
+                        onClick={(e) => e.stopPropagation()}
+                        className={cn(
+                          'w-10 border-b border-border px-2 align-middle',
+                          isOpen && 'border-b-transparent',
+                          dense ? 'py-1.5' : 'py-2',
+                        )}
+                      >
+                        <button
+                          onClick={() => toggleExpanded(id)}
+                          aria-expanded={isOpen}
+                          aria-label={isOpen ? `Hide the other fields of ${getLabel(row)}` : `Show the other ${foldedColumns.length} fields of ${getLabel(row)}`}
+                          title={isOpen ? 'Hide the rest' : `Show ${foldedColumns.length} more fields`}
+                          className={cn(
+                            'grid size-7 place-items-center rounded-md text-fg-subtle transition-colors hover:bg-bg-muted hover:text-fg',
+                            isOpen && 'bg-primary-soft text-primary-soft-fg',
+                          )}
+                        >
+                          <ChevronDown className={cn('size-4 transition-transform', isOpen && 'rotate-180')} />
+                        </button>
+                      </td>
+                    )}
                     {rowActions && (
                       <td
                         onClick={(e) => e.stopPropagation()}
                         className={cn(
                           'border-b border-border text-right',
+                          isOpen && 'border-b-transparent',
                           dense ? 'px-2 py-1' : 'px-2 py-2',
                           stickyActions && 'sticky right-0 z-10 border-l border-border shadow-sticky-l',
                           isSelected ? 'bg-[hsl(var(--primary-soft))]' : 'bg-surface group-hover:bg-[hsl(var(--bg-muted))]',
@@ -504,6 +578,26 @@ export function DataTable<T>({
                       </td>
                     )}
                   </tr>
+                  {isOpen && (
+                    <tr className={cn(isSelected ? 'bg-primary-soft/25' : 'bg-bg-muted/40')}>
+                      <td
+                        colSpan={1 + shownColumns.length + 1 + (rowActions ? 1 : 0)}
+                        className="border-b border-border px-4 pb-4 pt-1"
+                      >
+                        <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+                          {foldedColumns.map((c) => (
+                            <div key={c.key} className="min-w-0">
+                              <dt className="text-[11px] font-semibold uppercase tracking-[0.055em] text-fg-subtle">
+                                {c.header}
+                              </dt>
+                              <dd className="mt-0.5 text-[13px] text-fg">{c.cell(row)}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </td>
+                    </tr>
+                  )}
+                  </React.Fragment>
                 )
               })}
             </tbody>

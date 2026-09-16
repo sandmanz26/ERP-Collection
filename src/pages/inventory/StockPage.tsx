@@ -41,12 +41,12 @@ export function StockPage() {
 
   const columns: Column<WarehouseStock>[] = [
     {
-      key: 'sku', header: 'SKU', width: 'w-[136px]', pinned: true, sortable: true,
+      key: 'sku', primary: true, header: 'SKU', width: 'w-[136px]', pinned: true, sortable: true,
       sortValue: (r) => itemOf(r)?.sku ?? '', exportValue: (r) => itemOf(r)?.sku ?? '',
       cell: (r) => <span className="font-mono text-[12px] font-medium text-fg-muted">{itemOf(r)?.sku ?? '—'}</span>,
     },
     {
-      key: 'item', header: 'Item', width: 'w-[250px] max-w-[250px]', sortable: true,
+      key: 'item', primary: true, header: 'Item', width: 'w-[250px] max-w-[250px]', sortable: true,
       sortValue: (r) => itemOf(r)?.name ?? '', exportValue: (r) => itemOf(r)?.name ?? '',
       cell: (r) => {
         const item = itemOf(r)
@@ -63,7 +63,7 @@ export function StockPage() {
       },
     },
     {
-      key: 'warehouse', header: 'Warehouse', width: 'w-[180px]', sortable: true,
+      key: 'warehouse', primary: true, header: 'Warehouse', width: 'w-[180px]', sortable: true,
       sortValue: (r) => warehouseOf(r)?.code ?? '', exportValue: (r) => warehouseOf(r)?.code ?? '',
       cell: (r) => {
         const w = warehouseOf(r)
@@ -95,7 +95,7 @@ export function StockPage() {
       cell: (r) => <span className="tnum text-[12.5px] text-fg-muted">{fmtNumber(r.qtyReserved)}</span>,
     },
     {
-      key: 'available', header: 'Available', width: 'w-[122px]', align: 'right', sortable: true,
+      key: 'available', primary: true, header: 'Available', width: 'w-[122px]', align: 'right', sortable: true,
       sortValue: (r) => availableQty(r), exportValue: (r) => availableQty(r),
       headerHint: 'On hand less what is already reserved for a project',
       cell: (r) => {
@@ -105,7 +105,7 @@ export function StockPage() {
       },
     },
     {
-      key: 'health', header: 'Level', width: 'w-[146px]', sortable: true,
+      key: 'health', primary: true, header: 'Level', width: 'w-[146px]', sortable: true,
       sortValue: (r) => ({ OUT_OF_STOCK: 0, LOW: 1, OVERSTOCK: 2, HEALTHY: 3 })[stockStatus(r, itemOf(r))],
       exportValue: (r) => stockStatus(r, itemOf(r)),
       cell: (r) => {

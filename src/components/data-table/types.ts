@@ -15,6 +15,12 @@ export interface Column<T> {
   headerHint?: string
   /** pin this column to the left, after the checkbox */
   pinned?: boolean
+  /**
+   * Survives in the relaxed presentation: the handful of columns somebody
+   * scanning the register actually decides on. Everything else moves behind
+   * the per-row expander. When no column declares it, the first few stand in.
+   */
+  primary?: boolean
   /** anchor for the onboarding tour, stamped on the column header */
   tour?: string
 }

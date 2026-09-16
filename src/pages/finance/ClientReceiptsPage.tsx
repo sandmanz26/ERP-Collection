@@ -53,7 +53,7 @@ export function ClientReceiptsPage() {
 
   const columns: Column<ClientReceipt>[] = [
     {
-      key: 'code', header: 'Receipt', width: 'w-[168px]', sortable: true, pinned: true,
+      key: 'code', primary: true, header: 'Receipt', width: 'w-[168px]', sortable: true, pinned: true,
       sortValue: (r) => r.code, exportValue: (r) => r.code,
       cell: (r) => (
         <div className="min-w-0">
@@ -63,7 +63,7 @@ export function ClientReceiptsPage() {
       ),
     },
     {
-      key: 'invoice', header: 'Invoice', width: 'w-[168px]', sortable: true,
+      key: 'invoice', primary: true, header: 'Invoice', width: 'w-[168px]', sortable: true,
       sortValue: (r) => invoiceOf(r)?.code ?? '', exportValue: (r) => invoiceOf(r)?.code ?? '',
       cell: (r) => {
         const invoice = invoiceOf(r)
@@ -80,7 +80,7 @@ export function ClientReceiptsPage() {
       },
     },
     {
-      key: 'client', header: 'Client', width: 'w-[210px] max-w-[210px]', sortable: true,
+      key: 'client', primary: true, header: 'Client', width: 'w-[210px] max-w-[210px]', sortable: true,
       sortValue: (r) => clientName(r.clientId), exportValue: (r) => clientName(r.clientId),
       cell: (r) => <p className="truncate text-[12.5px] font-medium text-fg">{clientName(r.clientId)}</p>,
     },
@@ -94,7 +94,7 @@ export function ClientReceiptsPage() {
       },
     },
     {
-      key: 'receivedAt', header: 'Received', width: 'w-[150px]', sortable: true,
+      key: 'receivedAt', primary: true, header: 'Received', width: 'w-[150px]', sortable: true,
       sortValue: (r) => r.receivedAt, exportValue: (r) => r.receivedAt.slice(0, 10),
       cell: (r) => (
         <div className="min-w-0">
@@ -136,7 +136,7 @@ export function ClientReceiptsPage() {
       },
     },
     {
-      key: 'amount', header: 'Amount', width: 'w-[156px]', align: 'right', sortable: true,
+      key: 'amount', primary: true, header: 'Amount', width: 'w-[156px]', align: 'right', sortable: true,
       sortValue: (r) => r.amount, exportValue: (r) => Math.round(r.amount),
       cell: (r) => <span className="tnum text-[12.5px] font-semibold text-fg">{fmtCurrency(r.amount, 'IDR')}</span>,
     },

@@ -50,7 +50,7 @@ export function UsersPage() {
 
   const columns: Column<UserAccount>[] = [
     {
-      key: 'name', header: 'Account', width: 'w-[240px] max-w-[240px]', pinned: true, sortable: true,
+      key: 'name', primary: true, header: 'Account', width: 'w-[240px] max-w-[240px]', pinned: true, sortable: true,
       sortValue: (r) => r.fullName, exportValue: (r) => r.fullName,
       cell: (r) => (
         <div className="min-w-0">
@@ -63,12 +63,12 @@ export function UsersPage() {
       ),
     },
     {
-      key: 'email', header: 'Email', width: 'w-[220px] max-w-[220px]', sortable: true,
+      key: 'email', primary: true, header: 'Email', width: 'w-[220px] max-w-[220px]', sortable: true,
       sortValue: (r) => r.email, exportValue: (r) => r.email,
       cell: (r) => <p className="truncate text-[12.5px] text-fg-muted">{r.email}</p>,
     },
     {
-      key: 'roles', header: 'Roles', width: 'w-[190px] max-w-[190px]', sortable: true,
+      key: 'roles', primary: true, header: 'Roles', width: 'w-[190px] max-w-[190px]', sortable: true,
       sortValue: (r) => rolesOf(r, roles).map((x) => x.name).join(','),
       exportValue: (r) => rolesOf(r, roles).map((x) => x.code).join(' | '),
       cell: (r) => {
@@ -134,7 +134,7 @@ export function UsersPage() {
       ),
     },
     {
-      key: 'status', header: 'Status', width: 'w-[164px]', sortable: true,
+      key: 'status', primary: true, header: 'Status', width: 'w-[164px]', sortable: true,
       sortValue: (r) => r.status, exportValue: (r) => r.status,
       cell: (r) => (
         <div className="flex flex-wrap items-center gap-1.5">

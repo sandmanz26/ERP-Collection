@@ -85,7 +85,7 @@ export function PaymentsPage() {
 
   const columns: Column<SupplierPayment>[] = [
     {
-      key: 'code', header: 'Payment', width: 'w-[160px]', sortable: true, pinned: true,
+      key: 'code', primary: true, header: 'Payment', width: 'w-[160px]', sortable: true, pinned: true,
       sortValue: (r) => r.code, exportValue: (r) => r.code,
       cell: (r) => (
         <div className="min-w-0">
@@ -95,7 +95,7 @@ export function PaymentsPage() {
       ),
     },
     {
-      key: 'order', header: 'Order', width: 'w-[150px]', sortable: true,
+      key: 'order', primary: true, header: 'Order', width: 'w-[150px]', sortable: true,
       sortValue: (r) => orderOf(r)?.code ?? '', exportValue: (r) => orderOf(r)?.code ?? '',
       cell: (r) => {
         const po = orderOf(r)
@@ -111,12 +111,12 @@ export function PaymentsPage() {
       },
     },
     {
-      key: 'supplier', header: 'Supplier', width: 'w-[210px] max-w-[210px]', sortable: true,
+      key: 'supplier', primary: true, header: 'Supplier', width: 'w-[210px] max-w-[210px]', sortable: true,
       sortValue: (r) => supplierName(r.supplierId), exportValue: (r) => supplierName(r.supplierId),
       cell: (r) => <p className="truncate text-[12.5px] font-medium text-fg">{supplierName(r.supplierId)}</p>,
     },
     {
-      key: 'paidAt', header: 'Paid', width: 'w-[150px]', sortable: true,
+      key: 'paidAt', primary: true, header: 'Paid', width: 'w-[150px]', sortable: true,
       sortValue: (r) => r.paidAt, exportValue: (r) => r.paidAt.slice(0, 10),
       cell: (r) => (
         <div className="min-w-0">
@@ -140,7 +140,7 @@ export function PaymentsPage() {
       },
     },
     {
-      key: 'amount', header: 'Amount', width: 'w-[150px]', align: 'right', sortable: true,
+      key: 'amount', primary: true, header: 'Amount', width: 'w-[150px]', align: 'right', sortable: true,
       sortValue: (r) => r.amount, exportValue: (r) => Math.round(r.amount),
       cell: (r) => <span className="tnum text-[12.5px] font-semibold text-fg">{fmtCurrency(r.amount, 'IDR')}</span>,
     },

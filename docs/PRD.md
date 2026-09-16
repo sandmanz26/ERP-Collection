@@ -395,6 +395,14 @@ filters, CSV import with mapping and validation, CSV/JSON export (including a re
 visible total row count, column show/hide, density control, bulk selection and delete with a cascade
 warning.
 
+Every register offers two presentations of the same data, chosen by the reader and remembered:
+**Detailed**, every column at once, for reconciling a month; and **Relaxed**, only the columns that
+decide (each register declares them), with the remaining fields folded behind a chevron on each row
+that opens a labelled panel underneath. Folding is presentation only — search, sort, filters and
+export keep working on the full column set. The switch between them is a floating control the reader
+can drag anywhere, collapse to a single button, and which appears only where there is a register to
+restyle.
+
 Navigation and field labels are English. Operating vocabulary — shift names, position titles, item
 names — stays Indonesian.
 

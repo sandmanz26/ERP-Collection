@@ -404,7 +404,7 @@ export function StockTransfersPage() {
 
   const columns: Column<StockTransfer>[] = [
     {
-      key: 'code', header: 'Transfer', width: 'w-[160px]', sortable: true, pinned: true,
+      key: 'code', primary: true, header: 'Transfer', width: 'w-[160px]', sortable: true, pinned: true,
       sortValue: (r) => r.code, exportValue: (r) => r.code,
       cell: (r) => (
         <div className="min-w-0">
@@ -414,7 +414,7 @@ export function StockTransfersPage() {
       ),
     },
     {
-      key: 'route', header: 'Route', width: 'w-[268px] max-w-[268px]', sortable: true,
+      key: 'route', primary: true, header: 'Route', width: 'w-[268px] max-w-[268px]', sortable: true,
       sortValue: (r) => `${codeOf(r.fromWarehouseId)}→${codeOf(r.toWarehouseId)}`,
       exportValue: (r) => `${codeOf(r.fromWarehouseId)} → ${codeOf(r.toWarehouseId)}`,
       cell: (r) => (
@@ -431,7 +431,7 @@ export function StockTransfersPage() {
       ),
     },
     {
-      key: 'status', header: 'Status', width: 'w-[136px]', sortable: true,
+      key: 'status', primary: true, header: 'Status', width: 'w-[136px]', sortable: true,
       sortValue: (r) => r.status, exportValue: (r) => r.status,
       cell: (r) => <StatusBadge value={r.status} size="sm" />,
     },
@@ -441,7 +441,7 @@ export function StockTransfersPage() {
       cell: (r) => <span className="tnum text-[12.5px] text-fg-muted">{r.lines.length}</span>,
     },
     {
-      key: 'qty', header: 'Units', width: 'w-[108px]', align: 'right', sortable: true,
+      key: 'qty', primary: true, header: 'Units', width: 'w-[108px]', align: 'right', sortable: true,
       sortValue: (r) => transferQty(r), exportValue: (r) => transferQty(r),
       cell: (r) => <span className="tnum text-[12.5px] font-medium text-fg">{fmtNumber(transferQty(r))}</span>,
     },
@@ -461,7 +461,7 @@ export function StockTransfersPage() {
       },
     },
     {
-      key: 'value', header: 'Value', width: 'w-[140px]', align: 'right', sortable: true,
+      key: 'value', primary: true, header: 'Value', width: 'w-[140px]', align: 'right', sortable: true,
       sortValue: (r) => transferValue(r), exportValue: (r) => Math.round(transferValue(r)),
       cell: (r) => <span className="tnum text-[12.5px] font-semibold text-fg">{fmtCurrency(transferValue(r), 'IDR', { compact: true })}</span>,
     },

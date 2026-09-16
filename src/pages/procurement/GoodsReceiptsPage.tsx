@@ -45,7 +45,7 @@ export function GoodsReceiptsPage() {
 
   const columns: Column<GoodsReceipt>[] = [
     {
-      key: 'code', header: 'Receipt', width: 'w-[168px]', sortable: true, pinned: true,
+      key: 'code', primary: true, header: 'Receipt', width: 'w-[168px]', sortable: true, pinned: true,
       sortValue: (r) => r.code, exportValue: (r) => r.code,
       cell: (r) => (
         <div className="min-w-0">
@@ -55,7 +55,7 @@ export function GoodsReceiptsPage() {
       ),
     },
     {
-      key: 'order', header: 'Order', width: 'w-[150px]', sortable: true,
+      key: 'order', primary: true, header: 'Order', width: 'w-[150px]', sortable: true,
       sortValue: (r) => orderOf(r)?.code ?? '', exportValue: (r) => orderOf(r)?.code ?? '',
       cell: (r) => {
         const po = orderOf(r)
@@ -71,12 +71,12 @@ export function GoodsReceiptsPage() {
       },
     },
     {
-      key: 'supplier', header: 'Supplier', width: 'w-[200px] max-w-[200px]', sortable: true,
+      key: 'supplier', primary: true, header: 'Supplier', width: 'w-[200px] max-w-[200px]', sortable: true,
       sortValue: (r) => supplierOf(r)?.legalName ?? '', exportValue: (r) => supplierOf(r)?.legalName ?? '',
       cell: (r) => <p className="truncate text-[12.5px] font-medium text-fg">{supplierOf(r)?.brandName ?? supplierOf(r)?.legalName}</p>,
     },
     {
-      key: 'receivedAt', header: 'Received', width: 'w-[150px]', sortable: true,
+      key: 'receivedAt', primary: true, header: 'Received', width: 'w-[150px]', sortable: true,
       sortValue: (r) => r.receivedAt, exportValue: (r) => r.receivedAt.slice(0, 10),
       cell: (r) => (
         <div className="min-w-0">
@@ -86,7 +86,7 @@ export function GoodsReceiptsPage() {
       ),
     },
     {
-      key: 'timing', header: 'Timing', width: 'w-[108px]', sortable: true,
+      key: 'timing', primary: true, header: 'Timing', width: 'w-[108px]', sortable: true,
       sortValue: (r) => (r.onTime ? 1 : 0), exportValue: (r) => (r.onTime ? 'ON_TIME' : 'LATE'),
       cell: (r) => <Badge tone={r.onTime ? 'success' : 'warning'} size="sm" dot>{r.onTime ? 'On time' : 'Late'}</Badge>,
     },

@@ -45,12 +45,12 @@ export function PositionsPage() {
 
   const columns: Column<Position>[] = [
     {
-      key: 'code', header: 'Code', width: 'w-[128px]', pinned: true, sortable: true,
+      key: 'code', primary: true, header: 'Code', width: 'w-[128px]', pinned: true, sortable: true,
       sortValue: (r) => r.code, exportValue: (r) => r.code,
       cell: (r) => <span className="font-mono text-[12px] font-medium text-fg-muted">{r.code}</span>,
     },
     {
-      key: 'name', header: 'Position', width: 'w-[250px] max-w-[250px]', sortable: true,
+      key: 'name', primary: true, header: 'Position', width: 'w-[250px] max-w-[250px]', sortable: true,
       sortValue: (r) => r.name, exportValue: (r) => r.name,
       cell: (r) => (
         <div className="min-w-0">
@@ -60,7 +60,7 @@ export function PositionsPage() {
       ),
     },
     {
-      key: 'service', header: 'Service line', width: 'w-[160px]', sortable: true,
+      key: 'service', primary: true, header: 'Service line', width: 'w-[160px]', sortable: true,
       sortValue: (r) => r.serviceType, exportValue: (r) => serviceLabel(r.serviceType),
       cell: (r) => <Badge tone="outline" size="sm">{serviceLabel(r.serviceType)}</Badge>,
     },
@@ -86,7 +86,7 @@ export function PositionsPage() {
         ),
     },
     {
-      key: 'deployed', header: 'On site', width: 'w-[120px]', align: 'right', sortable: true,
+      key: 'deployed', primary: true, header: 'On site', width: 'w-[120px]', align: 'right', sortable: true,
       sortValue: deployedOf, exportValue: deployedOf,
       headerHint: 'Deployed against contracted, across running projects',
       cell: (r) => {
@@ -112,7 +112,7 @@ export function PositionsPage() {
       ),
     },
     {
-      key: 'bill', header: 'Default bill rate', width: 'w-[156px]', align: 'right', sortable: true,
+      key: 'bill', primary: true, header: 'Default bill rate', width: 'w-[156px]', align: 'right', sortable: true,
       sortValue: (r) => r.defaultBillRate, exportValue: (r) => r.defaultBillRate,
       cell: (r) => <span className="tnum text-[12.5px] font-medium text-fg">{fmtCurrency(r.defaultBillRate, 'IDR', { compact: true })}</span>,
     },

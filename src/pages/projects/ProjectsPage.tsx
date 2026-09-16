@@ -50,12 +50,12 @@ export function ProjectsPage() {
 
   const columns: Column<Project>[] = [
     {
-      key: 'code', header: 'Code', width: 'w-[120px]', pinned: true, sortable: true,
+      key: 'code', primary: true, header: 'Code', width: 'w-[120px]', pinned: true, sortable: true,
       sortValue: (r) => r.code, exportValue: (r) => r.code,
       cell: (r) => <span className="font-mono text-[12px] font-medium text-fg-muted">{r.code}</span>,
     },
     {
-      key: 'name', header: 'Project', width: 'w-[230px] max-w-[230px]', sortable: true,
+      key: 'name', primary: true, header: 'Project', width: 'w-[230px] max-w-[230px]', sortable: true,
       sortValue: (r) => r.name, exportValue: (r) => r.name,
       cell: (r) => (
         <div className="min-w-0">
@@ -65,7 +65,7 @@ export function ProjectsPage() {
       ),
     },
     {
-      key: 'client', header: 'Client', width: 'w-[150px] max-w-[150px]', sortable: true,
+      key: 'client', primary: true, header: 'Client', width: 'w-[150px] max-w-[150px]', sortable: true,
       sortValue: (r) => clientOf(r)?.legalName ?? '', exportValue: (r) => clientOf(r)?.legalName ?? '',
       cell: (r) => {
         const c = clientOf(r)
@@ -94,7 +94,7 @@ export function ProjectsPage() {
       },
     },
     {
-      key: 'status', header: 'Status', width: 'w-[132px]', sortable: true,
+      key: 'status', primary: true, header: 'Status', width: 'w-[132px]', sortable: true,
       sortValue: (r) => r.status, exportValue: (r) => r.status,
       cell: (r) => (
         <div className="flex flex-wrap items-center gap-1.5">
@@ -133,7 +133,7 @@ export function ProjectsPage() {
       },
     },
     {
-      key: 'fulfilment', header: 'Fulfilment', width: 'w-[158px]', sortable: true,
+      key: 'fulfilment', primary: true, header: 'Fulfilment', width: 'w-[158px]', sortable: true,
       sortValue: (r) => fulfilment(r).pct, exportValue: (r) => `${fulfilment(r).deployed}/${fulfilment(r).required}`,
       headerHint: 'Deployed against contracted headcount',
       cell: (r) => {

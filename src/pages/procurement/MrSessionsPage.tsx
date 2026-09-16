@@ -172,7 +172,7 @@ export function MrSessionsPage() {
 
   const columns: Column<MrSession>[] = [
     {
-      key: 'code', header: 'Session', width: 'w-[150px]', pinned: true, sortable: true,
+      key: 'code', primary: true, header: 'Session', width: 'w-[150px]', pinned: true, sortable: true,
       sortValue: (r) => `${r.periodYear}${String(r.periodMonth).padStart(2, '0')}`, exportValue: (r) => r.code,
       cell: (r) => (
         <div className="min-w-0">
@@ -182,7 +182,7 @@ export function MrSessionsPage() {
       ),
     },
     {
-      key: 'window', header: 'Filing window', width: 'w-[196px]', sortable: true,
+      key: 'window', primary: true, header: 'Filing window', width: 'w-[196px]', sortable: true,
       sortValue: (r) => r.closesAt, exportValue: (r) => `${r.opensAt.slice(0, 10)} → ${r.closesAt.slice(0, 10)}`,
       cell: (r) => {
         const left = daysUntil(r.closesAt)
@@ -199,12 +199,12 @@ export function MrSessionsPage() {
       },
     },
     {
-      key: 'status', header: 'Status', width: 'w-[124px]', sortable: true,
+      key: 'status', primary: true, header: 'Status', width: 'w-[124px]', sortable: true,
       sortValue: (r) => r.status, exportValue: (r) => r.status,
       cell: (r) => <StatusBadge value={r.status} size="sm" tone={r.status === 'LOCKED' ? 'purple' : undefined} />,
     },
     {
-      key: 'divisions', header: 'Divisions filed', width: 'w-[172px]', sortable: true,
+      key: 'divisions', primary: true, header: 'Divisions filed', width: 'w-[172px]', sortable: true,
       sortValue: (r) => statsOf(r).submitted, exportValue: (r) => `${statsOf(r).submitted}/${statsOf(r).eligibleDivisions}`,
       headerHint: 'Submitted, against the divisions that could file',
       cell: (r) => {
@@ -235,7 +235,7 @@ export function MrSessionsPage() {
       cell: (r) => <span className="tnum text-[12.5px] font-medium text-fg">{statsOf(r).mergedItems} items</span>,
     },
     {
-      key: 'estimate', header: 'Estimated value', width: 'w-[160px]', align: 'right', sortable: true,
+      key: 'estimate', primary: true, header: 'Estimated value', width: 'w-[160px]', align: 'right', sortable: true,
       sortValue: (r) => statsOf(r).estimate, exportValue: (r) => Math.round(statsOf(r).estimate),
       cell: (r) => <span className="tnum text-[12.5px] font-medium text-fg">{fmtCurrency(statsOf(r).estimate, 'IDR', { compact: true })}</span>,
     },

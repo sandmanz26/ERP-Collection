@@ -7,6 +7,7 @@ import {
 import { cn } from '@/lib/utils'
 import { NAV } from './nav'
 import { CommandPalette } from './CommandPalette'
+import { TableStyleSwitcher } from '@/components/data-table/TableStyleSwitcher'
 import { Button } from '@/components/ui/button'
 import { Kbd, Separator } from '@/components/ui/misc'
 import { Tooltip } from '@/components/ui/tooltip'
@@ -319,6 +320,7 @@ export function AppShell() {
       </div>
 
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
+      <TableStyleSwitcher />
     </div>
   )
 }

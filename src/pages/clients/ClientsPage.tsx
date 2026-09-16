@@ -43,12 +43,12 @@ export function ClientsPage() {
 
   const columns: Column<Client>[] = [
     {
-      key: 'code', header: 'Code', width: 'w-[104px]', pinned: true, sortable: true,
+      key: 'code', primary: true, header: 'Code', width: 'w-[104px]', pinned: true, sortable: true,
       sortValue: (r) => r.code, exportValue: (r) => r.code,
       cell: (r) => <span className="font-mono text-[12px] font-medium text-fg-muted">{r.code}</span>,
     },
     {
-      key: 'name', header: 'Client', width: 'w-[250px] max-w-[250px]', sortable: true,
+      key: 'name', primary: true, header: 'Client', width: 'w-[250px] max-w-[250px]', sortable: true,
       sortValue: (r) => r.brandName || r.legalName, exportValue: (r) => r.legalName,
       cell: (r) => (
         <div className="min-w-0">
@@ -58,7 +58,7 @@ export function ClientsPage() {
       ),
     },
     {
-      key: 'status', header: 'Status', width: 'w-[126px]', sortable: true,
+      key: 'status', primary: true, header: 'Status', width: 'w-[126px]', sortable: true,
       sortValue: (r) => r.status, exportValue: (r) => r.status,
       cell: (r) => <StatusBadge value={r.status} size="sm" />,
     },
@@ -83,7 +83,7 @@ export function ClientsPage() {
       cell: (r) => <span className="tnum text-[12.5px] text-fg-muted">{buildingsOf(r).length}</span>,
     },
     {
-      key: 'projects', header: 'Projects', width: 'w-[124px]', align: 'right', sortable: true,
+      key: 'projects', primary: true, header: 'Projects', width: 'w-[124px]', align: 'right', sortable: true,
       sortValue: (r) => liveOf(r).length, exportValue: (r) => projectsOf(r).length,
       cell: (r) => {
         const live = liveOf(r).length
@@ -103,7 +103,7 @@ export function ClientsPage() {
       cell: (r) => <span className="tnum text-[12.5px] font-medium text-fg">{headcountOf(r) || '—'}</span>,
     },
     {
-      key: 'monthly', header: 'Monthly value', width: 'w-[160px]', align: 'right', sortable: true,
+      key: 'monthly', primary: true, header: 'Monthly value', width: 'w-[160px]', align: 'right', sortable: true,
       sortValue: monthlyOf, exportValue: monthlyOf,
       cell: (r) => (
         <span className="tnum text-[12.5px] font-medium text-fg">

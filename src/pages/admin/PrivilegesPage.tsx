@@ -38,7 +38,7 @@ export function PrivilegesPage() {
 
   const columns: Column<PermissionDef>[] = [
     {
-      key: 'key', header: 'Privilege', width: 'w-[210px] max-w-[210px]', pinned: true, sortable: true,
+      key: 'key', primary: true, header: 'Privilege', width: 'w-[210px] max-w-[210px]', pinned: true, sortable: true,
       sortValue: (r) => r.key, exportValue: (r) => r.key,
       cell: (r) => (
         <div className="min-w-0">
@@ -48,7 +48,7 @@ export function PrivilegesPage() {
       ),
     },
     {
-      key: 'module', header: 'Module', width: 'w-[150px]', sortable: true,
+      key: 'module', primary: true, header: 'Module', width: 'w-[150px]', sortable: true,
       sortValue: (r) => r.module, exportValue: (r) => moduleLabel(r.module),
       cell: (r) => <Badge tone="outline" size="sm">{moduleLabel(r.module)}</Badge>,
     },
@@ -58,7 +58,7 @@ export function PrivilegesPage() {
       cell: (r) => <span className="text-[12.5px] text-fg-muted">{r.action}</span>,
     },
     {
-      key: 'risk', header: 'Risk', width: 'w-[100px]', sortable: true,
+      key: 'risk', primary: true, header: 'Risk', width: 'w-[100px]', sortable: true,
       sortValue: (r) => ({ HIGH: 0, MEDIUM: 1, LOW: 2 })[r.risk], exportValue: (r) => r.risk,
       cell: (r) => (
         <Badge tone={r.risk === 'HIGH' ? 'danger' : r.risk === 'MEDIUM' ? 'warning' : 'neutral'} size="sm">
@@ -85,7 +85,7 @@ export function PrivilegesPage() {
       },
     },
     {
-      key: 'accounts', header: 'Accounts', width: 'w-[104px]', align: 'right', sortable: true,
+      key: 'accounts', primary: true, header: 'Accounts', width: 'w-[104px]', align: 'right', sortable: true,
       sortValue: (r) => holdersOf.get(r.key) ?? 0, exportValue: (r) => holdersOf.get(r.key) ?? 0,
       headerHint: 'Active accounts whose effective privileges include this one',
       cell: (r) => {

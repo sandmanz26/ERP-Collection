@@ -35,12 +35,12 @@ export function RolesPage() {
 
   const columns: Column<Role>[] = [
     {
-      key: 'code', header: 'Code', width: 'w-[186px] max-w-[186px]', pinned: true, sortable: true,
+      key: 'code', primary: true, header: 'Code', width: 'w-[186px] max-w-[186px]', pinned: true, sortable: true,
       sortValue: (r) => r.code, exportValue: (r) => r.code,
       cell: (r) => <span className="font-mono text-[12px] font-medium text-fg-muted">{r.code}</span>,
     },
     {
-      key: 'name', header: 'Role', width: 'w-[280px] max-w-[280px]', sortable: true,
+      key: 'name', primary: true, header: 'Role', width: 'w-[280px] max-w-[280px]', sortable: true,
       sortValue: (r) => r.name, exportValue: (r) => r.name,
       cell: (r) => (
         <div className="min-w-0">
@@ -53,7 +53,7 @@ export function RolesPage() {
       ),
     },
     {
-      key: 'holders', header: 'Accounts', width: 'w-[112px]', align: 'right', sortable: true,
+      key: 'holders', primary: true, header: 'Accounts', width: 'w-[112px]', align: 'right', sortable: true,
       sortValue: (r) => holders(r).length, exportValue: (r) => holders(r).length,
       cell: (r) => {
         const list = holders(r)
@@ -114,7 +114,7 @@ export function RolesPage() {
       },
     },
     {
-      key: 'status', header: 'Status', width: 'w-[124px]', sortable: true,
+      key: 'status', primary: true, header: 'Status', width: 'w-[124px]', sortable: true,
       sortValue: (r) => r.status, exportValue: (r) => r.status,
       cell: (r) => <StatusBadge value={r.status} size="sm" />,
     },

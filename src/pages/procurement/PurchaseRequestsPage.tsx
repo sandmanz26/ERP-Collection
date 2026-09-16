@@ -42,7 +42,7 @@ export function PurchaseRequestsPage() {
 
   const columns: Column<PurchaseRequest>[] = [
     {
-      key: 'code', header: 'Code', width: 'w-[184px]', sortable: true, pinned: true,
+      key: 'code', primary: true, header: 'Code', width: 'w-[184px]', sortable: true, pinned: true,
       sortValue: (r) => r.code, exportValue: (r) => r.code,
       cell: (r) => {
         const session = sessionOf(r)
@@ -78,7 +78,7 @@ export function PurchaseRequestsPage() {
       },
     },
     {
-      key: 'status', header: 'Status', width: 'w-[130px]', sortable: true,
+      key: 'status', primary: true, header: 'Status', width: 'w-[130px]', sortable: true,
       sortValue: (r) => r.status, exportValue: (r) => r.status,
       cell: (r) => <StatusBadge value={r.status} size="sm" />,
     },
@@ -100,7 +100,7 @@ export function PurchaseRequestsPage() {
       cell: (r) => <span className="tnum text-[12.5px] text-fg-muted">{totalsOf(r).divisions}</span>,
     },
     {
-      key: 'assigned', header: 'Assigned to suppliers', width: 'w-[196px]', sortable: true,
+      key: 'assigned', primary: true, header: 'Assigned to suppliers', width: 'w-[196px]', sortable: true,
       sortValue: (r) => {
         const t = totalsOf(r)
         return t.lines ? t.assigned / t.lines : 0
@@ -138,7 +138,7 @@ export function PurchaseRequestsPage() {
       ),
     },
     {
-      key: 'value', header: 'Value', width: 'w-[150px]', align: 'right', sortable: true,
+      key: 'value', primary: true, header: 'Value', width: 'w-[150px]', align: 'right', sortable: true,
       sortValue: (r) => totalsOf(r).value, exportValue: (r) => Math.round(totalsOf(r).value),
       headerHint: 'Agreed price where there is one, last purchase price otherwise',
       cell: (r) => (

@@ -354,6 +354,25 @@ them:
 - Column show/hide with a stored preference, compact/comfortable density, page size, bulk selection,
   bulk delete with a cascade warning that names what else it will affect.
 
+### Two presentations, one table
+
+The same register serves two people. Somebody reconciling a month wants every column at once and will
+read a dense grid all day; somebody approving one order wants the four columns that decide and a way
+to open the rest when a row raises a question. Neither is the real view, so the choice belongs to the
+reader:
+
+- **Detailed** — every column, the grid as it has always been.
+- **Relaxed** — only the columns marked `primary` on that register (order, supplier, status, value,
+  payment on the purchase orders, for instance), with more room per row. Everything else moves behind
+  a chevron on the row and opens as a labelled panel underneath it. Nothing is lost: search, sort,
+  filters and export still work on the full set of columns, so a relaxed view exports the same file a
+  detailed one does.
+
+The control that switches between them floats above the page and is **draggable** — there is no one
+right place for it, so it goes where you put it and stays there, and collapses to a single button
+when it is in the way. Position, collapse and mode are remembered. It only appears on pages that have
+a register to restyle.
+
 ---
 
 ## What the seeded book contains

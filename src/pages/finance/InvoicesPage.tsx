@@ -63,7 +63,7 @@ export function InvoicesPage() {
 
   const columns: Column<Invoice>[] = [
     {
-      key: 'code', header: 'Invoice', width: 'w-[180px]', sortable: true, pinned: true,
+      key: 'code', primary: true, header: 'Invoice', width: 'w-[180px]', sortable: true, pinned: true,
       sortValue: (r) => r.code, exportValue: (r) => r.code,
       cell: (r) => (
         <div className="min-w-0">
@@ -73,7 +73,7 @@ export function InvoicesPage() {
       ),
     },
     {
-      key: 'client', header: 'Client', width: 'w-[210px] max-w-[210px]', sortable: true,
+      key: 'client', primary: true, header: 'Client', width: 'w-[210px] max-w-[210px]', sortable: true,
       sortValue: (r) => clientOf(r)?.legalName ?? '', exportValue: (r) => clientOf(r)?.legalName ?? '',
       cell: (r) => {
         const client = clientOf(r)
@@ -110,7 +110,7 @@ export function InvoicesPage() {
       ),
     },
     {
-      key: 'status', header: 'Status', width: 'w-[140px]', sortable: true,
+      key: 'status', primary: true, header: 'Status', width: 'w-[140px]', sortable: true,
       sortValue: (r) => r.status, exportValue: (r) => r.status,
       cell: (r) => {
         const state = stateOf(r)
@@ -136,7 +136,7 @@ export function InvoicesPage() {
       },
     },
     {
-      key: 'due', header: 'Amount due', width: 'w-[152px]', align: 'right', sortable: true,
+      key: 'due', primary: true, header: 'Amount due', width: 'w-[152px]', align: 'right', sortable: true,
       sortValue: (r) => invoiceTotals(r).due, exportValue: (r) => Math.round(invoiceTotals(r).due),
       headerHint: 'After PPN is added and PPh 23 is withheld — what the client actually transfers',
       cell: (r) => <span className="tnum text-[12.5px] font-semibold text-fg">{fmtCurrency(invoiceTotals(r).due, 'IDR', { compact: true })}</span>,
@@ -165,7 +165,7 @@ export function InvoicesPage() {
       },
     },
     {
-      key: 'outstanding', header: 'Outstanding', width: 'w-[150px]', align: 'right', sortable: true,
+      key: 'outstanding', primary: true, header: 'Outstanding', width: 'w-[150px]', align: 'right', sortable: true,
       sortValue: (r) => stateOf(r).outstanding, exportValue: (r) => Math.round(stateOf(r).outstanding),
       cell: (r) => {
         const state = stateOf(r)

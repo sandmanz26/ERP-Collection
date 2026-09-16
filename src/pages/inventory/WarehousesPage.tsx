@@ -37,12 +37,12 @@ export function WarehousesPage() {
 
   const columns: Column<Warehouse>[] = [
     {
-      key: 'code', header: 'Code', width: 'w-[124px]', pinned: true, sortable: true,
+      key: 'code', primary: true, header: 'Code', width: 'w-[124px]', pinned: true, sortable: true,
       sortValue: (r) => r.code, exportValue: (r) => r.code,
       cell: (r) => <span className="font-mono text-[12px] font-medium text-fg-muted">{r.code}</span>,
     },
     {
-      key: 'name', header: 'Warehouse', width: 'w-[230px] max-w-[230px]', sortable: true,
+      key: 'name', primary: true, header: 'Warehouse', width: 'w-[230px] max-w-[230px]', sortable: true,
       sortValue: (r) => r.name, exportValue: (r) => r.name,
       cell: (r) => (
         <div className="min-w-0">
@@ -57,7 +57,7 @@ export function WarehousesPage() {
       cell: (r) => <Badge tone="outline" size="sm">{warehouseTypeLabel(r.type)}</Badge>,
     },
     {
-      key: 'city', header: 'Location', width: 'w-[168px]', sortable: true,
+      key: 'city', primary: true, header: 'Location', width: 'w-[168px]', sortable: true,
       sortValue: (r) => r.city, exportValue: (r) => `${r.city}, ${r.province}`,
       cell: (r) => (
         <div className="min-w-0">
@@ -77,7 +77,7 @@ export function WarehousesPage() {
       cell: (r) => <span className="tnum text-[12.5px] text-fg-muted">{totals(r).lines}</span>,
     },
     {
-      key: 'units', header: 'Units on hand', width: 'w-[132px]', align: 'right', sortable: true,
+      key: 'units', primary: true, header: 'Units on hand', width: 'w-[132px]', align: 'right', sortable: true,
       sortValue: (r) => totals(r).onHand, exportValue: (r) => totals(r).onHand,
       cell: (r) => <span className="tnum text-[12.5px] text-fg-muted">{fmtNumber(totals(r).onHand)}</span>,
     },
@@ -123,7 +123,7 @@ export function WarehousesPage() {
       cell: (r) => <span className="tnum text-[12px] text-fg-muted">{fmtDate(r.openedAt)}</span>,
     },
     {
-      key: 'status', header: 'Status', width: 'w-[110px]', sortable: true,
+      key: 'status', primary: true, header: 'Status', width: 'w-[110px]', sortable: true,
       sortValue: (r) => r.status, exportValue: (r) => r.status,
       cell: (r) => <StatusBadge value={r.status} size="sm" />,
     },

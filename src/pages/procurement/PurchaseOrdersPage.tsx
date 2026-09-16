@@ -37,7 +37,7 @@ export function PurchaseOrdersPage() {
 
   const columns: Column<PurchaseOrder>[] = [
     {
-      key: 'code', header: 'Order', width: 'w-[176px]', sortable: true, pinned: true,
+      key: 'code', primary: true, header: 'Order', width: 'w-[176px]', sortable: true, pinned: true,
       sortValue: (r) => r.code, exportValue: (r) => r.code,
       cell: (r) => {
         const pr = purchaseRequests.find((p) => p.id === r.purchaseRequestId)
@@ -50,7 +50,7 @@ export function PurchaseOrdersPage() {
       },
     },
     {
-      key: 'supplier', header: 'Supplier', width: 'w-[220px] max-w-[220px]', sortable: true,
+      key: 'supplier', primary: true, header: 'Supplier', width: 'w-[220px] max-w-[220px]', sortable: true,
       sortValue: (r) => supplierOf(r)?.legalName ?? '', exportValue: (r) => supplierOf(r)?.legalName ?? '',
       cell: (r) => {
         const s = supplierOf(r)
@@ -63,7 +63,7 @@ export function PurchaseOrdersPage() {
       },
     },
     {
-      key: 'status', header: 'Status', width: 'w-[150px]', sortable: true,
+      key: 'status', primary: true, header: 'Status', width: 'w-[150px]', sortable: true,
       sortValue: (r) => r.status, exportValue: (r) => r.status,
       cell: (r) => (
         <div className="flex flex-col items-start gap-1">
@@ -95,7 +95,7 @@ export function PurchaseOrdersPage() {
       },
     },
     {
-      key: 'total', header: 'Order value', width: 'w-[150px]', align: 'right', sortable: true,
+      key: 'total', primary: true, header: 'Order value', width: 'w-[150px]', align: 'right', sortable: true,
       sortValue: (r) => poTotals(r).total, exportValue: (r) => Math.round(poTotals(r).total),
       headerHint: 'Including PPN',
       cell: (r) => (
@@ -103,7 +103,7 @@ export function PurchaseOrdersPage() {
       ),
     },
     {
-      key: 'payment', header: 'Payment', width: 'w-[168px]', sortable: true,
+      key: 'payment', primary: true, header: 'Payment', width: 'w-[168px]', sortable: true,
       sortValue: (r) => payOf(r).paid / (poTotals(r).total || 1),
       exportValue: (r) => payOf(r).state,
       headerHint: 'Paid against the order value, and whether the term has run out',

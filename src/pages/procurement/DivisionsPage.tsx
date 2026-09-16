@@ -151,12 +151,12 @@ export function DivisionsPage() {
 
   const columns: Column<Division>[] = [
     {
-      key: 'code', header: 'Code', width: 'w-[118px]', pinned: true, sortable: true,
+      key: 'code', primary: true, header: 'Code', width: 'w-[118px]', pinned: true, sortable: true,
       sortValue: (r) => r.code, exportValue: (r) => r.code,
       cell: (r) => <span className="font-mono text-[12px] font-medium text-fg-muted">{r.code}</span>,
     },
     {
-      key: 'name', header: 'Division', width: 'w-[260px] max-w-[260px]', sortable: true,
+      key: 'name', primary: true, header: 'Division', width: 'w-[260px] max-w-[260px]', sortable: true,
       sortValue: (r) => r.name, exportValue: (r) => r.name,
       cell: (r) => (
         <div className="min-w-0">
@@ -166,7 +166,7 @@ export function DivisionsPage() {
       ),
     },
     {
-      key: 'head', header: 'Head of division', width: 'w-[210px] max-w-[210px]', sortable: true,
+      key: 'head', primary: true, header: 'Head of division', width: 'w-[210px] max-w-[210px]', sortable: true,
       sortValue: (r) => r.headName, exportValue: (r) => r.headName,
       cell: (r) => {
         const account = users.find((u) => u.id === r.headUserId)
@@ -193,7 +193,7 @@ export function DivisionsPage() {
       cell: (r) => <span className="text-[12.5px] text-fg-muted">{r.branchCode}</span>,
     },
     {
-      key: 'requests', header: 'MR filed', width: 'w-[104px]', align: 'right', sortable: true,
+      key: 'requests', primary: true, header: 'MR filed', width: 'w-[104px]', align: 'right', sortable: true,
       sortValue: (r) => requestsOf(r).length, exportValue: (r) => requestsOf(r).length,
       headerHint: 'Requests filed across every session',
       cell: (r) => <span className="tnum text-[12.5px] text-fg">{requestsOf(r).length || '—'}</span>,
@@ -209,7 +209,7 @@ export function DivisionsPage() {
       ),
     },
     {
-      key: 'status', header: 'Status', width: 'w-[112px]', sortable: true,
+      key: 'status', primary: true, header: 'Status', width: 'w-[112px]', sortable: true,
       sortValue: (r) => r.status, exportValue: (r) => r.status,
       cell: (r) => <StatusBadge value={r.status} size="sm" />,
     },

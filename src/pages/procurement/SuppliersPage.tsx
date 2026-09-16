@@ -397,12 +397,12 @@ export function SuppliersPage() {
 
   const columns: Column<Supplier>[] = [
     {
-      key: 'code', header: 'Code', width: 'w-[112px]', pinned: true, sortable: true,
+      key: 'code', primary: true, header: 'Code', width: 'w-[112px]', pinned: true, sortable: true,
       sortValue: (r) => r.code, exportValue: (r) => r.code,
       cell: (r) => <span className="font-mono text-[12px] font-medium text-fg-muted">{r.code}</span>,
     },
     {
-      key: 'name', header: 'Supplier', width: 'w-[250px] max-w-[250px]', sortable: true,
+      key: 'name', primary: true, header: 'Supplier', width: 'w-[250px] max-w-[250px]', sortable: true,
       sortValue: (r) => r.legalName, exportValue: (r) => r.legalName,
       cell: (r) => (
         <div className="min-w-0">
@@ -412,7 +412,7 @@ export function SuppliersPage() {
       ),
     },
     {
-      key: 'categories', header: 'Approved for', width: 'w-[210px] max-w-[210px]', sortable: true,
+      key: 'categories', primary: true, header: 'Approved for', width: 'w-[210px] max-w-[210px]', sortable: true,
       sortValue: (r) => r.categories.join(','), exportValue: (r) => r.categories.join(' | '),
       cell: (r) => (
         <div className="flex flex-wrap gap-1">
@@ -451,7 +451,7 @@ export function SuppliersPage() {
       cell: (r) => <span className="tnum text-[12.5px] text-fg-muted">{purchasesOf(r).length || '—'}</span>,
     },
     {
-      key: 'spend', header: 'Historic value', width: 'w-[156px]', align: 'right', sortable: true,
+      key: 'spend', primary: true, header: 'Historic value', width: 'w-[156px]', align: 'right', sortable: true,
       sortValue: spendOf, exportValue: (r) => Math.round(spendOf(r)),
       cell: (r) => <span className="tnum text-[12.5px] font-medium text-fg">{spendOf(r) ? fmtCurrency(spendOf(r), 'IDR', { compact: true }) : '—'}</span>,
     },
@@ -477,7 +477,7 @@ export function SuppliersPage() {
       cell: (r) => (openLines(r) ? <Badge tone="primary" size="sm">{openLines(r)} lines</Badge> : <span className="text-[12px] text-fg-subtle">—</span>),
     },
     {
-      key: 'status', header: 'Status', width: 'w-[128px]', sortable: true,
+      key: 'status', primary: true, header: 'Status', width: 'w-[128px]', sortable: true,
       sortValue: (r) => r.status, exportValue: (r) => r.status,
       cell: (r) => <StatusBadge value={r.status} size="sm" />,
     },

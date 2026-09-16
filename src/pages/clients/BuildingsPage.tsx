@@ -38,12 +38,12 @@ export function BuildingsPage() {
 
   const columns: Column<Building>[] = [
     {
-      key: 'code', header: 'Code', width: 'w-[104px]', pinned: true, sortable: true,
+      key: 'code', primary: true, header: 'Code', width: 'w-[104px]', pinned: true, sortable: true,
       sortValue: (r) => r.code, exportValue: (r) => r.code,
       cell: (r) => <span className="font-mono text-[12px] font-medium text-fg-muted">{r.code}</span>,
     },
     {
-      key: 'name', header: 'Building', width: 'w-[230px] max-w-[230px]', sortable: true,
+      key: 'name', primary: true, header: 'Building', width: 'w-[230px] max-w-[230px]', sortable: true,
       sortValue: (r) => r.name, exportValue: (r) => r.name,
       cell: (r) => (
         <div className="min-w-0">
@@ -53,7 +53,7 @@ export function BuildingsPage() {
       ),
     },
     {
-      key: 'client', header: 'Client', width: 'w-[170px] max-w-[170px]', sortable: true,
+      key: 'client', primary: true, header: 'Client', width: 'w-[170px] max-w-[170px]', sortable: true,
       sortValue: (r) => clientOf(r)?.legalName ?? '', exportValue: (r) => clientOf(r)?.legalName ?? '',
       cell: (r) => {
         const c = clientOf(r)
@@ -97,7 +97,7 @@ export function BuildingsPage() {
       ),
     },
     {
-      key: 'hours', header: 'Coverage', width: 'w-[152px]', sortable: true,
+      key: 'hours', primary: true, header: 'Coverage', width: 'w-[152px]', sortable: true,
       sortValue: (r) => r.operatingHours, exportValue: (r) => `${r.operatingHours} / ${r.shiftPattern}`,
       cell: (r) => (
         <div className="min-w-0">
@@ -122,7 +122,7 @@ export function BuildingsPage() {
       cell: (r) => <span className="text-[12.5px] text-fg-muted">{r.province}</span>,
     },
     {
-      key: 'status', header: 'Status', width: 'w-[112px]', sortable: true,
+      key: 'status', primary: true, header: 'Status', width: 'w-[112px]', sortable: true,
       sortValue: (r) => r.status, exportValue: (r) => r.status,
       cell: (r) => <StatusBadge value={r.status} size="sm" />,
     },
