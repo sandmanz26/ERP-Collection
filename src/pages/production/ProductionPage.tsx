@@ -193,7 +193,7 @@ export function ProductionPage() {
         description="One work order per model on an order, split when the run is bigger than a bench can hold. This is the hinge between the budget and the warehouse: a work order is what draws material out of stock and what puts finished pieces back in."
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Open work orders" value={String(load.open)} sub={`${fmtNumber(load.pieces)} pieces on the floor`} icon={<Factory />} accent="primary" />
         <KpiCard label="Made so far" value={fmtPercent(load.completionPct, 0)} sub={`${fmtNumber(load.produced)} of ${fmtNumber(load.pieces)}`} accent="accent" />
         <KpiCard label="Past due" value={String(load.late)} sub={load.late ? 'the ship date does not move for us' : 'nothing overdue'} accent={load.late ? 'danger' : 'success'} />

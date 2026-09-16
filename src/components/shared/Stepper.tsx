@@ -33,7 +33,7 @@ export function Stepper({
               <button
                 onClick={() => onSelect(s.key)}
                 className={cn(
-                  'group relative flex min-w-[124px] flex-1 shrink-0 items-start gap-2 border-r border-border px-3 py-3 text-left transition-colors last:border-r-0',
+                  'group relative flex min-w-[112px] flex-1 shrink-0 items-start gap-2 border-r border-border px-3 py-3.5 text-left transition-colors last:border-r-0',
                   isSelected ? 'bg-primary-soft/60' : 'hover:bg-bg-muted/70',
                 )}
               >

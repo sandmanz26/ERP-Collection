@@ -194,7 +194,7 @@ export function BuyersPage() {
         description="Who we sell to, on what terms, and what they demand before they will take a container. The certification columns are not decoration — an FSC or EUDR requirement here becomes a blocking document on every order that buyer places."
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Buyers" value={String(buyers.length)} sub={`${buyers.filter((b) => b.status === 'ACTIVE').length} active`} icon={<Building2 />} accent="primary" />
         <KpiCard label="Countries" value={String(new Set(buyers.map((b) => b.countryCode)).size)} sub="destinations served" accent="accent" />
         <KpiCard label="Owed to us" value={fmtCurrency(receivable, 'IDR', { compact: true })} sub="across all open invoices" accent="success" />

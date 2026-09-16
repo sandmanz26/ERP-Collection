@@ -27,7 +27,7 @@ export function WarehousesPage() {
         description="Seven places stock can sit, and they are not interchangeable. Timber above twelve per cent moisture cannot leave the kiln store; material at a subcontractor is still ours and still our risk; and nothing in the quarantine bay is available to a work order no matter how badly the floor needs it."
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Warehouses" value={String(store.warehouses.filter((w) => w.active).length)} sub={`${new Set(store.warehouses.map((w) => w.city)).size} locations`} icon={<WarehouseIcon />} accent="primary" />
         <KpiCard label="Volume standing" value={`${fmtNumber(totalCbm, 1)} m³`} sub={`of ${fmtNumber(totalCap)} m³ of capacity`} accent="accent" />
         <KpiCard label="Total value" value={fmtCurrency(loads.reduce((a, l) => a + l.value, 0), 'IDR', { compact: true })} sub="at moving average cost" accent="success" />
@@ -39,7 +39,7 @@ export function WarehousesPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         {loads.map((l) => {
           const w = l.warehouse
           const contents = rows
@@ -82,15 +82,15 @@ export function WarehousesPage() {
               </CardBody>
 
               <div className="border-t border-border">
-                <p className="px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
+                <p className="px-5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
                   What is standing in it
                 </p>
                 <div className="scrollbar-thin max-h-[220px] divide-y divide-border overflow-y-auto">
                   {contents.length === 0 && (
-                    <p className="px-4 py-6 text-center text-[12.5px] text-fg-muted">Empty.</p>
+                    <p className="px-5 py-8 text-center text-[12.5px] text-fg-muted">Empty.</p>
                   )}
                   {contents.slice(0, 12).map(({ row, item }) => (
-                    <div key={`${row.itemId}-${row.warehouseId}`} className="flex items-center justify-between gap-3 px-4 py-2">
+                    <div key={`${row.itemId}-${row.warehouseId}`} className="flex items-center justify-between gap-3 px-5 py-2.5">
                       <div className="min-w-0">
                         <p className="truncate text-[12.5px] text-fg">{item!.name}</p>
                         <p className="tnum truncate text-[11px] text-fg-muted">{item!.sku}</p>
@@ -104,7 +104,7 @@ export function WarehousesPage() {
                     </div>
                   ))}
                   {contents.length > 12 && (
-                    <p className="px-4 py-2 text-[11.5px] text-fg-subtle">
+                    <p className="px-5 py-2.5 text-[11.5px] text-fg-subtle">
                       and {contents.length - 12} more lines
                     </p>
                   )}

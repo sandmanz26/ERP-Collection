@@ -81,7 +81,7 @@ export function ProfitabilityPage() {
         }
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Order book revenue" value={fmtCurrency(revenue, 'IDR', { compact: true })} sub={`${rows.length} won orders`} icon={<LineChart />} accent="primary" />
         <KpiCard label="Budgeted cost" value={fmtCurrency(budgeted, 'IDR', { compact: true })} sub={fmtPercent(revenue ? ((revenue - budgeted) / revenue) * 100 : 0, 1) + ' margin'} accent="accent" />
         <KpiCard label="Committed to suppliers" value={fmtCurrency(exposure, 'IDR', { compact: true })} sub="ordered plus received" accent="warning" />
@@ -103,16 +103,16 @@ export function ProfitabilityPage() {
             <table className="w-full min-w-[1080px] text-[12.5px]">
               <thead>
                 <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                  <th className="px-4 py-2 font-medium">Order</th>
-                  <th className="px-4 py-2 font-medium">Buyer</th>
-                  <th className="px-4 py-2 font-medium">Stage</th>
-                  <th className="px-4 py-2 text-right font-medium">Revenue</th>
-                  <th className="px-4 py-2 text-right font-medium">Budget</th>
-                  <th className="px-4 py-2 text-right font-medium">Committed</th>
-                  <th className="px-4 py-2 text-right font-medium">Received</th>
-                  <th className="px-4 py-2 text-right font-medium">Budget margin</th>
-                  <th className="px-4 py-2 text-right font-medium">Projected</th>
-                  <th className="px-4 py-2 font-medium">Budget consumed</th>
+                  <th className="px-5 py-2.5 font-medium">Order</th>
+                  <th className="px-5 py-2.5 font-medium">Buyer</th>
+                  <th className="px-5 py-2.5 font-medium">Stage</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Revenue</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Budget</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Committed</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Received</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Budget margin</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Projected</th>
+                  <th className="px-5 py-2.5 font-medium">Budget consumed</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -124,27 +124,27 @@ export function ProfitabilityPage() {
                     : 0
                   return (
                     <tr key={project.id} className={cn('hover:bg-bg-muted/50', costing.overCommitted && 'bg-danger-soft/25')}>
-                      <td className="px-4 py-2.5">
+                      <td className="px-5 py-3">
                         <Link to={`/projects/${project.id}`} className="font-medium text-fg hover:text-primary">
                           {project.code}
                         </Link>
                       </td>
-                      <td className="px-4 py-2.5 text-fg-muted">{project.buyerName}</td>
-                      <td className="px-4 py-2.5"><StatusBadge value={project.stage} size="sm" /></td>
-                      <td className="tnum px-4 py-2.5 text-right">{fmtCurrency(costing.revenue, 'IDR', { compact: true })}</td>
-                      <td className="tnum px-4 py-2.5 text-right text-fg-muted">
+                      <td className="px-5 py-3 text-fg-muted">{project.buyerName}</td>
+                      <td className="px-5 py-3"><StatusBadge value={project.stage} size="sm" /></td>
+                      <td className="tnum px-5 py-3 text-right">{fmtCurrency(costing.revenue, 'IDR', { compact: true })}</td>
+                      <td className="tnum px-5 py-3 text-right text-fg-muted">
                         {costing.budget ? fmtCurrency(costing.budget, 'IDR', { compact: true }) : <span className="text-danger">none</span>}
                       </td>
-                      <td className="tnum px-4 py-2.5 text-right text-warning-soft-fg">{fmtCurrency(costing.committed, 'IDR', { compact: true })}</td>
-                      <td className="tnum px-4 py-2.5 text-right text-accent-soft-fg">{fmtCurrency(costing.actual, 'IDR', { compact: true })}</td>
-                      <td className="tnum px-4 py-2.5 text-right">
+                      <td className="tnum px-5 py-3 text-right text-warning-soft-fg">{fmtCurrency(costing.committed, 'IDR', { compact: true })}</td>
+                      <td className="tnum px-5 py-3 text-right text-accent-soft-fg">{fmtCurrency(costing.actual, 'IDR', { compact: true })}</td>
+                      <td className="tnum px-5 py-3 text-right">
                         {costing.budget ? (
                           <Badge size="sm" tone={costing.budgetMarginPct >= costing.targetMarginPct ? 'success' : 'warning'}>
                             {fmtPercent(costing.budgetMarginPct, 1)}
                           </Badge>
                         ) : '—'}
                       </td>
-                      <td className="tnum px-4 py-2.5 text-right">
+                      <td className="tnum px-5 py-3 text-right">
                         {costing.budget ? (
                           <Tooltip content="Committed and received, plus the labour, overhead and contingency the budget allows but no purchase order covers.">
                             <span
@@ -158,7 +158,7 @@ export function ProfitabilityPage() {
                           </Tooltip>
                         ) : '—'}
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-5 py-3">
                         {purchased ? <UtilisationBar pct={(costing.exposure / purchased) * 100} className="w-28" /> : <span className="text-fg-subtle">—</span>}
                       </td>
                     </tr>
@@ -186,34 +186,34 @@ export function ProfitabilityPage() {
             <table className="w-full min-w-[980px] text-[12.5px]">
               <thead>
                 <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                  <th className="px-4 py-2 font-medium">Order</th>
-                  <th className="px-4 py-2 text-right font-medium">Pieces</th>
-                  <th className="px-4 py-2 text-right font-medium">m³</th>
-                  <th className="px-4 py-2 text-right font-medium">Cost / piece</th>
-                  <th className="px-4 py-2 text-right font-medium">Price / piece</th>
-                  <th className="px-4 py-2 text-right font-medium">Cost / m³</th>
-                  <th className="px-4 py-2 text-right font-medium">Revenue / m³</th>
-                  <th className="px-4 py-2 text-right font-medium">Margin / m³</th>
-                  <th className="px-4 py-2 text-right font-medium">Sample cost absorbed</th>
+                  <th className="px-5 py-2.5 font-medium">Order</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Pieces</th>
+                  <th className="px-5 py-2.5 text-right font-medium">m³</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Cost / piece</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Price / piece</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Cost / m³</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Revenue / m³</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Margin / m³</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Sample cost absorbed</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {rows.map(({ project, fob, samples }) => (
                   <tr key={project.id} className="hover:bg-bg-muted/50">
-                    <td className="px-4 py-2.5">
+                    <td className="px-5 py-3">
                       <Link to={`/projects/${project.id}`} className="font-medium text-fg hover:text-primary">{project.code}</Link>
                       <p className="truncate text-[11.5px] text-fg-muted">{project.buyerName}</p>
                     </td>
-                    <td className="tnum px-4 py-2.5 text-right">{fmtNumber(fob.pieces)}</td>
-                    <td className="tnum px-4 py-2.5 text-right">{fmtNumber(fob.cbm, 1)}</td>
-                    <td className="tnum px-4 py-2.5 text-right text-fg-muted">{fmtCurrency(fob.costPerPiece, 'IDR', { compact: true })}</td>
-                    <td className="tnum px-4 py-2.5 text-right">{fmtCurrency(fob.revenuePerPiece, 'IDR', { compact: true })}</td>
-                    <td className="tnum px-4 py-2.5 text-right text-fg-muted">{fmtCurrency(fob.costPerCbm, 'IDR', { compact: true })}</td>
-                    <td className="tnum px-4 py-2.5 text-right">{fmtCurrency(fob.revenuePerCbm, 'IDR', { compact: true })}</td>
-                    <td className={cn('tnum px-4 py-2.5 text-right font-semibold', fob.marginPerCbm < 0 ? 'text-danger' : 'text-success')}>
+                    <td className="tnum px-5 py-3 text-right">{fmtNumber(fob.pieces)}</td>
+                    <td className="tnum px-5 py-3 text-right">{fmtNumber(fob.cbm, 1)}</td>
+                    <td className="tnum px-5 py-3 text-right text-fg-muted">{fmtCurrency(fob.costPerPiece, 'IDR', { compact: true })}</td>
+                    <td className="tnum px-5 py-3 text-right">{fmtCurrency(fob.revenuePerPiece, 'IDR', { compact: true })}</td>
+                    <td className="tnum px-5 py-3 text-right text-fg-muted">{fmtCurrency(fob.costPerCbm, 'IDR', { compact: true })}</td>
+                    <td className="tnum px-5 py-3 text-right">{fmtCurrency(fob.revenuePerCbm, 'IDR', { compact: true })}</td>
+                    <td className={cn('tnum px-5 py-3 text-right font-semibold', fob.marginPerCbm < 0 ? 'text-danger' : 'text-success')}>
                       {fmtCurrency(fob.marginPerCbm, 'IDR', { compact: true })}
                     </td>
-                    <td className="tnum px-4 py-2.5 text-right text-fg-muted">
+                    <td className="tnum px-5 py-3 text-right text-fg-muted">
                       {samples.absorbed ? fmtCurrency(samples.absorbed, 'IDR', { compact: true }) : '—'}
                     </td>
                   </tr>
@@ -241,23 +241,23 @@ export function ProfitabilityPage() {
             <table className="w-full min-w-[760px] text-[12.5px]">
               <thead>
                 <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                  <th className="px-4 py-2 font-medium">Category</th>
-                  <th className="px-4 py-2 text-right font-medium">Budget</th>
-                  <th className="px-4 py-2 text-right font-medium">Committed</th>
-                  <th className="px-4 py-2 text-right font-medium">Received</th>
-                  <th className="px-4 py-2 text-right font-medium">Share of budget</th>
-                  <th className="px-4 py-2 font-medium">Consumed</th>
+                  <th className="px-5 py-2.5 font-medium">Category</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Budget</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Committed</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Received</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Share of budget</th>
+                  <th className="px-5 py-2.5 font-medium">Consumed</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {categoryTotals.map((c) => (
                   <tr key={c.category} className="hover:bg-bg-muted/50">
-                    <td className="px-4 py-2.5 font-medium text-fg">{costCategoryLabel(c.category as never)}</td>
-                    <td className="tnum px-4 py-2.5 text-right">{fmtCurrency(c.budget, 'IDR', { compact: true })}</td>
-                    <td className="tnum px-4 py-2.5 text-right text-warning-soft-fg">{c.committed ? fmtCurrency(c.committed, 'IDR', { compact: true }) : '—'}</td>
-                    <td className="tnum px-4 py-2.5 text-right text-accent-soft-fg">{c.actual ? fmtCurrency(c.actual, 'IDR', { compact: true }) : '—'}</td>
-                    <td className="tnum px-4 py-2.5 text-right text-fg-muted">{fmtPercent(budgeted ? (c.budget / budgeted) * 100 : 0, 1)}</td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-5 py-3 font-medium text-fg">{costCategoryLabel(c.category as never)}</td>
+                    <td className="tnum px-5 py-3 text-right">{fmtCurrency(c.budget, 'IDR', { compact: true })}</td>
+                    <td className="tnum px-5 py-3 text-right text-warning-soft-fg">{c.committed ? fmtCurrency(c.committed, 'IDR', { compact: true }) : '—'}</td>
+                    <td className="tnum px-5 py-3 text-right text-accent-soft-fg">{c.actual ? fmtCurrency(c.actual, 'IDR', { compact: true }) : '—'}</td>
+                    <td className="tnum px-5 py-3 text-right text-fg-muted">{fmtPercent(budgeted ? (c.budget / budgeted) * 100 : 0, 1)}</td>
+                    <td className="px-5 py-3">
                       {c.budget ? <UtilisationBar pct={((c.actual + c.committed) / c.budget) * 100} className="w-32" /> : <span className="text-fg-subtle">—</span>}
                     </td>
                   </tr>
@@ -275,7 +275,7 @@ export function ProfitabilityPage() {
         </Card>
       )}
 
-      <p className="mt-4 text-[11.5px] text-fg-subtle">
+      <p className="mt-6 text-[11.5px] text-fg-subtle">
         {fmtNumber(rows.reduce((a, r) => a + projectCbm(r.project), 0), 1)} m³ of finished goods across{' '}
         {rows.length} won orders, budgeted at {fmtCurrency(budgetTotal(undefined) + budgeted, 'IDR', { compact: true })}.
       </p>

@@ -263,7 +263,7 @@ export function ProjectsPage() {
         }
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Order book" value={fmtCurrency(bookValue, 'IDR', { compact: true })} sub={`${won.length} orders`} icon={<Ruler />} accent="primary" />
         <KpiCard label="Volume to ship" value={`${fmtNumber(cbm, 1)} m³`} sub={`${suggestContainers(cbm).map((c) => `${c.count}×${c.size}`).join(' + ')}`} accent="accent" />
         <KpiCard

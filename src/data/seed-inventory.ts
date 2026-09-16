@@ -414,39 +414,7 @@ counts.forEach((count, ci) => {
 })
 
 /* ==================================================================
-   6 — material set aside for an order
-   ================================================================== */
-
-const reservations: StockReservation[] = []
-projects
-  .filter((p) => ['PROCUREMENT', 'PRODUCTION', 'QC_PACKING'].includes(p.stage))
-  .forEach((project, pi) => {
-    const r = rng(61_000 + pi * 11)
-    const demand = new Map<string, number>()
-    project.items.forEach((pit) => {
-      const remaining = Math.max(0, pit.qty - pit.producedQty)
-      explodeBom(pit.itemRef, remaining).forEach((d) => demand.set(d.itemId, (demand.get(d.itemId) ?? 0) + d.qty))
-    })
-    Array.from(demand.entries())
-      .filter(([, qty]) => qty > 0)
-      .slice(0, 6)
-      .forEach(([itemId, qty], i) => {
-        const item = itemById(itemId)!
-        reservations.push({
-          id: `rsv_${project.id}_${i}`,
-          projectId: project.id,
-          itemId,
-          warehouseId: item.category === 'TIMBER' ? 'wh_kd' : 'wh_rm',
-          qty: round(qty * (0.4 + r() * 0.5), item.uom === 'M3' ? 2 : 0),
-          status: 'RESERVED',
-          reservedAt: stamp(-intBetween(r, 3, 24), 10),
-          neededBy: day(intBetween(r, 2, 26)),
-        })
-      })
-  })
-
-/* ==================================================================
-   7 — make the opening balance honest
+   6 — make the opening balance honest
 
    The opening balance is the one figure nobody can point at a document for,
    so it is the one that has to absorb everything else. Walking each item and
@@ -494,6 +462,61 @@ projects
       note: 'Carried forward from the closing count of the previous half-year.',
     })
   })
+}
+
+/* ==================================================================
+   7 — material set aside for an order
+
+   Reservations are written last and clamped to what is actually on the shelf,
+   because a reservation for stock that does not exist is not a promise, it is
+   a lie the production planner finds out about on the day.
+   ================================================================== */
+
+const reservations: StockReservation[] = []
+{
+  const free = new Map<string, number>()
+  movements.forEach((m) => {
+    if (m.warehouseId === 'wh_qrn') return
+    const key = `${m.itemId}::${m.warehouseId}`
+    free.set(key, (free.get(key) ?? 0) + m.qty)
+  })
+
+  projects
+    .filter((p) => ['PROCUREMENT', 'PRODUCTION', 'QC_PACKING'].includes(p.stage))
+    .forEach((project, pi) => {
+      const r = rng(61_000 + pi * 11)
+      const demand = new Map<string, number>()
+      project.items.forEach((pit) => {
+        const remaining = Math.max(0, pit.qty - pit.producedQty)
+        explodeBom(pit.itemRef, remaining).forEach((d) => demand.set(d.itemId, (demand.get(d.itemId) ?? 0) + d.qty))
+      })
+      Array.from(demand.entries())
+        .filter(([, qty]) => qty > 0)
+        .slice(0, 6)
+        .forEach(([itemId, qty], i) => {
+          const item = itemById(itemId)
+          if (!item) return
+          const warehouseId = item.category === 'TIMBER' ? 'wh_kd' : 'wh_rm'
+          const key = `${itemId}::${warehouseId}`
+          const onShelf = free.get(key) ?? 0
+          const wanted = qty * (0.4 + r() * 0.5)
+          /* never reserve more than three quarters of what is standing there —
+             the next order has to be able to draw on it too */
+          const taken = round(Math.min(wanted, onShelf * 0.75), item.uom === 'M3' ? 2 : 0)
+          if (taken <= 0) return
+          free.set(key, onShelf - taken)
+          reservations.push({
+            id: `rsv_${project.id}_${i}`,
+            projectId: project.id,
+            itemId,
+            warehouseId,
+            qty: taken,
+            status: 'RESERVED',
+            reservedAt: stamp(-intBetween(r, 3, 24), 10),
+            neededBy: day(intBetween(r, 2, 26)),
+          })
+        })
+    })
 }
 
 movements.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0))

@@ -235,7 +235,7 @@ export function LedgerPage() {
         }
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Entries" value={String(store.journal.length)} sub={`${posted.length} posted`} icon={<BookOpen />} accent="primary" />
         <KpiCard label="Total debits" value={fmtCurrency(totalDebit, 'IDR', { compact: true })} sub="posted entries only" accent="accent" />
         <KpiCard label="Total credits" value={fmtCurrency(totalCredit, 'IDR', { compact: true })} sub="posted entries only" accent="accent" />
@@ -282,7 +282,7 @@ export function LedgerPage() {
       )}
 
       {view === 'trial' && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {trialGroups.map((group) => {
             const accounts = store.accounts.filter((a) => a.group === group && balances.has(a.code))
             if (!accounts.length) return null
@@ -299,11 +299,11 @@ export function LedgerPage() {
                       const row = balances.get(a.code)!
                       return (
                         <tr key={a.id} className="hover:bg-bg-muted/50">
-                          <td className="w-[110px] px-4 py-2 tnum text-fg-muted">{a.code}</td>
-                          <td className="px-4 py-2 text-fg">{a.name}</td>
-                          <td className="tnum w-[150px] px-4 py-2 text-right text-fg-muted">{fmtCurrency(row.debit, 'IDR', { compact: true })}</td>
-                          <td className="tnum w-[150px] px-4 py-2 text-right text-fg-muted">{fmtCurrency(row.credit, 'IDR', { compact: true })}</td>
-                          <td className="tnum w-[160px] px-4 py-2 text-right font-medium text-fg">{fmtCurrency(balanceOf(a), 'IDR', { compact: true })}</td>
+                          <td className="w-[110px] px-5 py-2.5 tnum text-fg-muted">{a.code}</td>
+                          <td className="px-5 py-2.5 text-fg">{a.name}</td>
+                          <td className="tnum w-[150px] px-5 py-2.5 text-right text-fg-muted">{fmtCurrency(row.debit, 'IDR', { compact: true })}</td>
+                          <td className="tnum w-[150px] px-5 py-2.5 text-right text-fg-muted">{fmtCurrency(row.credit, 'IDR', { compact: true })}</td>
+                          <td className="tnum w-[160px] px-5 py-2.5 text-right font-medium text-fg">{fmtCurrency(balanceOf(a), 'IDR', { compact: true })}</td>
                         </tr>
                       )
                     })}
@@ -323,7 +323,7 @@ export function LedgerPage() {
         width="max-w-2xl"
       >
         {open && (
-          <div className="space-y-4 p-5">
+          <div className="space-y-5 p-5">
             <Card>
               <CardHeader title="Entry" />
               <CardBody className="divide-y divide-border py-0">
@@ -339,30 +339,30 @@ export function LedgerPage() {
               <table className="w-full text-[12.5px]">
                 <thead>
                   <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                    <th className="px-4 py-2 font-medium">Account</th>
-                    <th className="px-4 py-2 text-right font-medium">Debit</th>
-                    <th className="px-4 py-2 text-right font-medium">Credit</th>
+                    <th className="px-5 py-2.5 font-medium">Account</th>
+                    <th className="px-5 py-2.5 text-right font-medium">Debit</th>
+                    <th className="px-5 py-2.5 text-right font-medium">Credit</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {open.lines.map((l) => (
                     <tr key={l.id}>
-                      <td className="px-4 py-2">
+                      <td className="px-5 py-2.5">
                         <p className="text-fg">
                           <span className="tnum text-fg-muted">{l.accountCode}</span> {l.accountName}
                         </p>
                         {l.memo && <p className="text-[11.5px] text-fg-muted">{l.memo}</p>}
                       </td>
-                      <td className="tnum px-4 py-2 text-right">{l.debit ? fmtCurrency(l.debit, 'IDR', { compact: true }) : '—'}</td>
-                      <td className="tnum px-4 py-2 text-right">{l.credit ? fmtCurrency(l.credit, 'IDR', { compact: true }) : '—'}</td>
+                      <td className="tnum px-5 py-2.5 text-right">{l.debit ? fmtCurrency(l.debit, 'IDR', { compact: true }) : '—'}</td>
+                      <td className="tnum px-5 py-2.5 text-right">{l.credit ? fmtCurrency(l.credit, 'IDR', { compact: true }) : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-border bg-surface-sunken font-semibold">
-                    <td className="px-4 py-2">Total</td>
-                    <td className="tnum px-4 py-2 text-right">{fmtCurrency(open.lines.reduce((a, l) => a + l.debit, 0), 'IDR', { compact: true })}</td>
-                    <td className="tnum px-4 py-2 text-right">{fmtCurrency(open.lines.reduce((a, l) => a + l.credit, 0), 'IDR', { compact: true })}</td>
+                    <td className="px-5 py-2.5">Total</td>
+                    <td className="tnum px-5 py-2.5 text-right">{fmtCurrency(open.lines.reduce((a, l) => a + l.debit, 0), 'IDR', { compact: true })}</td>
+                    <td className="tnum px-5 py-2.5 text-right">{fmtCurrency(open.lines.reduce((a, l) => a + l.credit, 0), 'IDR', { compact: true })}</td>
                   </tr>
                 </tfoot>
               </table>

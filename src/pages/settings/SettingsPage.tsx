@@ -49,8 +49,8 @@ export function SettingsPage() {
       />
 
       {view === 'company' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard label="Founded" value={String(store.company.foundedYear)} sub={`${store.company.workshopCount} workshops · ${store.company.headcount} people`} icon={<Building2 />} accent="primary" />
             <KpiCard label="Licences" value={String(store.company.licences.length)} sub="registrations and certifications" accent="accent" />
             <KpiCard
@@ -63,7 +63,7 @@ export function SettingsPage() {
             <KpiCard label="Bank accounts" value={String(store.company.bankAccounts.length)} sub={store.company.bankAccounts.map((b) => b.currency).join(', ')} accent="accent" />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
             <Card>
               <CardHeader icon={<Building2 />} title={store.company.legalName} description={`Trading as ${store.company.tradingName}`} />
               <CardBody className="divide-y divide-border py-0">
@@ -105,7 +105,7 @@ export function SettingsPage() {
                   .map((l) => {
                     const left = relativeDays(l.expiresAt) ?? 0
                     return (
-                      <div key={l.id} className={cn('px-4 py-3', left < store.settings.certificateWarningDays && 'bg-warning-soft/25')}>
+                      <div key={l.id} className={cn('px-5 py-3.5', left < store.settings.certificateWarningDays && 'bg-warning-soft/25')}>
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="truncate text-[13px] font-medium text-fg">{titleCase(l.kind)}</p>
@@ -129,10 +129,10 @@ export function SettingsPage() {
       )}
 
       {view === 'thresholds' && (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
           <Card>
             <CardHeader icon={<SettingsIcon />} title="What the system enforces" description="Change one and the exception list changes with it — nothing here is decoration." />
-            <CardBody className="space-y-4">
+            <CardBody className="space-y-5">
               <Field label="Target margin" help="The margin an estimator is expected to build into a budget before it goes for approval.">
                 <Input value={String(draft.targetMarginPct)} onChange={(e) => setDraft({ ...draft, targetMarginPct: Number(e.target.value) || 0 })} trailing={<span className="text-[12px] text-fg-subtle">%</span>} />
               </Field>
@@ -166,7 +166,7 @@ export function SettingsPage() {
             </CardBody>
           </Card>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             <Card>
               <CardHeader title="Exchange rates" description="The rates orders are converted at. An order keeps the rate it was taken on." />
               <CardBody className="divide-y divide-border py-0">
@@ -208,35 +208,35 @@ export function SettingsPage() {
             <table className="w-full min-w-[820px] text-[12.5px]">
               <thead>
                 <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                  <th className="px-4 py-2 font-medium">Name</th>
-                  <th className="px-4 py-2 font-medium">Email</th>
-                  <th className="px-4 py-2 font-medium">Role</th>
-                  <th className="px-4 py-2 font-medium">Department</th>
-                  <th className="px-4 py-2 font-medium">Status</th>
-                  <th className="px-4 py-2 font-medium">Last signed in</th>
-                  <th className="px-4 py-2" />
+                  <th className="px-5 py-2.5 font-medium">Name</th>
+                  <th className="px-5 py-2.5 font-medium">Email</th>
+                  <th className="px-5 py-2.5 font-medium">Role</th>
+                  <th className="px-5 py-2.5 font-medium">Department</th>
+                  <th className="px-5 py-2.5 font-medium">Status</th>
+                  <th className="px-5 py-2.5 font-medium">Last signed in</th>
+                  <th className="px-5 py-2.5" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {auth.users.map((u) => (
                   <tr key={u.id} className="hover:bg-bg-muted/50">
-                    <td className="px-4 py-2.5">
+                    <td className="px-5 py-3">
                       <p className="font-medium text-fg">{u.fullName}</p>
                       <p className="text-[11.5px] text-fg-muted">{u.jobTitle}</p>
                     </td>
-                    <td className="px-4 py-2.5 text-fg-muted">{u.email}</td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-5 py-3 text-fg-muted">{u.email}</td>
+                    <td className="px-5 py-3">
                       <Badge size="sm" tone="neutral">{roleLabel(u.role)}</Badge>
                     </td>
-                    <td className="px-4 py-2.5 text-fg-muted">{u.department}</td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-5 py-3 text-fg-muted">{u.department}</td>
+                    <td className="px-5 py-3">
                       <StatusBadge value={u.status} size="sm" />
                       <p className="mt-0.5 text-[11px] text-fg-subtle">
                         {ACCOUNT_STATUSES.find((s) => s.value === u.status)?.hint}
                       </p>
                     </td>
-                    <td className="px-4 py-2.5 text-fg-muted">{u.lastLoginAt ? fmtDateTime(u.lastLoginAt) : 'never'}</td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td className="px-5 py-3 text-fg-muted">{u.lastLoginAt ? fmtDateTime(u.lastLoginAt) : 'never'}</td>
+                    <td className="px-5 py-3 text-right">
                       {u.status === 'LOCKED' && (
                         <Button size="xs" onClick={() => auth.unlock(u.id)}>Unlock</Button>
                       )}
@@ -272,7 +272,7 @@ export function SettingsPage() {
               />
             )}
             {store.activity.map((a) => (
-              <div key={a.id} className="flex items-start justify-between gap-3 px-4 py-2.5">
+              <div key={a.id} className="flex items-start justify-between gap-3 px-5 py-3">
                 <div className="min-w-0">
                   <p className="truncate text-[12.5px] text-fg">
                     <span className="font-medium">{titleCase(a.action)}</span> · {a.entity} — {a.detail}

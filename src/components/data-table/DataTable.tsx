@@ -169,12 +169,12 @@ export function DataTable<T>({
     else exportJson(exportName, payload)
   }
 
-  const cellPad = dense ? 'px-3 py-1.5' : 'px-3 py-2.5'
+  const cellPad = dense ? 'px-3 py-2' : 'px-3.5 py-3.5'
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {/* ------------ toolbar ------------ */}
-      <div className="flex flex-wrap items-center gap-2 pb-3">
+      <div className="flex flex-wrap items-center gap-2 pb-4">
         <div className="relative min-w-[200px] flex-1 md:max-w-xs" data-tour="table-search">
           <Input
             value={query}
@@ -381,7 +381,7 @@ export function DataTable<T>({
                       key={c.key}
                       className={cn(
                         'sticky top-0 z-20 whitespace-nowrap border-b border-border bg-surface-sunken text-left font-semibold text-fg-muted',
-                        dense ? 'px-3 py-1.5' : 'px-3 py-2',
+                        dense ? 'px-3 py-2' : 'px-3.5 py-2.5',
                         c.width,
                         c.align === 'right' && 'text-right',
                         c.align === 'center' && 'text-center',
@@ -421,7 +421,7 @@ export function DataTable<T>({
                     data-tour="table-actions"
                     className={cn(
                       'sticky top-0 z-30 w-[92px] border-b border-border bg-surface-sunken text-right text-[11.5px] font-semibold uppercase tracking-[0.055em] text-fg-muted',
-                      dense ? 'px-3 py-1.5' : 'px-3 py-2',
+                      dense ? 'px-3 py-2' : 'px-3.5 py-2.5',
                       stickyActions && 'right-0 border-l border-border shadow-sticky-l',
                     )}
                   >

@@ -71,15 +71,15 @@ export function ReceiptDetailPage() {
         }
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Delivered" value={fmtNumber(delivered, 2)} sub="what the lorry brought" icon={<Truck />} accent="primary" />
         <KpiCard label="Accepted" value={fmtNumber(accepted, 2)} sub={`into ${warehouse?.name ?? 'store'}`} icon={<PackageCheck />} accent="success" />
         <KpiCard label="Rejected" value={fmtNumber(rejected, 2)} sub={rejected > 0 ? 'held in the quarantine bay' : 'nothing refused'} icon={<ShieldAlert />} accent={rejected > 0 ? 'danger' : 'accent'} />
         <KpiCard label="Value received" value={fmtCurrency(value, 'IDR', { compact: true })} sub="at the order price" accent="accent" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="space-y-5">
           <Card>
             <CardHeader
               title="The tally"
@@ -89,13 +89,13 @@ export function ReceiptDetailPage() {
               <table className="w-full min-w-[800px] text-[12.5px]">
                 <thead>
                   <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                    <th className="px-4 py-2 font-medium">Item</th>
-                    <th className="px-4 py-2 text-right font-medium">Delivered</th>
-                    <th className="px-4 py-2 text-right font-medium">Accepted</th>
-                    <th className="px-4 py-2 text-right font-medium">Rejected</th>
-                    <th className="px-4 py-2 font-medium">Reason</th>
-                    <th className="px-4 py-2 font-medium">Bin / batch</th>
-                    <th className="px-4 py-2 font-medium">Legality</th>
+                    <th className="px-5 py-2.5 font-medium">Item</th>
+                    <th className="px-5 py-2.5 text-right font-medium">Delivered</th>
+                    <th className="px-5 py-2.5 text-right font-medium">Accepted</th>
+                    <th className="px-5 py-2.5 text-right font-medium">Rejected</th>
+                    <th className="px-5 py-2.5 font-medium">Reason</th>
+                    <th className="px-5 py-2.5 font-medium">Bin / batch</th>
+                    <th className="px-5 py-2.5 font-medium">Legality</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -103,7 +103,7 @@ export function ReceiptDetailPage() {
                     const item = store.items.find((i) => i.id === l.itemId)
                     return (
                       <tr key={l.id} className={cn(l.qtyRejected > 0 && 'bg-danger-soft/25')}>
-                        <td className="px-4 py-2.5">
+                        <td className="px-5 py-3">
                           <p className="font-medium text-fg">{l.description}</p>
                           <p className="text-[11.5px] text-fg-muted">
                             {item?.sku}
@@ -111,21 +111,21 @@ export function ReceiptDetailPage() {
                           </p>
                           {l.note && <p className="mt-1 text-[11.5px] leading-relaxed text-warning-soft-fg">{l.note}</p>}
                         </td>
-                        <td className="tnum px-4 py-2.5 text-right">{fmtNumber(l.qtyDelivered, 2)} {uomLabel(l.uom)}</td>
-                        <td className="tnum px-4 py-2.5 text-right text-success">{fmtNumber(l.qtyAccepted, 2)}</td>
-                        <td className="tnum px-4 py-2.5 text-right text-danger">{l.qtyRejected ? fmtNumber(l.qtyRejected, 2) : '—'}</td>
-                        <td className="px-4 py-2.5">
+                        <td className="tnum px-5 py-3 text-right">{fmtNumber(l.qtyDelivered, 2)} {uomLabel(l.uom)}</td>
+                        <td className="tnum px-5 py-3 text-right text-success">{fmtNumber(l.qtyAccepted, 2)}</td>
+                        <td className="tnum px-5 py-3 text-right text-danger">{l.qtyRejected ? fmtNumber(l.qtyRejected, 2) : '—'}</td>
+                        <td className="px-5 py-3">
                           {l.rejectReason ? (
                             <Badge size="sm" tone="danger">{rejectReasonLabel(l.rejectReason)}</Badge>
                           ) : (
                             <span className="text-fg-subtle">—</span>
                           )}
                         </td>
-                        <td className="tnum px-4 py-2.5 text-fg-muted">
+                        <td className="tnum px-5 py-3 text-fg-muted">
                           {l.binCode ?? '—'}
                           <span className="block text-[11px] text-fg-subtle">{l.batchNo}</span>
                         </td>
-                        <td className="tnum px-4 py-2.5">
+                        <td className="tnum px-5 py-3">
                           {l.legalityDocNo ? (
                             <span className="text-[11.5px] text-fg-muted">{l.legalityDocNo}</span>
                           ) : item?.legalityControlled ? (
@@ -160,7 +160,7 @@ export function ReceiptDetailPage() {
             <div className="divide-y divide-border">
               {movements.length === 0 && <EmptyState title="No movements found" description="This receipt was recorded but never posted to the ledger." />}
               {movements.map((m) => (
-                <div key={m.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                <div key={m.id} className="flex items-center justify-between gap-3 px-5 py-3">
                   <div className="min-w-0">
                     <p className="truncate text-[12.5px] font-medium text-fg">
                       {store.items.find((i) => i.id === m.itemId)?.name}
@@ -180,7 +180,7 @@ export function ReceiptDetailPage() {
           </Card>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           <Card>
             <CardHeader title="The delivery" />
             <CardBody className="divide-y divide-border py-0">
@@ -220,7 +220,7 @@ export function ReceiptDetailPage() {
                   key={g.id}
                   to={`/receipts/${g.id}`}
                   className={cn(
-                    'flex items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-bg-muted/60',
+                    'flex items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-bg-muted/60',
                     g.id === grn.id && 'bg-primary-soft/40',
                   )}
                 >

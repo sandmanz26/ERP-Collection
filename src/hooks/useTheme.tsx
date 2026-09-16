@@ -2,15 +2,15 @@ import * as React from 'react'
 
 type Mode = 'light' | 'dark' | 'system'
 const Ctx = React.createContext<{ mode: Mode; resolved: 'light' | 'dark'; setMode: (m: Mode) => void }>({
-  mode: 'dark',
-  resolved: 'dark',
+  mode: 'light',
+  resolved: 'light',
   setMode: () => {},
 })
 
 export const useTheme = () => React.useContext(Ctx)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setMode] = React.useState<Mode>(() => (localStorage.getItem('kn-theme') as Mode) ?? 'system')
+  const [mode, setMode] = React.useState<Mode>(() => (localStorage.getItem('kn-theme') as Mode) ?? 'light')
   const [systemDark, setSystemDark] = React.useState(
     () => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false,
   )

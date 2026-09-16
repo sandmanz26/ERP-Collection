@@ -198,7 +198,7 @@ export function ReceiptsPage() {
         }
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Deliveries booked" value={String(store.receipts.length)} sub={`against ${new Set(store.receipts.map((r) => r.poId)).size} orders`} icon={<PackageCheck />} accent="primary" />
         <KpiCard label="Part deliveries" value={String(partial.length)} sub="orders that arrived in pieces" icon={<Truck />} accent="warning" />
         <KpiCard label="Direct deliveries" value={String(direct.length)} sub="never entered the main gate" accent="purple" />
@@ -347,7 +347,7 @@ function BookDeliverySheet({
         </>
       }
     >
-      <div className="space-y-4 p-5">
+      <div className="space-y-5 p-5">
         <Field label="Against which purchase order" required help="Only approved orders with something still outstanding can take a delivery.">
           <Select
             value={poId}
@@ -364,7 +364,7 @@ function BookDeliverySheet({
 
         {po && (
           <>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="How it arrived" help="Full is the whole order at once. Partial is one of several. Direct never entered the gate.">
                 <Select
                   value={mode}
@@ -405,11 +405,11 @@ function BookDeliverySheet({
                 <table className="w-full min-w-[640px] text-[12.5px]">
                   <thead>
                     <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                      <th className="px-4 py-2 font-medium">Item</th>
-                      <th className="px-4 py-2 text-right font-medium">Outstanding</th>
-                      <th className="px-4 py-2 font-medium">Delivered</th>
-                      <th className="px-4 py-2 font-medium">Rejected</th>
-                      <th className="px-4 py-2 font-medium">Reason</th>
+                      <th className="px-5 py-2.5 font-medium">Item</th>
+                      <th className="px-5 py-2.5 text-right font-medium">Outstanding</th>
+                      <th className="px-5 py-2.5 font-medium">Delivered</th>
+                      <th className="px-5 py-2.5 font-medium">Rejected</th>
+                      <th className="px-5 py-2.5 font-medium">Reason</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -419,7 +419,7 @@ function BookDeliverySheet({
                       const entry = qty[l.id] ?? { delivered: '0', rejected: '0', doc: '' }
                       return (
                         <tr key={l.id}>
-                          <td className="px-4 py-2">
+                          <td className="px-5 py-2.5">
                             <p className="font-medium text-fg">{l.description}</p>
                             <p className="text-[11.5px] text-fg-muted">
                               {item?.sku} · {fmtNumber(l.qty, 2)} {uomLabel(l.uom)} ordered at{' '}
@@ -434,22 +434,22 @@ function BookDeliverySheet({
                               />
                             )}
                           </td>
-                          <td className="tnum px-4 py-2 text-right text-fg-muted">{fmtNumber(outstanding, 2)}</td>
-                          <td className="px-4 py-2">
+                          <td className="tnum px-5 py-2.5 text-right text-fg-muted">{fmtNumber(outstanding, 2)}</td>
+                          <td className="px-5 py-2.5">
                             <Input
                               className="w-24"
                               value={entry.delivered}
                               onChange={(e) => setQty({ ...qty, [l.id]: { ...entry, delivered: e.target.value } })}
                             />
                           </td>
-                          <td className="px-4 py-2">
+                          <td className="px-5 py-2.5">
                             <Input
                               className="w-20"
                               value={entry.rejected}
                               onChange={(e) => setQty({ ...qty, [l.id]: { ...entry, rejected: e.target.value } })}
                             />
                           </td>
-                          <td className="px-4 py-2">
+                          <td className="px-5 py-2.5">
                             {Number(entry.rejected) > 0 ? (
                               <Select
                                 size="sm"

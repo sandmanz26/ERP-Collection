@@ -219,7 +219,7 @@ export function ItemsPage() {
         description="Everything the factory buys, makes or ships. The legality flag is the one that matters most: a controlled item cannot enter a finished piece unless the batch it came from carries a supplier legality reference all the way back to the forest."
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Items" value={String(store.items.length)} sub={`${new Set(store.items.map((i) => i.category)).size} categories`} icon={<Package />} accent="primary" />
         <KpiCard label="Legality controlled" value={String(controlled.length)} sub="timber, panel and components" accent="accent" />
         <KpiCard label="Finished goods" value={String(store.items.filter((i) => i.category === 'FINISHED_GOOD').length)} sub="models with an HS code" accent="accent" />

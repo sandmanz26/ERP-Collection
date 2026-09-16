@@ -111,7 +111,7 @@ export function LoginPage() {
         </div>
       }
     >
-      <form onSubmit={submit} className="space-y-4" noValidate>
+      <form onSubmit={submit} className="space-y-5" noValidate>
         {result && !result.ok && (
           <AuthNotice
             tone={result.failure === 'SUSPENDED' || result.failure === 'LOCKED' ? 'danger' : 'warning'}
@@ -184,8 +184,9 @@ export function LoginPage() {
           Demo accounts — including the ones that fail
         </p>
         <p className="mt-1 text-[11.5px] leading-relaxed text-fg-subtle">
-          Every account uses the same password. Sign in as the operator to see the focused four-phase workspace; the
-          last three exist so the unverified, locked and suspended paths can be walked without breaking anything.
+          Every account uses the same password and every account sees the whole suite — at this size the same few desks
+          touch all of it. The last three exist so the unverified, locked and suspended paths can be walked without
+          breaking anything.
         </p>
         <div className="mt-2.5 flex flex-wrap gap-1.5">
           {DEMO_ACCOUNTS.map((a) => (

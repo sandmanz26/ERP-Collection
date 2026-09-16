@@ -85,10 +85,10 @@ export function AppShell() {
       <aside
         className={cn(
           'relative z-20 flex shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-200 ease-out',
-          collapsed ? 'w-[62px]' : 'w-[244px]',
+          collapsed ? 'w-[68px]' : 'w-[256px]',
         )}
       >
-        <div className={cn('flex h-14 shrink-0 items-center gap-2.5 border-b border-border px-3.5', collapsed && 'justify-center px-0')}>
+        <div className={cn('flex h-16 shrink-0 items-center gap-3 border-b border-border px-4', collapsed && 'justify-center px-0')}>
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-fg">
             <BRAND_ICON className="size-[17px]" />
           </span>
@@ -100,15 +100,15 @@ export function AppShell() {
           )}
         </div>
 
-        <nav className="scrollbar-thin flex-1 overflow-y-auto px-2 py-3">
+        <nav className="scrollbar-thin flex-1 overflow-y-auto px-2.5 py-4">
           {NAV.map((group) => (
-            <div key={group.label} className="mb-4 last:mb-0">
+            <div key={group.label} className="mb-6 last:mb-0">
               {!collapsed && (
-                <p className="mb-1.5 px-2.5 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-fg-subtle">
+                <p className="mb-2 px-3 text-[10.5px] font-semibold uppercase tracking-[0.09em] text-fg-subtle">
                   {group.label}
                 </p>
               )}
-              <ul className="space-y-0.5">
+              <ul className="space-y-1">
                 {group.items.map((item) => {
                   const count = item.badgeKey ? badges[item.badgeKey] ?? 0 : 0
                   const link = (
@@ -117,7 +117,7 @@ export function AppShell() {
                       end={item.end}
                       className={({ isActive }) =>
                         cn(
-                          'group flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] font-medium transition-colors',
+                          'group flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors',
                           collapsed && 'justify-center px-0',
                           isActive
                             ? 'bg-primary-soft text-primary-soft-fg'
@@ -166,7 +166,7 @@ export function AppShell() {
 
       {/* ---------------- main ---------------- */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-5">
+        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border bg-surface px-6">
           <button
             onClick={() => setPaletteOpen(true)}
             data-tour="palette"
@@ -285,9 +285,9 @@ export function AppShell() {
           </div>
         </header>
 
-        <main key={location.pathname} className="scrollbar-thin flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-5 lg:px-7">
+        <main key={location.pathname} className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-6 py-7 lg:px-10 lg:py-8">
           <Outlet />
-          <footer className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 text-[11.5px] text-fg-subtle">
+          <footer className="mt-14 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5 text-[11.5px] text-fg-subtle">
             <span>
               {store.company.legalName} · {store.company.registrationNo} · Front-end demonstration build, no backend
             </span>

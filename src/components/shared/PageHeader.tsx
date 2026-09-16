@@ -17,12 +17,12 @@ export function PageHeader({
   className?: string
 }) {
   return (
-    <div className={cn('flex flex-wrap items-start justify-between gap-4 pb-5', className)}>
+    <div className={cn('flex flex-wrap items-start justify-between gap-5 pb-7', className)}>
       <div className="min-w-0">
-        {eyebrow && <div className="mb-1.5 flex items-center gap-2">{eyebrow}</div>}
-        <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.022em] text-fg">{title}</h1>
-        {description && <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-fg-muted">{description}</p>}
-        {meta && <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">{meta}</div>}
+        {eyebrow && <div className="mb-2.5 flex items-center gap-2">{eyebrow}</div>}
+        <h1 className="text-[23px] font-semibold leading-tight tracking-[-0.022em] text-fg">{title}</h1>
+        {description && <p className="mt-2.5 max-w-3xl text-[13.5px] leading-[1.65] text-fg-muted">{description}</p>}
+        {meta && <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2.5">{meta}</div>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
     </div>
@@ -61,7 +61,7 @@ export function KpiCard({
     <Comp
       onClick={onClick}
       className={cn(
-        'flex items-start gap-3 rounded-xl border border-border bg-surface p-4 text-left shadow-card transition-shadow',
+        'flex items-start gap-3.5 rounded-xl border border-border bg-surface px-5 py-[18px] text-left shadow-card transition-shadow',
         onClick && 'hover:border-border-strong hover:shadow-pop',
       )}
     >
@@ -71,9 +71,9 @@ export function KpiCard({
         </span>
       )}
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[11.5px] font-medium uppercase tracking-[0.06em] text-fg-subtle">{label}</p>
-        <p className="tnum mt-1.5 truncate text-[21px] font-semibold leading-none tracking-[-0.025em] text-fg">{value}</p>
-        <div className="mt-1.5 flex items-center gap-2">
+        <p className="text-[11px] font-medium uppercase leading-tight tracking-[0.055em] text-fg-subtle">{label}</p>
+        <p className="tnum mt-2 truncate text-[21px] font-semibold leading-none tracking-[-0.025em] text-fg">{value}</p>
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           {delta && (
             <span
               className={cn(
@@ -86,7 +86,7 @@ export function KpiCard({
               {delta}
             </span>
           )}
-          {sub && <span className="truncate text-[12px] text-fg-muted">{sub}</span>}
+          {sub && <span className="text-[12px] leading-snug text-fg-muted">{sub}</span>}
         </div>
       </div>
     </Comp>

@@ -11,10 +11,11 @@
     <title>Kriyanusa Furniture — Export Manufacturing Suite</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23c25510'/%3E%3Cpath d='M16 4.5 9 14h4l-5 7h6v6.5h4V21h6l-5-7h4z' fill='white'/%3E%3C/svg%3E" />
     <script>
-      /* Resolve the theme before first paint, so a dark-mode user never sees a white flash. */
+      /* Resolve the theme before first paint. Light is the default; a viewer who has
+         chosen dark, or Auto on a dark system, never sees a white flash. */
       (function () {
         try {
-          var mode = localStorage.getItem('kn-theme') || 'system'
+          var mode = localStorage.getItem('kn-theme') || 'light'
           var dark = mode === 'dark' || (mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)
           if (dark) document.documentElement.classList.add('dark')
           document.documentElement.style.colorScheme = dark ? 'dark' : 'light'

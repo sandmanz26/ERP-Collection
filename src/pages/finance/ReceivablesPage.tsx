@@ -187,7 +187,7 @@ export function ReceivablesPage() {
         description="Deposits and balances against export orders. A deposit is not a formality: nothing is bought for an order until it clears, because the timber for a teak range has to be paid for outright long before the container sails."
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           label="Owed to us"
           value={fmtCurrency(open.reduce((a, i) => a + idr(i), 0), 'IDR', { compact: true })}

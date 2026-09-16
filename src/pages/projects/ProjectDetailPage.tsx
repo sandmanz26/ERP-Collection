@@ -148,7 +148,7 @@ export function ProjectDetailPage() {
           onSelect={(s) => setStagePeek(s)}
           className="mb-1"
         />
-        <p className="mb-5 px-1 text-[12.5px] leading-relaxed text-fg-muted">
+        <p className="mb-6 px-1 text-[12.5px] leading-relaxed text-fg-muted">
           {PROJECT_STAGES.find((s) => s.key === (stagePeek ?? project.stage))!.hint}
         </p>
       </div>
@@ -159,8 +159,8 @@ export function ProjectDetailPage() {
 
       {/* ================= OVERVIEW ================= */}
       {tab === 'overview' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard
               label="Order value"
               value={fmtCurrency(project.contractValue, project.currency, { compact: true })}
@@ -195,7 +195,7 @@ export function ProjectDetailPage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
             <Card>
               <CardHeader title="The order" description="What was agreed, and with whom." />
               <CardBody className="divide-y divide-border py-0">
@@ -231,7 +231,7 @@ export function ProjectDetailPage() {
                 {project.compliance.map((c) => {
                   const spec = complianceSpec(c.key)
                   return (
-                    <div key={c.key} className="px-4 py-2.5">
+                    <div key={c.key} className="px-5 py-3">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="truncate text-[12.5px] font-medium text-fg">{spec.label}</p>
@@ -251,7 +251,7 @@ export function ProjectDetailPage() {
               </div>
             </Card>
 
-            <div className="space-y-4">
+            <div className="space-y-5">
               <Card>
                 <CardHeader title="Material availability" description="What the remaining production still needs, against what is actually there." />
                 <div className="scrollbar-thin max-h-[260px] divide-y divide-border overflow-y-auto">
@@ -260,7 +260,7 @@ export function ProjectDetailPage() {
                     const item = store.items.find((i) => i.id === g.itemId)
                     if (!item) return null
                     return (
-                      <div key={g.itemId} className="flex items-center gap-3 px-4 py-2.5">
+                      <div key={g.itemId} className="flex items-center gap-3 px-5 py-3">
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[12.5px] font-medium text-fg">{item.name}</p>
                           <p className="tnum truncate text-[11.5px] text-fg-muted">
@@ -314,50 +314,50 @@ export function ProjectDetailPage() {
             <table className="w-full min-w-[980px] text-[12.5px]">
               <thead>
                 <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                  <th className="px-4 py-2 font-medium">Model</th>
-                  <th className="px-4 py-2 font-medium">Species & finish</th>
-                  <th className="px-4 py-2 font-medium">Dimensions</th>
-                  <th className="px-4 py-2 font-medium">Packing</th>
-                  <th className="px-4 py-2 text-right font-medium">Qty</th>
-                  <th className="px-4 py-2 text-right font-medium">m³ each</th>
-                  <th className="px-4 py-2 text-right font-medium">Total m³</th>
-                  <th className="px-4 py-2 text-right font-medium">Target</th>
-                  <th className="px-4 py-2 text-right font-medium">Agreed</th>
-                  <th className="px-4 py-2 text-right font-medium">Line value</th>
-                  <th className="px-4 py-2 font-medium">Made</th>
+                  <th className="px-5 py-2.5 font-medium">Model</th>
+                  <th className="px-5 py-2.5 font-medium">Species & finish</th>
+                  <th className="px-5 py-2.5 font-medium">Dimensions</th>
+                  <th className="px-5 py-2.5 font-medium">Packing</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Qty</th>
+                  <th className="px-5 py-2.5 text-right font-medium">m³ each</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Total m³</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Target</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Agreed</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Line value</th>
+                  <th className="px-5 py-2.5 font-medium">Made</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {project.items.map((it) => (
                   <tr key={it.id} className="hover:bg-bg-muted/50">
-                    <td className="px-4 py-2.5">
+                    <td className="px-5 py-3">
                       <p className="font-medium text-fg">{it.itemRef}</p>
                       <p className="text-[11.5px] text-fg-muted">{it.name}</p>
                     </td>
-                    <td className="px-4 py-2.5 text-fg-muted">
+                    <td className="px-5 py-3 text-fg-muted">
                       {titleCase(it.species)}
                       <br />
                       <span className="text-[11.5px]">{it.finish}</span>
                     </td>
-                    <td className="tnum px-4 py-2.5 text-fg-muted">
+                    <td className="tnum px-5 py-3 text-fg-muted">
                       {it.lengthMm} × {it.widthMm} × {it.heightMm}
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-5 py-3">
                       <Badge size="sm" tone="neutral">{titleCase(it.packingType)}</Badge>
                     </td>
-                    <td className="tnum px-4 py-2.5 text-right">{fmtNumber(it.qty)}</td>
-                    <td className="tnum px-4 py-2.5 text-right text-fg-muted">{fmtNumber(it.cbmPerUnit, 2)}</td>
-                    <td className="tnum px-4 py-2.5 text-right">{fmtNumber(it.qty * it.cbmPerUnit, 1)}</td>
-                    <td className="tnum px-4 py-2.5 text-right text-fg-muted">
+                    <td className="tnum px-5 py-3 text-right">{fmtNumber(it.qty)}</td>
+                    <td className="tnum px-5 py-3 text-right text-fg-muted">{fmtNumber(it.cbmPerUnit, 2)}</td>
+                    <td className="tnum px-5 py-3 text-right">{fmtNumber(it.qty * it.cbmPerUnit, 1)}</td>
+                    <td className="tnum px-5 py-3 text-right text-fg-muted">
                       {fmtMoneyShort(it.targetUnitPrice, project.currency)}
                     </td>
-                    <td className="tnum px-4 py-2.5 text-right font-medium">
+                    <td className="tnum px-5 py-3 text-right font-medium">
                       {fmtMoneyShort(it.agreedUnitPrice, project.currency)}
                     </td>
-                    <td className="tnum px-4 py-2.5 text-right font-semibold">
+                    <td className="tnum px-5 py-3 text-right font-semibold">
                       {fmtCurrency(it.qty * it.agreedUnitPrice, project.currency, { compact: true })}
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-5 py-3">
                       <Progress value={(it.producedQty / it.qty) * 100} className="w-[90px]" />
                       <span className="tnum text-[11px] text-fg-muted">
                         {fmtNumber(it.producedQty)} made · {fmtNumber(it.packedQty)} packed
@@ -368,14 +368,14 @@ export function ProjectDetailPage() {
               </tbody>
               <tfoot>
                 <tr className="border-t border-border bg-surface-sunken text-[12.5px] font-semibold">
-                  <td className="px-4 py-2.5" colSpan={4}>
+                  <td className="px-5 py-3" colSpan={4}>
                     {project.items.length} lines
                   </td>
-                  <td className="tnum px-4 py-2.5 text-right">{fmtNumber(ordered)}</td>
+                  <td className="tnum px-5 py-3 text-right">{fmtNumber(ordered)}</td>
                   <td />
-                  <td className="tnum px-4 py-2.5 text-right">{fmtNumber(cbm, 1)}</td>
+                  <td className="tnum px-5 py-3 text-right">{fmtNumber(cbm, 1)}</td>
                   <td colSpan={2} />
-                  <td className="tnum px-4 py-2.5 text-right">
+                  <td className="tnum px-5 py-3 text-right">
                     {fmtCurrency(project.contractValue, project.currency, { compact: true })}
                   </td>
                   <td />
@@ -396,7 +396,7 @@ export function ProjectDetailPage() {
 
       {/* ================= NEGOTIATION ================= */}
       {tab === 'negotiation' && (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
           <Card>
             <CardHeader
               title={`${project.negotiations.length} rounds`}
@@ -404,7 +404,7 @@ export function ProjectDetailPage() {
             />
             <div className="divide-y divide-border">
               {project.negotiations.map((n) => (
-                <div key={n.id} className="flex gap-3 px-4 py-3.5">
+                <div key={n.id} className="flex gap-3 px-5 py-4">
                   <div className="flex flex-col items-center">
                     <span
                       className={cn(
@@ -476,7 +476,7 @@ export function ProjectDetailPage() {
 
       {/* ================= DRAWINGS & SAMPLES ================= */}
       {tab === 'design' && (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
           <Card>
             <CardHeader
               icon={<PencilRuler />}
@@ -486,7 +486,7 @@ export function ProjectDetailPage() {
             <div className="divide-y divide-border">
               {project.drawings.length === 0 && <EmptyState title="No drawings issued yet" />}
               {project.drawings.map((d) => (
-                <div key={d.id} className="px-4 py-3">
+                <div key={d.id} className="px-5 py-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-[13px] font-medium text-fg">
@@ -519,7 +519,7 @@ export function ProjectDetailPage() {
             <div className="divide-y divide-border">
               {project.samples.length === 0 && <EmptyState title="No samples on this order" description="Either a repeat model, or the buyer approved from photographs." />}
               {project.samples.map((s) => (
-                <div key={s.id} className="px-4 py-3">
+                <div key={s.id} className="px-5 py-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-[13px] font-medium text-fg">
@@ -558,8 +558,8 @@ export function ProjectDetailPage() {
 
       {/* ================= PROCUREMENT ================= */}
       {tab === 'procurement' && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard label="Orders placed" value={String(orders.length)} sub={`${orders.filter((o) => o.status === 'PARTIALLY_RECEIVED').length} part delivered`} accent="primary" />
             <KpiCard label="Committed" value={fmtCurrency(costing.committed, 'IDR', { compact: true })} sub="ordered, not yet delivered" accent="warning" />
             <KpiCard label="Received" value={fmtCurrency(costing.actual, 'IDR', { compact: true })} sub={`${receipts.length} deliveries`} accent="success" />
@@ -578,7 +578,7 @@ export function ProjectDetailPage() {
               {orders.map((o) => {
                 const p = orderProgress(o, store.receipts)
                 return (
-                  <Link key={o.id} to={`/purchase-orders/${o.id}`} className="block px-4 py-3 transition-colors hover:bg-bg-muted/60">
+                  <Link key={o.id} to={`/purchase-orders/${o.id}`} className="block px-5 py-3.5 transition-colors hover:bg-bg-muted/60">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="min-w-0">
                         <p className="truncate text-[13px] font-medium text-fg">
@@ -608,7 +608,7 @@ export function ProjectDetailPage() {
             <div className="divide-y divide-border">
               {receipts.length === 0 && <EmptyState title="Nothing has arrived yet" />}
               {receipts.map((g) => (
-                <Link key={g.id} to={`/receipts/${g.id}`} className="block px-4 py-3 transition-colors hover:bg-bg-muted/60">
+                <Link key={g.id} to={`/receipts/${g.id}`} className="block px-5 py-3.5 transition-colors hover:bg-bg-muted/60">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="truncate text-[13px] font-medium text-fg">
@@ -645,42 +645,42 @@ export function ProjectDetailPage() {
             <table className="w-full min-w-[880px] text-[12.5px]">
               <thead>
                 <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                  <th className="px-4 py-2 font-medium">Work order</th>
-                  <th className="px-4 py-2 font-medium">Model</th>
-                  <th className="px-4 py-2 font-medium">Workshop</th>
-                  <th className="px-4 py-2 font-medium">Stage</th>
-                  <th className="px-4 py-2 text-right font-medium">Qty</th>
-                  <th className="px-4 py-2 font-medium">Progress</th>
-                  <th className="px-4 py-2 font-medium">Due</th>
-                  <th className="px-4 py-2 font-medium">Status</th>
+                  <th className="px-5 py-2.5 font-medium">Work order</th>
+                  <th className="px-5 py-2.5 font-medium">Model</th>
+                  <th className="px-5 py-2.5 font-medium">Workshop</th>
+                  <th className="px-5 py-2.5 font-medium">Stage</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Qty</th>
+                  <th className="px-5 py-2.5 font-medium">Progress</th>
+                  <th className="px-5 py-2.5 font-medium">Due</th>
+                  <th className="px-5 py-2.5 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {workOrders.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-4 py-10 text-center text-fg-muted">
+                    <td colSpan={8} className="px-5 py-12 text-center text-fg-muted">
                       Nothing released to the floor yet.
                     </td>
                   </tr>
                 )}
                 {workOrders.map((w) => (
                   <tr key={w.id} className="hover:bg-bg-muted/50">
-                    <td className="px-4 py-2.5 font-medium text-fg">{w.code}</td>
-                    <td className="px-4 py-2.5 text-fg-muted">{w.itemRef}</td>
-                    <td className="px-4 py-2.5 text-fg-muted">{w.workshop}</td>
-                    <td className="px-4 py-2.5"><StatusBadge value={w.stage} size="sm" /></td>
-                    <td className="tnum px-4 py-2.5 text-right">{fmtNumber(w.qty)}</td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-5 py-3 font-medium text-fg">{w.code}</td>
+                    <td className="px-5 py-3 text-fg-muted">{w.itemRef}</td>
+                    <td className="px-5 py-3 text-fg-muted">{w.workshop}</td>
+                    <td className="px-5 py-3"><StatusBadge value={w.stage} size="sm" /></td>
+                    <td className="tnum px-5 py-3 text-right">{fmtNumber(w.qty)}</td>
+                    <td className="px-5 py-3">
                       <Progress value={(w.producedQty / w.qty) * 100} className="w-[110px]" />
                       <span className="tnum text-[11px] text-fg-muted">
                         {fmtNumber(w.producedQty)} made{w.rejectQty ? ` · ${w.rejectQty} rejected` : ''}
                       </span>
                     </td>
-                    <td className="px-4 py-2.5 text-fg-muted">
+                    <td className="px-5 py-3 text-fg-muted">
                       {fmtDate(w.dueAt, 'short')}
                       <span className="block text-[11px] text-fg-subtle">{relativeLabel(w.dueAt)}</span>
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-5 py-3">
                       <StatusBadge value={w.status} size="sm" />
                       {w.holdReason && (
                         <p className="mt-1 max-w-[220px] text-[11.5px] leading-relaxed text-warning-soft-fg">{w.holdReason}</p>
@@ -696,7 +696,7 @@ export function ProjectDetailPage() {
 
       {/* ================= SHIPMENT ================= */}
       {tab === 'shipment' && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {!shipment && (
             <EmptyState
               title="No shipment planned yet"
@@ -705,7 +705,7 @@ export function ProjectDetailPage() {
           )}
           {shipment && (
             <>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <KpiCard label="Shipment" value={shipment.code} sub={`${shipment.polName} → ${shipment.podName}`} accent="primary" icon={<Container />} />
                 <KpiCard label="Status" value={titleCase(shipment.status)} sub={shipment.vesselName ? `${shipment.vesselName} ${shipment.voyageNo}` : 'no vessel booked'} accent="accent" />
                 <KpiCard label="ETD" value={fmtDate(shipment.etd)} sub={relativeLabel(shipment.etd)} accent="warning" />
@@ -717,14 +717,14 @@ export function ProjectDetailPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                 <Card>
                   <CardHeader title="Containers" description="Volume loaded against the usable volume of the box." />
                   <div className="divide-y divide-border">
                     {shipment.containers.map((c) => {
                       const usable = { LCL: 1, '20GP': 28, '40GP': 58, '40HC': 66 }[c.size]
                       return (
-                        <div key={c.id} className="flex items-center gap-3 px-4 py-3">
+                        <div key={c.id} className="flex items-center gap-3 px-5 py-3.5">
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-[13px] font-medium text-fg">
                               {c.containerNo ?? <span className="text-fg-subtle">number not allocated</span>}{' '}
@@ -749,7 +749,7 @@ export function ProjectDetailPage() {
                   />
                   <div className="divide-y divide-border">
                     {shipment.documents.map((d) => (
-                      <div key={d.id} className="px-4 py-2.5">
+                      <div key={d.id} className="px-5 py-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="truncate text-[12.5px] font-medium text-fg">
@@ -828,7 +828,7 @@ export function BudgetPanel({ projectId }: { projectId: string }) {
   })).filter((g) => g.lines.length > 0)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {versions.map((v) => (
@@ -865,7 +865,7 @@ export function BudgetPanel({ projectId }: { projectId: string }) {
         </p>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <KpiCard label="Budgeted cost" value={fmtCurrency(total, 'IDR', { compact: true })} sub={`${budget.lines.length} lines`} accent="primary" />
         <KpiCard label="Order revenue" value={fmtCurrency(revenueIdr(project), 'IDR', { compact: true })} sub={fmtCurrency(project.contractValue, project.currency, { compact: true })} accent="accent" />
         <KpiCard
@@ -888,12 +888,12 @@ export function BudgetPanel({ projectId }: { projectId: string }) {
           <table className="w-full min-w-[760px] text-[12.5px]">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                <th className="px-4 py-2 font-medium">Category</th>
-                <th className="px-4 py-2 text-right font-medium">Budget</th>
-                <th className="px-4 py-2 text-right font-medium">Committed</th>
-                <th className="px-4 py-2 text-right font-medium">Received</th>
-                <th className="px-4 py-2 text-right font-medium">Variance</th>
-                <th className="px-4 py-2 font-medium">Consumed</th>
+                <th className="px-5 py-2.5 font-medium">Category</th>
+                <th className="px-5 py-2.5 text-right font-medium">Budget</th>
+                <th className="px-5 py-2.5 text-right font-medium">Committed</th>
+                <th className="px-5 py-2.5 text-right font-medium">Received</th>
+                <th className="px-5 py-2.5 text-right font-medium">Variance</th>
+                <th className="px-5 py-2.5 font-medium">Consumed</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -901,14 +901,14 @@ export function BudgetPanel({ projectId }: { projectId: string }) {
                 const spent = r.actual + r.committed
                 return (
                   <tr key={r.category} className="hover:bg-bg-muted/50">
-                    <td className="px-4 py-2.5 font-medium text-fg">{r.label}</td>
-                    <td className="tnum px-4 py-2.5 text-right">{fmtCurrency(r.budget, 'IDR', { compact: true })}</td>
-                    <td className="tnum px-4 py-2.5 text-right text-warning-soft-fg">{r.committed ? fmtCurrency(r.committed, 'IDR', { compact: true }) : '—'}</td>
-                    <td className="tnum px-4 py-2.5 text-right text-accent-soft-fg">{r.actual ? fmtCurrency(r.actual, 'IDR', { compact: true }) : '—'}</td>
-                    <td className={cn('tnum px-4 py-2.5 text-right font-medium', r.variance < 0 ? 'text-danger' : 'text-fg')}>
+                    <td className="px-5 py-3 font-medium text-fg">{r.label}</td>
+                    <td className="tnum px-5 py-3 text-right">{fmtCurrency(r.budget, 'IDR', { compact: true })}</td>
+                    <td className="tnum px-5 py-3 text-right text-warning-soft-fg">{r.committed ? fmtCurrency(r.committed, 'IDR', { compact: true }) : '—'}</td>
+                    <td className="tnum px-5 py-3 text-right text-accent-soft-fg">{r.actual ? fmtCurrency(r.actual, 'IDR', { compact: true }) : '—'}</td>
+                    <td className={cn('tnum px-5 py-3 text-right font-medium', r.variance < 0 ? 'text-danger' : 'text-fg')}>
                       {r.budget ? fmtCurrency(r.variance, 'IDR', { compact: true }) : '—'}
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-5 py-3">
                       {r.budget ? <UtilisationBar pct={(spent / r.budget) * 100} className="w-24" /> : <span className="text-fg-subtle">—</span>}
                     </td>
                   </tr>
@@ -917,11 +917,11 @@ export function BudgetPanel({ projectId }: { projectId: string }) {
             </tbody>
             <tfoot>
               <tr className="border-t border-border bg-surface-sunken font-semibold">
-                <td className="px-4 py-2.5">Total</td>
-                <td className="tnum px-4 py-2.5 text-right">{fmtCurrency(total, 'IDR', { compact: true })}</td>
-                <td className="tnum px-4 py-2.5 text-right">{fmtCurrency(costing.committed, 'IDR', { compact: true })}</td>
-                <td className="tnum px-4 py-2.5 text-right">{fmtCurrency(costing.actual, 'IDR', { compact: true })}</td>
-                <td className={cn('tnum px-4 py-2.5 text-right', costing.overCommitted && 'text-danger')}>
+                <td className="px-5 py-3">Total</td>
+                <td className="tnum px-5 py-3 text-right">{fmtCurrency(total, 'IDR', { compact: true })}</td>
+                <td className="tnum px-5 py-3 text-right">{fmtCurrency(costing.committed, 'IDR', { compact: true })}</td>
+                <td className="tnum px-5 py-3 text-right">{fmtCurrency(costing.actual, 'IDR', { compact: true })}</td>
+                <td className={cn('tnum px-5 py-3 text-right', costing.overCommitted && 'text-danger')}>
                   {fmtCurrency(costing.remaining, 'IDR', { compact: true })}
                 </td>
                 <td />
@@ -940,36 +940,36 @@ export function BudgetPanel({ projectId }: { projectId: string }) {
           <table className="w-full min-w-[900px] text-[12.5px]">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                <th className="px-4 py-2 font-medium">Description</th>
-                <th className="px-4 py-2 text-right font-medium">Qty</th>
-                <th className="px-4 py-2 font-medium">Unit</th>
-                <th className="px-4 py-2 text-right font-medium">Unit cost</th>
-                <th className="px-4 py-2 text-right font-medium">Wastage</th>
-                <th className="px-4 py-2 text-right font-medium">Budget</th>
-                <th className="px-4 py-2 font-medium">Supplier</th>
+                <th className="px-5 py-2.5 font-medium">Description</th>
+                <th className="px-5 py-2.5 text-right font-medium">Qty</th>
+                <th className="px-5 py-2.5 font-medium">Unit</th>
+                <th className="px-5 py-2.5 text-right font-medium">Unit cost</th>
+                <th className="px-5 py-2.5 text-right font-medium">Wastage</th>
+                <th className="px-5 py-2.5 text-right font-medium">Budget</th>
+                <th className="px-5 py-2.5 font-medium">Supplier</th>
               </tr>
             </thead>
             <tbody>
               {byCategory.map((group) => (
                 <React.Fragment key={group.category.value}>
                   <tr className="border-y border-border bg-surface-sunken">
-                    <td colSpan={7} className="px-4 py-2">
+                    <td colSpan={7} className="px-5 py-2.5">
                       <span className="text-[12px] font-semibold text-fg">{group.category.label}</span>
                       <span className="ml-2 text-[11.5px] text-fg-muted">{group.category.hint}</span>
                     </td>
                   </tr>
                   {group.lines.map((l) => (
                     <tr key={l.id} className="border-b border-border hover:bg-bg-muted/50">
-                      <td className="px-4 py-2 text-fg">
+                      <td className="px-5 py-2.5 text-fg">
                         {l.description}
                         {l.note && <p className="text-[11.5px] text-fg-muted">{l.note}</p>}
                       </td>
-                      <td className="tnum px-4 py-2 text-right">{fmtNumber(l.qty, l.qty < 10 ? 2 : 0)}</td>
-                      <td className="px-4 py-2 text-fg-muted">{uomLabel(l.uom)}</td>
-                      <td className="tnum px-4 py-2 text-right">{fmtCurrency(l.unitCost, 'IDR', { compact: true })}</td>
-                      <td className="tnum px-4 py-2 text-right text-fg-muted">{l.wastagePct ? `${l.wastagePct}%` : '—'}</td>
-                      <td className="tnum px-4 py-2 text-right font-medium">{fmtCurrency(lineBudget(l), 'IDR', { compact: true })}</td>
-                      <td className="px-4 py-2 text-fg-muted">
+                      <td className="tnum px-5 py-2.5 text-right">{fmtNumber(l.qty, l.qty < 10 ? 2 : 0)}</td>
+                      <td className="px-5 py-2.5 text-fg-muted">{uomLabel(l.uom)}</td>
+                      <td className="tnum px-5 py-2.5 text-right">{fmtCurrency(l.unitCost, 'IDR', { compact: true })}</td>
+                      <td className="tnum px-5 py-2.5 text-right text-fg-muted">{l.wastagePct ? `${l.wastagePct}%` : '—'}</td>
+                      <td className="tnum px-5 py-2.5 text-right font-medium">{fmtCurrency(lineBudget(l), 'IDR', { compact: true })}</td>
+                      <td className="px-5 py-2.5 text-fg-muted">
                         {store.suppliers.find((s) => s.id === l.supplierId)?.name ?? '—'}
                       </td>
                     </tr>

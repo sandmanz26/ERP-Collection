@@ -206,7 +206,7 @@ export function BudgetsPage() {
         description="Every order is costed before anything is bought. The lines are exploded from the bill of materials for the models on the order, priced at standard cost and grossed up for the wastage the estimator expects to lose. What is left after that is the margin, and it is not negotiable with arithmetic."
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Budgets" value={String(store.budgets.length)} sub={`${approved.length} approved`} icon={<FileSpreadsheet />} accent="primary" />
         <KpiCard
           label="Waiting for approval"
@@ -265,7 +265,7 @@ export function BudgetsPage() {
         width="max-w-4xl"
       >
         {open && (
-          <div className="space-y-4 p-5">
+          <div className="space-y-5 p-5">
             <Button variant="secondary" size="sm" onClick={() => navigate(`/projects/${open.projectId}`)}>
               Open the order
             </Button>

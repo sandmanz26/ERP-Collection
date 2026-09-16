@@ -53,7 +53,7 @@ export function ShipmentsPage() {
         }
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Shipments" value={String(store.shipments.length)} sub={`${live.length} still being prepared`} icon={<Container />} accent="primary" />
         <KpiCard
           label="Containers"
@@ -81,7 +81,7 @@ export function ShipmentsPage() {
       </div>
 
       {view === 'shipments' && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {store.shipments.length === 0 && (
             <EmptyState title="No shipments yet" description="A shipment appears once an order reaches QC and packing." />
           )}
@@ -132,7 +132,7 @@ export function ShipmentsPage() {
                       </p>
                     </CardBody>
                   )}
-                  <CardBody className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                  <CardBody className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                     <div>
                       <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">Containers</p>
                       <div className="space-y-2">
@@ -195,7 +195,7 @@ export function ShipmentsPage() {
       )}
 
       {view === 'compliance' && (
-        <div className="space-y-4">
+        <div className="space-y-5">
           <Card>
             <CardHeader
               title="What each order owes"
@@ -205,8 +205,8 @@ export function ShipmentsPage() {
               <table className="w-full min-w-[900px] text-[12.5px]">
                 <thead>
                   <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                    <th className="px-4 py-2 font-medium">Order</th>
-                    <th className="px-4 py-2 font-medium">Destination</th>
+                    <th className="px-5 py-2.5 font-medium">Order</th>
+                    <th className="px-5 py-2.5 font-medium">Destination</th>
                     {COMPLIANCE_SPECS.map((c) => (
                       <th key={c.key} className="px-2 py-2 text-center font-medium">
                         <Tooltip content={`${c.label} — ${c.hint}`}>
@@ -214,19 +214,19 @@ export function ShipmentsPage() {
                         </Tooltip>
                       </th>
                     ))}
-                    <th className="px-4 py-2 text-right font-medium">Ships</th>
+                    <th className="px-5 py-2.5 text-right font-medium">Ships</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {complianceRows.map(({ project, required }) => (
                     <tr key={project.id} className="hover:bg-bg-muted/50">
-                      <td className="px-4 py-2.5">
+                      <td className="px-5 py-3">
                         <Link to={`/projects/${project.id}`} className="font-medium text-fg hover:text-primary">
                           {project.code}
                         </Link>
                         <p className="truncate text-[11.5px] text-fg-muted">{project.buyerName}</p>
                       </td>
-                      <td className="px-4 py-2.5 text-fg-muted">
+                      <td className="px-5 py-3 text-fg-muted">
                         {project.destinationCountry} · {project.destinationPort}
                       </td>
                       {COMPLIANCE_SPECS.map((spec) => {
@@ -251,7 +251,7 @@ export function ShipmentsPage() {
                           </td>
                         )
                       })}
-                      <td className="px-4 py-2.5 text-right text-fg-muted">
+                      <td className="px-5 py-3 text-right text-fg-muted">
                         {fmtDate(project.targetShipAt, 'short')}
                         <span className="block text-[11px] text-fg-subtle">{relativeLabel(project.targetShipAt)}</span>
                       </td>
@@ -270,7 +270,7 @@ export function ShipmentsPage() {
             </CardBody>
           </Card>
 
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
             {COMPLIANCE_SPECS.map((c) => (
               <Card key={c.key}>
                 <CardHeader

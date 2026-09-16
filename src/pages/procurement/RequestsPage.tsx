@@ -144,7 +144,7 @@ export function RequestsPage() {
         description="What the floor and the warehouse are asking for, before it becomes a commitment to a supplier. A request carries the budget line it came from, so purchasing can see whether the money for it was ever allowed."
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Requests" value={String(store.requests.length)} icon={<ClipboardList />} accent="primary" />
         <KpiCard label="Waiting for approval" value={String(waiting.length)} sub={waiting.map((r) => r.code).join(', ') || 'none'} accent={waiting.length ? 'warning' : 'accent'} />
         <KpiCard
@@ -193,7 +193,7 @@ export function RequestsPage() {
         width="max-w-3xl"
       >
         {open && (
-          <div className="space-y-4 p-5">
+          <div className="space-y-5 p-5">
             <Card>
               <CardHeader title="Request" />
               <CardBody className="divide-y divide-border py-0">
@@ -216,24 +216,24 @@ export function RequestsPage() {
                 <table className="w-full min-w-[620px] text-[12.5px]">
                   <thead>
                     <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                      <th className="px-4 py-2 font-medium">Item</th>
-                      <th className="px-4 py-2 text-right font-medium">Requested</th>
-                      <th className="px-4 py-2 text-right font-medium">Ordered</th>
-                      <th className="px-4 py-2 text-right font-medium">Est. unit cost</th>
-                      <th className="px-4 py-2 font-medium">Needed by</th>
+                      <th className="px-5 py-2.5 font-medium">Item</th>
+                      <th className="px-5 py-2.5 text-right font-medium">Requested</th>
+                      <th className="px-5 py-2.5 text-right font-medium">Ordered</th>
+                      <th className="px-5 py-2.5 text-right font-medium">Est. unit cost</th>
+                      <th className="px-5 py-2.5 font-medium">Needed by</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {open.lines.map((l) => (
                       <tr key={l.id}>
-                        <td className="px-4 py-2">
+                        <td className="px-5 py-2.5">
                           <p className="font-medium text-fg">{l.description}</p>
                           <p className="text-[11.5px] text-fg-muted">{store.items.find((i) => i.id === l.itemId)?.sku}</p>
                         </td>
-                        <td className="tnum px-4 py-2 text-right">{fmtNumber(l.qty, 2)} {uomLabel(l.uom)}</td>
-                        <td className="tnum px-4 py-2 text-right text-fg-muted">{fmtNumber(l.orderedQty, 2)}</td>
-                        <td className="tnum px-4 py-2 text-right">{fmtCurrency(l.estimatedUnitCost, 'IDR', { compact: true })}</td>
-                        <td className="px-4 py-2 text-fg-muted">{fmtDate(l.neededBy)}</td>
+                        <td className="tnum px-5 py-2.5 text-right">{fmtNumber(l.qty, 2)} {uomLabel(l.uom)}</td>
+                        <td className="tnum px-5 py-2.5 text-right text-fg-muted">{fmtNumber(l.orderedQty, 2)}</td>
+                        <td className="tnum px-5 py-2.5 text-right">{fmtCurrency(l.estimatedUnitCost, 'IDR', { compact: true })}</td>
+                        <td className="px-5 py-2.5 text-fg-muted">{fmtDate(l.neededBy)}</td>
                       </tr>
                     ))}
                   </tbody>

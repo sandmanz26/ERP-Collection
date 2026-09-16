@@ -208,7 +208,7 @@ export function PayablesPage() {
         description="What suppliers have invoiced, checked against what they actually delivered. A bill is only payable when the order, the goods receipt and the invoice agree — where they do not, the reason matters: a quantity variance is usually a short delivery nobody credited, a price variance is a rate that moved after the order went out."
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           label="Owed to suppliers"
           value={fmtCurrency(store.bills.reduce((a, b) => a + billOutstanding(b), 0), 'IDR', { compact: true })}

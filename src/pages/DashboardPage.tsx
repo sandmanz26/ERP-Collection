@@ -93,7 +93,7 @@ export function DashboardPage() {
       />
 
       {/* ---------------- KPIs ---------------- */}
-      <div data-tour="kpis" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+      <div data-tour="kpis" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         <KpiCard
           label="Order book"
           value={fmtCurrency(orderBook, 'IDR', { compact: true })}
@@ -147,14 +147,14 @@ export function DashboardPage() {
       </div>
 
       {/* ---------------- exceptions + ship calendar ---------------- */}
-      <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+      <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <Card data-tour="exceptions" className="min-w-0">
           <CardHeader
             icon={<AlertTriangle />}
             title={`${exceptions.length} things want attention`}
             description={`${counts.critical} critical · ${counts.high} high · ${counts.medium} worth knowing. Each one is a rule read off the live records, not a flag somebody set.`}
           />
-          <div className="border-b border-border px-4 py-2.5">
+          <div className="border-b border-border px-5 py-3">
             <div className="scrollbar-thin flex gap-1.5 overflow-x-auto pb-0.5">
               <button
                 onClick={() => setArea('ALL')}
@@ -190,7 +190,7 @@ export function DashboardPage() {
               <Link
                 key={e.id}
                 to={e.to}
-                className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-bg-muted/60"
+                className="flex items-start gap-3 px-5 py-3.5 transition-colors hover:bg-bg-muted/60"
               >
                 <AlertTriangle className={cn('mt-0.5 size-4 shrink-0', SEVERITY_TONE[e.severity])} />
                 <div className="min-w-0 flex-1">
@@ -211,7 +211,7 @@ export function DashboardPage() {
           </div>
         </Card>
 
-        <div className="min-w-0 space-y-4">
+        <div className="min-w-0 space-y-5">
           <Card data-tour="ship">
             <CardHeader
               icon={<CalendarClock />}
@@ -228,7 +228,7 @@ export function DashboardPage() {
                   <Link
                     key={project.id}
                     to={`/projects/${project.id}`}
-                    className="block px-4 py-3 transition-colors hover:bg-bg-muted/60"
+                    className="block px-5 py-3.5 transition-colors hover:bg-bg-muted/60"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -291,7 +291,7 @@ export function DashboardPage() {
       </div>
 
       {/* ---------------- pipeline and spend ---------------- */}
-      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="mt-6 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <Card>
           <CardHeader
             title="The order book by stage"
@@ -361,7 +361,7 @@ export function DashboardPage() {
       </div>
 
       {/* ---------------- margin watch ---------------- */}
-      <Card className="mt-4">
+      <Card className="mt-6">
         <CardHeader
           title="Margin watch"
           description="Every won order, ranked by the margin its approved budget leaves. The thinnest ones are where a late delivery or a rework turns a profit into a loss."
@@ -375,13 +375,13 @@ export function DashboardPage() {
           <table className="w-full min-w-[720px] text-[12.5px]">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                <th className="px-4 py-2 font-medium">Order</th>
-                <th className="px-4 py-2 font-medium">Buyer</th>
-                <th className="px-4 py-2 text-right font-medium">Revenue</th>
-                <th className="px-4 py-2 text-right font-medium">Budget</th>
-                <th className="px-4 py-2 text-right font-medium">Margin</th>
-                <th className="px-4 py-2 font-medium">Against target</th>
-                <th className="px-4 py-2 font-medium">Ships</th>
+                <th className="px-5 py-2.5 font-medium">Order</th>
+                <th className="px-5 py-2.5 font-medium">Buyer</th>
+                <th className="px-5 py-2.5 text-right font-medium">Revenue</th>
+                <th className="px-5 py-2.5 text-right font-medium">Budget</th>
+                <th className="px-5 py-2.5 text-right font-medium">Margin</th>
+                <th className="px-5 py-2.5 font-medium">Against target</th>
+                <th className="px-5 py-2.5 font-medium">Ships</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -398,20 +398,20 @@ export function DashboardPage() {
                 .slice(0, 8)
                 .map(({ p, budget, revenue, cost, pct }) => (
                   <tr key={p.id} className="hover:bg-bg-muted/50">
-                    <td className="px-4 py-2.5">
+                    <td className="px-5 py-3">
                       <Link to={`/projects/${p.id}`} className="font-medium text-fg hover:text-primary">
                         {p.code}
                       </Link>
                     </td>
-                    <td className="px-4 py-2.5 text-fg-muted">{p.buyerName}</td>
-                    <td className="tnum px-4 py-2.5 text-right">{fmtCurrency(revenue, 'IDR', { compact: true })}</td>
-                    <td className="tnum px-4 py-2.5 text-right text-fg-muted">
+                    <td className="px-5 py-3 text-fg-muted">{p.buyerName}</td>
+                    <td className="tnum px-5 py-3 text-right">{fmtCurrency(revenue, 'IDR', { compact: true })}</td>
+                    <td className="tnum px-5 py-3 text-right text-fg-muted">
                       {cost ? fmtCurrency(cost, 'IDR', { compact: true }) : '—'}
                     </td>
-                    <td className="tnum px-4 py-2.5 text-right font-semibold">
+                    <td className="tnum px-5 py-3 text-right font-semibold">
                       {pct === null ? <span className="text-fg-subtle">no budget</span> : fmtPercent(pct as number, 1)}
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td className="px-5 py-3">
                       {budget && pct !== null ? (
                         <Badge
                           size="sm"
@@ -423,7 +423,7 @@ export function DashboardPage() {
                         <Badge size="sm" tone="danger">not costed</Badge>
                       )}
                     </td>
-                    <td className="px-4 py-2.5 text-fg-muted">
+                    <td className="px-5 py-3 text-fg-muted">
                       {fmtDate(p.targetShipAt, 'short')}{' '}
                       <span className="text-fg-subtle">({relativeLabel(p.targetShipAt)})</span>
                     </td>

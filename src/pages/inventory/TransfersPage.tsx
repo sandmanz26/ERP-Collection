@@ -46,7 +46,7 @@ export function TransfersPage() {
 
       {view === 'transfers' && (
         <>
-          <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard label="Transfers" value={String(store.transfers.length)} sub={`${store.transfers.filter((t) => t.status === 'RECEIVED').length} completed`} icon={<ArrowLeftRight />} accent="primary" />
             <KpiCard label="In transit" value={String(inTransit.length)} sub={inTransit.length ? 'stock nobody can pick' : 'nothing on the road'} accent={inTransit.length ? 'warning' : 'accent'} />
             <KpiCard
@@ -109,10 +109,10 @@ export function TransfersPage() {
                     <table className="w-full text-[12.5px]">
                       <thead>
                         <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                          <th className="px-4 py-2 font-medium">Item</th>
-                          <th className="px-4 py-2 text-right font-medium">Sent</th>
-                          <th className="px-4 py-2 text-right font-medium">Received</th>
-                          <th className="px-4 py-2 text-right font-medium">Value</th>
+                          <th className="px-5 py-2.5 font-medium">Item</th>
+                          <th className="px-5 py-2.5 text-right font-medium">Sent</th>
+                          <th className="px-5 py-2.5 text-right font-medium">Received</th>
+                          <th className="px-5 py-2.5 text-right font-medium">Value</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
@@ -120,15 +120,15 @@ export function TransfersPage() {
                           const item = itemOf(l.itemId)
                           return (
                             <tr key={l.id}>
-                              <td className="px-4 py-2">
+                              <td className="px-5 py-2.5">
                                 <p className="text-fg">{item?.name}</p>
                                 <p className="tnum text-[11.5px] text-fg-muted">{item?.sku}</p>
                               </td>
-                              <td className="tnum px-4 py-2 text-right">{fmtNumber(l.qty, 2)} {uomLabel(l.uom)}</td>
-                              <td className="tnum px-4 py-2 text-right text-fg-muted">
+                              <td className="tnum px-5 py-2.5 text-right">{fmtNumber(l.qty, 2)} {uomLabel(l.uom)}</td>
+                              <td className="tnum px-5 py-2.5 text-right text-fg-muted">
                                 {l.receivedQty ? fmtNumber(l.receivedQty, 2) : <span className="text-warning-soft-fg">not yet</span>}
                               </td>
-                              <td className="tnum px-4 py-2 text-right">{fmtCurrency(l.qty * (item?.standardCost ?? 0), 'IDR', { compact: true })}</td>
+                              <td className="tnum px-5 py-2.5 text-right">{fmtCurrency(l.qty * (item?.standardCost ?? 0), 'IDR', { compact: true })}</td>
                             </tr>
                           )
                         })}
@@ -144,7 +144,7 @@ export function TransfersPage() {
 
       {view === 'counts' && (
         <>
-          <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard label="Counts" value={String(store.counts.length)} sub={`${store.counts.filter((c) => c.status === 'POSTED').length} posted`} icon={<ClipboardCheck />} accent="primary" />
             <KpiCard label="Open" value={String(openCounts.length)} sub={openCounts.length ? 'the ledger is frozen against unconfirmed numbers' : 'nothing half-counted'} accent={openCounts.length ? 'warning' : 'accent'} />
             <KpiCard
@@ -203,11 +203,11 @@ export function TransfersPage() {
                     <table className="w-full text-[12.5px]">
                       <thead className="sticky top-0 bg-surface">
                         <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                          <th className="px-4 py-2 font-medium">Item</th>
-                          <th className="px-4 py-2 text-right font-medium">System</th>
-                          <th className="px-4 py-2 text-right font-medium">Counted</th>
-                          <th className="px-4 py-2 text-right font-medium">Difference</th>
-                          <th className="px-4 py-2 text-right font-medium">Value</th>
+                          <th className="px-5 py-2.5 font-medium">Item</th>
+                          <th className="px-5 py-2.5 text-right font-medium">System</th>
+                          <th className="px-5 py-2.5 text-right font-medium">Counted</th>
+                          <th className="px-5 py-2.5 text-right font-medium">Difference</th>
+                          <th className="px-5 py-2.5 text-right font-medium">Value</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
@@ -216,16 +216,16 @@ export function TransfersPage() {
                           const diff = l.countedQty - l.systemQty
                           return (
                             <tr key={l.id} className={cn(Math.abs(diff) > 0.001 && 'bg-warning-soft/20')}>
-                              <td className="px-4 py-2">
+                              <td className="px-5 py-2.5">
                                 <p className="text-fg">{item?.name}</p>
                                 <p className="tnum text-[11.5px] text-fg-muted">{item?.sku}</p>
                               </td>
-                              <td className="tnum px-4 py-2 text-right text-fg-muted">{fmtNumber(l.systemQty, 2)}</td>
-                              <td className="tnum px-4 py-2 text-right">{fmtNumber(l.countedQty, 2)}</td>
-                              <td className={cn('tnum px-4 py-2 text-right font-medium', diff < 0 ? 'text-danger' : diff > 0 ? 'text-success' : 'text-fg-subtle')}>
+                              <td className="tnum px-5 py-2.5 text-right text-fg-muted">{fmtNumber(l.systemQty, 2)}</td>
+                              <td className="tnum px-5 py-2.5 text-right">{fmtNumber(l.countedQty, 2)}</td>
+                              <td className={cn('tnum px-5 py-2.5 text-right font-medium', diff < 0 ? 'text-danger' : diff > 0 ? 'text-success' : 'text-fg-subtle')}>
                                 {Math.abs(diff) < 0.001 ? '—' : `${diff > 0 ? '+' : ''}${fmtNumber(diff, 2)}`}
                               </td>
-                              <td className="tnum px-4 py-2 text-right text-fg-muted">
+                              <td className="tnum px-5 py-2.5 text-right text-fg-muted">
                                 {Math.abs(diff) < 0.001 ? '—' : fmtCurrency(diff * (item?.standardCost ?? 0), 'IDR', { compact: true })}
                               </td>
                             </tr>

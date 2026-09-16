@@ -215,7 +215,7 @@ export function PurchaseOrdersPage() {
         description="What has been promised to suppliers. The received column is folded out of the goods receipts, so an order that says eighty per cent delivered is eighty per cent delivered — there is no separate number anybody can update by hand."
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Open orders" value={String(open.length)} sub={`${store.orders.length} in total`} icon={<ShoppingCart />} accent="primary" />
         <KpiCard
           label="Open commitment"

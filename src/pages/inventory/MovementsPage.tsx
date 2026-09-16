@@ -200,7 +200,7 @@ export function MovementsPage() {
         description="Every movement that ever made a balance. A goods receipt, an issue to a work order, a transfer between stores, a count adjustment, a piece scrapped at final inspection — each one is a row here, and the on-hand figure on every other screen is the sum of them."
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Movements" value={fmtNumber(store.movements.length)} sub="since the opening balance" icon={<BookOpen />} accent="primary" />
         <KpiCard
           label="Into stock"

@@ -158,7 +158,7 @@ export function PaymentsPage() {
         description="Money that actually moved, and what each transfer was applied to. An export business lives on the gap between the deposit landing and the sawmill wanting paying, so both sides are on one screen."
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard
           label="Received"
           value={fmtCurrency(inflow.reduce((a, p) => a + p.amount * p.exchangeRate, 0), 'IDR', { compact: true })}

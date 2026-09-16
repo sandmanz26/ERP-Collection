@@ -44,7 +44,7 @@ export function PipelinePage() {
         }
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Open enquiries" value={String(wl.open)} sub={fmtCurrency(wl.openValue, 'IDR', { compact: true })} accent="warning" />
         <KpiCard label="Won" value={String(wl.won)} sub={fmtCurrency(wl.wonValue, 'IDR', { compact: true })} accent="success" />
         <KpiCard label="Lost" value={String(wl.lost)} sub={fmtCurrency(wl.lostValue, 'IDR', { compact: true })} accent="danger" />
@@ -121,33 +121,33 @@ export function PipelinePage() {
             <table className="w-full min-w-[820px] text-[12.5px]">
               <thead>
                 <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                  <th className="px-4 py-2 font-medium">Order</th>
-                  <th className="px-4 py-2 font-medium">Buyer</th>
-                  <th className="px-4 py-2 text-right font-medium">Rounds</th>
-                  <th className="px-4 py-2 text-right font-medium">Days arguing</th>
-                  <th className="px-4 py-2 text-right font-medium">Our price moved</th>
-                  <th className="px-4 py-2 text-right font-medium">Samples</th>
-                  <th className="px-4 py-2 text-right font-medium">Drawing revisions</th>
-                  <th className="px-4 py-2 font-medium">Outcome</th>
+                  <th className="px-5 py-2.5 font-medium">Order</th>
+                  <th className="px-5 py-2.5 font-medium">Buyer</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Rounds</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Days arguing</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Our price moved</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Samples</th>
+                  <th className="px-5 py-2.5 text-right font-medium">Drawing revisions</th>
+                  <th className="px-5 py-2.5 font-medium">Outcome</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {effort.map((e) => (
                   <tr key={e.project.id} className="hover:bg-bg-muted/50">
-                    <td className="px-4 py-2.5">
+                    <td className="px-5 py-3">
                       <Link to={`/projects/${e.project.id}`} className="font-medium text-fg hover:text-primary">
                         {e.project.code}
                       </Link>
                     </td>
-                    <td className="px-4 py-2.5 text-fg-muted">{e.project.buyerName}</td>
-                    <td className="tnum px-4 py-2.5 text-right">{e.rounds}</td>
-                    <td className="tnum px-4 py-2.5 text-right">{e.days}</td>
-                    <td className={cn('tnum px-4 py-2.5 text-right', e.priceMovementPct < -4 ? 'text-danger' : 'text-fg-muted')}>
+                    <td className="px-5 py-3 text-fg-muted">{e.project.buyerName}</td>
+                    <td className="tnum px-5 py-3 text-right">{e.rounds}</td>
+                    <td className="tnum px-5 py-3 text-right">{e.days}</td>
+                    <td className={cn('tnum px-5 py-3 text-right', e.priceMovementPct < -4 ? 'text-danger' : 'text-fg-muted')}>
                       {fmtPercent(e.priceMovementPct, 1)}
                     </td>
-                    <td className="tnum px-4 py-2.5 text-right">{e.samples}</td>
-                    <td className="tnum px-4 py-2.5 text-right">{e.drawingRevisions}</td>
-                    <td className="px-4 py-2.5"><StatusBadge value={e.project.status} size="sm" /></td>
+                    <td className="tnum px-5 py-3 text-right">{e.samples}</td>
+                    <td className="tnum px-5 py-3 text-right">{e.drawingRevisions}</td>
+                    <td className="px-5 py-3"><StatusBadge value={e.project.status} size="sm" /></td>
                   </tr>
                 ))}
               </tbody>
@@ -164,7 +164,7 @@ export function PipelinePage() {
       )}
 
       {view === 'forecast' && (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
           <Card>
             <CardHeader title="Value by month of target ship" description="What is promised to leave the yard, and when." />
             <CardBody className="space-y-2.5">
@@ -192,7 +192,7 @@ export function PipelinePage() {
                 .filter((p) => p.status === 'WON' && p.stage !== 'CLOSED')
                 .sort((a, b) => (a.targetShipAt < b.targetShipAt ? -1 : 1))
                 .map((p) => (
-                  <Link key={p.id} to={`/projects/${p.id}`} className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-bg-muted/60">
+                  <Link key={p.id} to={`/projects/${p.id}`} className="flex items-center justify-between gap-3 px-5 py-3 hover:bg-bg-muted/60">
                     <div className="min-w-0">
                       <p className="truncate text-[12.5px] font-medium text-fg">{p.code}</p>
                       <p className="truncate text-[11.5px] text-fg-muted">{p.buyerName} · {fmtDate(p.targetShipAt)}</p>
@@ -206,7 +206,7 @@ export function PipelinePage() {
       )}
 
       {funnel.every((f) => f.count === 0) && <EmptyState title="The board is empty" />}
-      <p className="mt-4 text-[11.5px] text-fg-subtle">
+      <p className="mt-6 text-[11.5px] text-fg-subtle">
         {PROJECT_STAGES.length} stages in all. An order does not skip being costed on its way from a drawing to a container.
       </p>
     </div>

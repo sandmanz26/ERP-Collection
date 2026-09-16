@@ -63,7 +63,7 @@ export function BuyerDetailPage() {
         }
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Lifetime value" value={fmtCurrency(lifetime, 'IDR', { compact: true })} sub={`${won.length} orders won`} icon={<Building2 />} accent="primary" />
         <KpiCard label="Volume shipped" value={`${fmtNumber(volume, 1)} m³`} sub="finished goods" accent="accent" />
         <KpiCard
@@ -80,7 +80,7 @@ export function BuyerDetailPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         <Card>
           <CardHeader title="Trading terms" />
           <CardBody className="divide-y divide-border py-0">
@@ -120,7 +120,7 @@ export function BuyerDetailPage() {
           <div className="divide-y divide-border">
             {buyer.contacts.length === 0 && <EmptyState title="No contacts recorded" />}
             {buyer.contacts.map((c) => (
-              <div key={c.id} className="px-4 py-3">
+              <div key={c.id} className="px-5 py-3.5">
                 <p className="text-[13px] font-medium text-fg">
                   {c.name} {c.primary && <Badge size="sm" tone="primary">primary</Badge>}
                 </p>
@@ -135,7 +135,7 @@ export function BuyerDetailPage() {
         </Card>
       </div>
 
-      <Card className="mt-4">
+      <Card className="mt-6">
         <CardHeader
           title={`${orders.length} orders`}
           description={lost.length ? `${lost.length} lost — ${lost.map((l) => `${l.code} on ${titleCase(l.lossReason ?? 'unknown')}`).join(', ')}.` : 'Nothing lost with this buyer.'}
@@ -146,7 +146,7 @@ export function BuyerDetailPage() {
             .slice()
             .sort((a, b) => (a.inquiryAt < b.inquiryAt ? 1 : -1))
             .map((p) => (
-              <Link key={p.id} to={`/projects/${p.id}`} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 hover:bg-bg-muted/60">
+              <Link key={p.id} to={`/projects/${p.id}`} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 hover:bg-bg-muted/60">
                 <div className="min-w-0">
                   <p className="truncate text-[13px] font-medium text-fg">{p.code} · {p.name}</p>
                   <p className="truncate text-[11.5px] text-fg-muted">
@@ -165,38 +165,38 @@ export function BuyerDetailPage() {
         </div>
       </Card>
 
-      <Card className="mt-4">
+      <Card className="mt-6">
         <CardHeader title="Invoices" description="Deposits and balances, and what is still outstanding." />
         <div className="scrollbar-thin overflow-x-auto">
           <table className="w-full min-w-[700px] text-[12.5px]">
             <thead>
               <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                <th className="px-4 py-2 font-medium">Invoice</th>
-                <th className="px-4 py-2 font-medium">Kind</th>
-                <th className="px-4 py-2 font-medium">Issued</th>
-                <th className="px-4 py-2 font-medium">Due</th>
-                <th className="px-4 py-2 text-right font-medium">Amount</th>
-                <th className="px-4 py-2 text-right font-medium">Outstanding</th>
-                <th className="px-4 py-2 font-medium">Status</th>
+                <th className="px-5 py-2.5 font-medium">Invoice</th>
+                <th className="px-5 py-2.5 font-medium">Kind</th>
+                <th className="px-5 py-2.5 font-medium">Issued</th>
+                <th className="px-5 py-2.5 font-medium">Due</th>
+                <th className="px-5 py-2.5 text-right font-medium">Amount</th>
+                <th className="px-5 py-2.5 text-right font-medium">Outstanding</th>
+                <th className="px-5 py-2.5 font-medium">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {invoices.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-fg-muted">Nothing invoiced yet.</td></tr>
+                <tr><td colSpan={7} className="px-5 py-10 text-center text-fg-muted">Nothing invoiced yet.</td></tr>
               )}
               {invoices.map((i) => (
                 <tr key={i.id} className="hover:bg-bg-muted/50">
-                  <td className="px-4 py-2.5 font-medium text-fg">{i.code}</td>
-                  <td className="px-4 py-2.5"><StatusBadge value={i.kind} size="sm" /></td>
-                  <td className="px-4 py-2.5 text-fg-muted">{fmtDate(i.issuedAt)}</td>
-                  <td className="px-4 py-2.5 text-fg-muted">
+                  <td className="px-5 py-3 font-medium text-fg">{i.code}</td>
+                  <td className="px-5 py-3"><StatusBadge value={i.kind} size="sm" /></td>
+                  <td className="px-5 py-3 text-fg-muted">{fmtDate(i.issuedAt)}</td>
+                  <td className="px-5 py-3 text-fg-muted">
                     {fmtDate(i.dueAt)} <span className="text-fg-subtle">({relativeLabel(i.dueAt)})</span>
                   </td>
-                  <td className="tnum px-4 py-2.5 text-right">{fmtCurrency(i.amount, i.currency, { compact: true })}</td>
-                  <td className="tnum px-4 py-2.5 text-right font-medium">
+                  <td className="tnum px-5 py-3 text-right">{fmtCurrency(i.amount, i.currency, { compact: true })}</td>
+                  <td className="tnum px-5 py-3 text-right font-medium">
                     {fmtCurrency(i.amount - i.paidAmount, i.currency, { compact: true })}
                   </td>
-                  <td className="px-4 py-2.5"><StatusBadge value={i.status} size="sm" /></td>
+                  <td className="px-5 py-3"><StatusBadge value={i.status} size="sm" /></td>
                 </tr>
               ))}
             </tbody>

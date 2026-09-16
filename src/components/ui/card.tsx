@@ -21,8 +21,8 @@ export function CardHeader({
   icon?: React.ReactNode
 }) {
   return (
-    <div className={cn('flex items-start justify-between gap-4 border-b border-border px-4 py-3', className)} {...props}>
-      <div className="flex min-w-0 items-start gap-2.5">
+    <div className={cn('flex items-start justify-between gap-4 border-b border-border px-5 py-4', className)} {...props}>
+      <div className="flex min-w-0 items-start gap-3">
         {icon && (
           <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-md bg-primary-soft text-primary-soft-fg [&_svg]:size-4">
             {icon}
@@ -30,7 +30,7 @@ export function CardHeader({
         )}
         <div className="min-w-0">
           {title && <h3 className="truncate text-[14px] font-semibold tracking-[-0.01em] text-fg">{title}</h3>}
-          {description && <p className="mt-0.5 text-[12.5px] leading-relaxed text-fg-muted">{description}</p>}
+          {description && <p className="mt-1 text-[12.5px] leading-relaxed text-fg-muted">{description}</p>}
         </div>
       </div>
       {actions && <div className="flex shrink-0 items-center gap-1.5">{actions}</div>}
@@ -39,9 +39,9 @@ export function CardHeader({
 }
 
 export function CardBody({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('p-4', className)} {...props} />
+  return <div className={cn('p-5', className)} {...props} />
 }
 
 export function CardFooter({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('flex items-center justify-between gap-3 border-t border-border bg-surface-sunken/60 px-4 py-3', className)} {...props} />
+  return <div className={cn('flex items-center justify-between gap-3 border-t border-border bg-surface-sunken/60 px-5 py-4', className)} {...props} />
 }

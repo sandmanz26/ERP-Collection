@@ -68,7 +68,7 @@ export function InventoryPage() {
     {
       key: 'item',
       header: 'Item',
-      width: 'min-w-[250px]',
+      width: 'min-w-[236px]',
       pinned: true,
       tour: 'stock',
       sortable: true,
@@ -126,7 +126,7 @@ export function InventoryPage() {
     {
       key: 'where',
       header: 'Where it is',
-      width: 'min-w-[220px]',
+      width: 'min-w-[196px]',
       exportValue: (r) => perWarehouse(r.item.id).map((w) => `${w.warehouse?.code}:${w.qty}`).join(' '),
       cell: (r) => {
         const spread = perWarehouse(r.item.id)
@@ -149,7 +149,7 @@ export function InventoryPage() {
     {
       key: 'cover',
       header: 'Against reorder point',
-      width: 'w-[170px]',
+      width: 'w-[150px]',
       sortable: true,
       sortValue: (r) => (r.item.reorderPoint ? r.available / r.item.reorderPoint : 99),
       exportValue: (r) => r.item.reorderPoint,
@@ -223,7 +223,7 @@ export function InventoryPage() {
         description="There is no balance table in this system. Every quantity here is the sum of the movements that produced it, which is the only way a warehouse figure and a goods receipt can never disagree. Available is what is left once quarantine and other people's reservations are taken out."
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Stock at cost" value={fmtCurrency(inventoryValue(rows), 'IDR', { compact: true })} sub={`${live.length} items with a position`} icon={<Boxes />} accent="primary" />
         <KpiCard
           label="Below reorder point"
@@ -248,7 +248,7 @@ export function InventoryPage() {
 
       <Card className="mb-5">
         <CardHeader title="By warehouse" description="What is standing in each store, by volume and by value." />
-        <CardBody className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <CardBody className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {loads
             .filter((l) => l.warehouse.active)
             .map((l) => (

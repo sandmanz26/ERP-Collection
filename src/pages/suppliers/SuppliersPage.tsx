@@ -233,7 +233,7 @@ export function SuppliersPage() {
         description="Sawmills, panel mills, hardware importers and the village workshops that take carving and assembly on borongan terms. The scorecard is built from what they actually did — deliveries against the promised date, quantities rejected on arrival — not from an opinion somebody typed."
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Suppliers" value={String(store.suppliers.length)} sub={`${store.suppliers.filter((x) => x.status === 'ACTIVE').length} active`} icon={<Handshake />} accent="primary" />
         <KpiCard label="SVLK certified" value={String(store.suppliers.filter((x) => x.svlkCertified).length)} sub="can carry timber into a V-Legal document" accent="accent" />
         <KpiCard
@@ -275,7 +275,7 @@ export function SuppliersPage() {
 
       <Sheet open={!!open} onOpenChange={(v) => !v && setOpen(null)} title={open?.name ?? ''} description={open ? `${supplierTypeLabel(open.type)} · ${open.city}` : ''}>
         {open && (
-          <div className="space-y-4 p-5">
+          <div className="space-y-5 p-5">
             {open.note && (
               <p className="rounded-lg border border-border bg-surface-sunken px-3 py-2.5 text-[12.5px] leading-relaxed text-fg-muted">
                 {open.note}
@@ -329,7 +329,7 @@ export function SuppliersPage() {
               <CardHeader title="Contacts" />
               <div className="divide-y divide-border">
                 {open.contacts.map((c) => (
-                  <div key={c.id} className="px-4 py-2.5">
+                  <div key={c.id} className="px-5 py-3">
                     <p className="text-[12.5px] font-medium text-fg">{c.name}</p>
                     <p className="text-[11.5px] text-fg-muted">{c.role} · {c.email} · {c.phone}</p>
                   </div>

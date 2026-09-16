@@ -69,15 +69,15 @@ export function PurchaseOrderDetailPage() {
         }
       />
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Order value" value={fmtCurrency(orderValue(po), 'IDR', { compact: true })} sub={`plus ${fmtCurrency(orderTax(po), 'IDR', { compact: true })} VAT`} icon={<ShoppingCart />} accent="primary" />
         <KpiCard label="Received" value={`${progress.receivedPct.toFixed(0)}%`} sub={`${fmtCurrency(progress.receivedValue, 'IDR', { compact: true })} across ${progress.deliveries} deliveries`} icon={<PackageCheck />} accent="success" />
         <KpiCard label="Still owed" value={fmtCurrency(progress.openValue, 'IDR', { compact: true })} sub={`${open.length} line${open.length === 1 ? '' : 's'} outstanding`} accent={progress.openValue > 0 ? 'warning' : 'accent'} />
         <KpiCard label="Rejected on arrival" value={fmtNumber(progress.rejectedQty, 2)} sub={progress.rejectedQty > 0 ? 'held in the quarantine bay' : 'nothing refused'} accent={progress.rejectedQty > 0 ? 'danger' : 'accent'} />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="space-y-5">
           <Card>
             <CardHeader
               title="Order lines"
@@ -87,14 +87,14 @@ export function PurchaseOrderDetailPage() {
               <table className="w-full min-w-[860px] text-[12.5px]">
                 <thead>
                   <tr className="border-b border-border text-left text-[11px] uppercase tracking-[0.06em] text-fg-subtle">
-                    <th className="px-4 py-2 font-medium">Item</th>
-                    <th className="px-4 py-2 text-right font-medium">Ordered</th>
-                    <th className="px-4 py-2 text-right font-medium">Received</th>
-                    <th className="px-4 py-2 text-right font-medium">Rejected</th>
-                    <th className="px-4 py-2 text-right font-medium">Outstanding</th>
-                    <th className="px-4 py-2 text-right font-medium">Unit price</th>
-                    <th className="px-4 py-2 text-right font-medium">Line value</th>
-                    <th className="px-4 py-2 font-medium">Needed by</th>
+                    <th className="px-5 py-2.5 font-medium">Item</th>
+                    <th className="px-5 py-2.5 text-right font-medium">Ordered</th>
+                    <th className="px-5 py-2.5 text-right font-medium">Received</th>
+                    <th className="px-5 py-2.5 text-right font-medium">Rejected</th>
+                    <th className="px-5 py-2.5 text-right font-medium">Outstanding</th>
+                    <th className="px-5 py-2.5 text-right font-medium">Unit price</th>
+                    <th className="px-5 py-2.5 text-right font-medium">Line value</th>
+                    <th className="px-5 py-2.5 font-medium">Needed by</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -103,33 +103,33 @@ export function PurchaseOrderDetailPage() {
                     const outstanding = Math.max(0, l.qty - l.receivedQty)
                     return (
                       <tr key={l.id} className={cn('hover:bg-bg-muted/50', outstanding > 0 && 'bg-warning-soft/20')}>
-                        <td className="px-4 py-2.5">
+                        <td className="px-5 py-3">
                           <p className="font-medium text-fg">{l.description}</p>
                           <p className="text-[11.5px] text-fg-muted">{item?.sku}</p>
                         </td>
-                        <td className="tnum px-4 py-2.5 text-right">{fmtNumber(l.qty, 2)} {uomLabel(l.uom)}</td>
-                        <td className="tnum px-4 py-2.5 text-right text-success">{fmtNumber(l.receivedQty, 2)}</td>
-                        <td className="tnum px-4 py-2.5 text-right text-danger">{l.rejectedQty ? fmtNumber(l.rejectedQty, 2) : '—'}</td>
-                        <td className="tnum px-4 py-2.5 text-right font-medium">{outstanding ? fmtNumber(outstanding, 2) : '—'}</td>
-                        <td className="tnum px-4 py-2.5 text-right text-fg-muted">
+                        <td className="tnum px-5 py-3 text-right">{fmtNumber(l.qty, 2)} {uomLabel(l.uom)}</td>
+                        <td className="tnum px-5 py-3 text-right text-success">{fmtNumber(l.receivedQty, 2)}</td>
+                        <td className="tnum px-5 py-3 text-right text-danger">{l.rejectedQty ? fmtNumber(l.rejectedQty, 2) : '—'}</td>
+                        <td className="tnum px-5 py-3 text-right font-medium">{outstanding ? fmtNumber(outstanding, 2) : '—'}</td>
+                        <td className="tnum px-5 py-3 text-right text-fg-muted">
                           {fmtCurrency(lineNet(l), 'IDR', { compact: true })}
                           {l.discountPct > 0 && <span className="ml-1 text-[11px] text-accent">-{l.discountPct}%</span>}
                         </td>
-                        <td className="tnum px-4 py-2.5 text-right font-medium">{fmtCurrency(l.qty * lineNet(l), 'IDR', { compact: true })}</td>
-                        <td className="px-4 py-2.5 text-fg-muted">{fmtDate(l.neededBy, 'short')}</td>
+                        <td className="tnum px-5 py-3 text-right font-medium">{fmtCurrency(l.qty * lineNet(l), 'IDR', { compact: true })}</td>
+                        <td className="px-5 py-3 text-fg-muted">{fmtDate(l.neededBy, 'short')}</td>
                       </tr>
                     )
                   })}
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-border bg-surface-sunken font-semibold">
-                    <td className="px-4 py-2.5">{po.lines.length} lines</td>
-                    <td className="tnum px-4 py-2.5 text-right">{fmtNumber(progress.orderedQty, 2)}</td>
-                    <td className="tnum px-4 py-2.5 text-right">{fmtNumber(progress.receivedQty, 2)}</td>
-                    <td className="tnum px-4 py-2.5 text-right">{fmtNumber(progress.rejectedQty, 2)}</td>
-                    <td className="tnum px-4 py-2.5 text-right">{fmtNumber(progress.openQty, 2)}</td>
+                    <td className="px-5 py-3">{po.lines.length} lines</td>
+                    <td className="tnum px-5 py-3 text-right">{fmtNumber(progress.orderedQty, 2)}</td>
+                    <td className="tnum px-5 py-3 text-right">{fmtNumber(progress.receivedQty, 2)}</td>
+                    <td className="tnum px-5 py-3 text-right">{fmtNumber(progress.rejectedQty, 2)}</td>
+                    <td className="tnum px-5 py-3 text-right">{fmtNumber(progress.openQty, 2)}</td>
                     <td />
-                    <td className="tnum px-4 py-2.5 text-right">{fmtCurrency(orderValue(po), 'IDR', { compact: true })}</td>
+                    <td className="tnum px-5 py-3 text-right">{fmtCurrency(orderValue(po), 'IDR', { compact: true })}</td>
                     <td />
                   </tr>
                 </tfoot>
@@ -149,7 +149,7 @@ export function PurchaseOrderDetailPage() {
                 const delivered = g.lines.reduce((a, l) => a + l.qtyDelivered, 0)
                 const accepted = g.lines.reduce((a, l) => a + l.qtyAccepted, 0)
                 return (
-                  <Link key={g.id} to={`/receipts/${g.id}`} className="block px-4 py-3 transition-colors hover:bg-bg-muted/60">
+                  <Link key={g.id} to={`/receipts/${g.id}`} className="block px-5 py-3.5 transition-colors hover:bg-bg-muted/60">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-[13px] font-medium text-fg">
@@ -191,7 +191,7 @@ export function PurchaseOrderDetailPage() {
           </Card>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-5">
           <Card>
             <CardHeader title="Terms" />
             <CardBody className="divide-y divide-border py-0">
@@ -220,7 +220,7 @@ export function PurchaseOrderDetailPage() {
             <div className="divide-y divide-border">
               {open.length === 0 && <EmptyState title="Nothing outstanding" description="Everything ordered has been delivered." />}
               {open.map(({ line, open: qty }) => (
-                <div key={line.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                <div key={line.id} className="flex items-center justify-between gap-3 px-5 py-3">
                   <div className="min-w-0">
                     <p className="truncate text-[12.5px] font-medium text-fg">{line.description}</p>
                     <p className="text-[11.5px] text-fg-muted">needed by {fmtDate(line.neededBy)}</p>
@@ -238,7 +238,7 @@ export function PurchaseOrderDetailPage() {
             <div className="divide-y divide-border">
               {bills.length === 0 && <EmptyState title="Nothing invoiced yet" />}
               {bills.map((b) => (
-                <div key={b.id} className="px-4 py-2.5">
+                <div key={b.id} className="px-5 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-[12.5px] font-medium text-fg">{b.code}</p>

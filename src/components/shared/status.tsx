@@ -72,7 +72,7 @@ export function ToneDot({ tone }: { tone: BadgeTone }) {
 
 export function MetaRow({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`flex items-start justify-between gap-4 py-1.5 ${className ?? ''}`}>
+    <div className={`flex items-start justify-between gap-5 py-2.5 ${className ?? ''}`}>
       <span className="shrink-0 text-[12px] text-fg-muted">{label}</span>
       <span className="min-w-0 text-right text-[12.5px] font-medium text-fg">{children}</span>
     </div>
