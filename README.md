@@ -350,6 +350,10 @@ them:
   downloadable sample file. Rows whose code already exists are updated in place rather than duplicated.
 - **Export** — CSV or JSON, for the filtered view, the selection, or everything; plus a re-importable
   file shaped exactly like the importer expects, so export → edit → import round-trips.
+- **Money written out in full** — `IDR 111,949,605`, never `IDR 111.9M`. An abbreviated scale is not
+  how a rupiah book is read here: it forces the reader to expand the figure again before they can
+  trust it. Where that makes a number too long for the space it sits in, the type steps down rather
+  than the figure being clipped.
 - **Total row count**, always: `1–25 of 136`, and `(filtered from 137)` when a filter is on.
 - Column show/hide with a stored preference, compact/comfortable density, page size, bulk selection,
   bulk delete with a cascade warning that names what else it will affect.

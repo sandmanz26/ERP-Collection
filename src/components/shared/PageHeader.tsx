@@ -58,6 +58,14 @@ export function KpiCard({
     neutral: 'bg-neutral-soft text-neutral-soft-fg',
   }
   const Comp = onClick ? 'button' : 'div'
+  /**
+   * Rupiah written out in full is a long string — "IDR 7,102,549,000" is
+   * seventeen characters — and four of these cards sit side by side. Rather
+   * than clip a figure to an ellipsis, which is the one thing a money card
+   * must never do, the type steps down as the number gets longer.
+   */
+  const len = typeof value === 'string' ? value.length : 0
+  const valueSize = len > 16 ? 'text-[16px]' : len > 13 ? 'text-[18px]' : 'text-[21px]'
   return (
     <Comp
       onClick={onClick}
@@ -73,8 +81,8 @@ export function KpiCard({
       )}
       <div className="min-w-0 flex-1">
         <p className="truncate text-[11.5px] font-medium uppercase tracking-[0.06em] text-fg-subtle">{label}</p>
-        <p className="tnum mt-1.5 truncate text-[21px] font-semibold leading-none tracking-[-0.025em] text-fg">{value}</p>
-        <div className="mt-1.5 flex items-center gap-2">
+        <p className={cn('tnum mt-1.5 truncate font-semibold leading-none tracking-[-0.025em] text-fg', valueSize)}>{value}</p>
+        <div className="mt-1.5 flex items-start gap-2">
           {delta && (
             <span
               className={cn(
@@ -87,7 +95,9 @@ export function KpiCard({
               {delta}
             </span>
           )}
-          {sub && <span className="truncate text-[12px] text-fg-muted">{sub}</span>}
+          {/* Money is written out in full now, so a sentence naming a figure
+              needs a second line rather than an ellipsis that hides it. */}
+          {sub && <span className="line-clamp-2 text-[12px] leading-snug text-fg-muted">{sub}</span>}
         </div>
       </div>
     </Comp>

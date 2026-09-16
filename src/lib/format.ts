@@ -1,12 +1,20 @@
 const CURRENCY_MINOR: Record<string, number> = { IDR: 0, USD: 2, SGD: 2 }
 
+/**
+ * Money is always written out in full, with thousand separators and never an
+ * abbreviated scale: "111,900,000", not "111.9M". Finance staff here read
+ * rupiah by counting digit groups, and a K or an M forces them to expand it
+ * again in their head before they can trust the figure.
+ *
+ * `compact` therefore only drops the minor units — the cents on a USD or SGD
+ * figure — which is all it was ever wanted for on a rupiah book anyway.
+ */
 export function fmtMoney(value: number | undefined | null, currency = 'IDR', opts: { compact?: boolean; sign?: boolean } = {}) {
   if (value === undefined || value === null || Number.isNaN(value)) return '—'
-  const digits = CURRENCY_MINOR[currency] ?? 2
+  const digits = opts.compact ? 0 : CURRENCY_MINOR[currency] ?? 2
   const n = new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: opts.compact ? 0 : digits,
-    maximumFractionDigits: opts.compact ? 1 : digits,
-    notation: opts.compact ? 'compact' : 'standard',
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
   }).format(value)
   const prefix = opts.sign && value > 0 ? '+' : ''
   return `${prefix}${n}`

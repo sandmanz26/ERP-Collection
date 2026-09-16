@@ -395,6 +395,10 @@ filters, CSV import with mapping and validation, CSV/JSON export (including a re
 visible total row count, column show/hide, density control, bulk selection and delete with a cascade
 warning.
 
+Money is always written out in full with thousand separators — `IDR 111,949,605` — and never on an
+abbreviated scale such as `111.9M` or `385K`, anywhere in the interface. Where a figure is then too
+long for the space, the type size gives way; the figure never does.
+
 Every register offers two presentations of the same data, chosen by the reader and remembered:
 **Detailed**, every column at once, for reconciling a month; and **Relaxed**, only the columns that
 decide (each register declares them), with the remaining fields folded behind a chevron on each row
