@@ -165,8 +165,15 @@ seeded book is anchored to the day you open it, so cut-offs and ageing stay live
 
 ## Stack
 
-React 19 · TypeScript · Vite · Tailwind v4 with a token-based design system (light "workshop paper",
-dark "night workshop") · Radix primitives · Zustand with `persist` · react-router 7 · lucide icons.
+React 19 · TypeScript · Vite · Tailwind v4 with a token-based design system · Radix primitives ·
+Zustand with `persist` · react-router 7 · lucide icons.
+
+The palette is a timber one with no blue in it: burnt teak for the brand, plantation green for the
+accent, amber, brick red, iris for the informational tone and mulberry for the rare tags. Light
+("workshop paper") is the default; dark ("night workshop") is one click away and is resolved before
+first paint, so choosing it does not cost you a white flash on every reload. Both themes are defined
+from the same token names, so every screen follows automatically — the worst badge contrast in
+either theme is 6.5:1.
 
 The table on every list screen is one component: search, multi-select filters, column visibility and
 ordering, sticky columns, dense mode, pagination, CSV and JSON export, CSV import with column

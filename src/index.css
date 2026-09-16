@@ -6,8 +6,11 @@
 
 /* ------------------------------------------------------------------
    Kriyanusa Furniture — design tokens
-   A timber system. Light = "workshop paper"; dark = "night workshop".
-   Primary is burnt teak, accent is the green of a plantation lot.
+   A timber system with no blue in it. Light = "workshop paper"; dark =
+   "night workshop". Primary is burnt teak and accent is the green of a
+   plantation lot; the informational tone is iris and the rare-tag tone is
+   mulberry, so the severity scale reads red → amber → iris without a single
+   hue the rest of the palette has to compete with.
    ------------------------------------------------------------------ */
 :root {
   --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -54,14 +57,14 @@
   --danger: 358 66% 47%;
   --danger-soft: 356 88% 96%;
   --danger-soft-fg: 358 68% 35%;
-  --info: 210 78% 46%;
-  --info-soft: 208 92% 94%;
-  --info-soft-fg: 212 72% 34%;
+  --info: 265 54% 48%;
+  --info-soft: 266 76% 95%;
+  --info-soft-fg: 266 58% 35%;
   --neutral-soft: 32 20% 92%;
   --neutral-soft-fg: 28 14% 32%;
-  --purple: 280 48% 48%;
-  --purple-soft: 282 70% 95%;
-  --purple-soft-fg: 281 50% 36%;
+  --purple: 322 55% 44%;
+  --purple-soft: 320 68% 95%;
+  --purple-soft-fg: 322 56% 33%;
 
   /* the sign-in brand panel — dark walnut in both themes */
   --auth-panel: 24 46% 18%;
@@ -109,14 +112,14 @@
   --danger: 358 78% 62%;
   --danger-soft: 358 46% 16%;
   --danger-soft-fg: 356 88% 78%;
-  --info: 208 88% 62%;
-  --info-soft: 210 46% 17%;
-  --info-soft-fg: 208 90% 76%;
+  --info: 264 80% 74%;
+  --info-soft: 264 40% 21%;
+  --info-soft-fg: 266 88% 84%;
   --neutral-soft: 28 14% 18%;
   --neutral-soft-fg: 32 14% 70%;
-  --purple: 282 70% 70%;
-  --purple-soft: 282 36% 20%;
-  --purple-soft-fg: 283 80% 80%;
+  --purple: 322 72% 71%;
+  --purple-soft: 322 38% 21%;
+  --purple-soft-fg: 320 84% 82%;
 
   --shadow-color: 26 60% 2%;
 }
