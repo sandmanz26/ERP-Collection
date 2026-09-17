@@ -193,6 +193,10 @@
   .shadow-sticky-r {
     box-shadow: 12px 0 16px -12px hsl(var(--shadow-color) / 0.35);
   }
+  /* For a bar pinned to the bottom of a scroller: the shadow rises off it. */
+  .shadow-sticky-t {
+    box-shadow: 0 -10px 20px -12px hsl(var(--shadow-color) / 0.45);
+  }
 }
 
 @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }

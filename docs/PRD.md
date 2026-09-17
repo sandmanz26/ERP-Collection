@@ -407,6 +407,13 @@ export keep working on the full column set. The switch between them is a floatin
 can drag anywhere, collapse to a single button, and which appears only where there is a register to
 restyle.
 
+The suite is built for a desktop, with one exception that is not one: the division head's material
+request (§5.7) is filed from a phone as often as from a desk, so below 768px that page and the shell
+around it have a layout of their own — one card per request line instead of a column grid, the
+primary actions pinned to the bottom of the screen, and the sidebar as a drawer rather than an icon
+rail. Elsewhere below that width the interface stays usable and does not overflow horizontally, but
+registers keep their table and scroll it.
+
 Navigation and field labels are English. Operating vocabulary — shift names, position titles, item
 names — stays Indonesian.
 

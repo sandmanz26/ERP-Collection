@@ -23,8 +23,8 @@ Sign in with any seeded account — `siti.rahmawati@tatagemilang.co.id` and the 
 `Gemilang#2026`. Three accounts fail on purpose (unverified, locked, suspended) so those paths can be
 walked without breaking anything, and **each account opens a different suite**, because the role
 decides which pages exist: sign in as `hendra.wijayanto@` for everything, `lina.marlina@` for
-inventory without deletes, `rizal.maulana@` for procurement, `yanti.kurniasih@` for a division head
-who can only file their own request, or `ratna.wulandari@` for a custom site-supervisor role with no
+inventory without deletes, `rizal.maulana@` for procurement, `nurhayati.dewi@` or `yanti.kurniasih@`
+for a division head who can only file their own request, or `ratna.wulandari@` for a custom site-supervisor role with no
 commercial access at all.
 
 ---
@@ -144,6 +144,18 @@ items qualify — with the available quantity shown against each, and a category
 items are a search rather than a scroll. The estimated unit price is optional;
 where it is left out the item's standard cost stands in, marked as such so nobody mistakes it for a
 quote. Once submitted, the form is read-only until purchasing sends it back with a reason.
+
+A division head is rarely at a desk when they file this — they are standing in a store room counting
+what is left — so **this page has a layout of its own below 768px** rather than a squeezed copy of
+the desktop one. The seven-column line grid becomes one card per line, where the item, quantity,
+estimate and purpose each get a full-width field and the line's stock and value sit underneath it;
+the four summary cards collapse into a single three-up strip; and *Save draft* and *Submit* leave the
+page header for a bar pinned to the bottom of the screen, carrying the running total, so they are
+still under a thumb at the twentieth line. Everything above that width is untouched.
+
+The shell follows: below 768px the sidebar leaves the layout and returns as a drawer over it, with
+its labels rather than the icon rail a finger cannot ask the name of, opened from a button in the
+header and closed by following any link in it.
 
 **Locking** is the one irreversible step, and the dialog says exactly what it will do before it does
 it: how many requests merge into how many lines, how many of those lines combine more than one

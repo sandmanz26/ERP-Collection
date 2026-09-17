@@ -1,8 +1,8 @@
 import * as React from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Bell, LogOut, PanelLeftClose, PanelLeftOpen, RotateCcw, Search, Settings, ShieldCheck, ShieldHalf,
-  TriangleAlert,
+  Bell, LogOut, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen, RotateCcw, Search, Settings, ShieldCheck,
+  ShieldHalf, TriangleAlert, X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAV } from './nav'
@@ -25,6 +25,11 @@ export function AppShell() {
   /* Below a laptop width there is no room for a 238px rail of labels, so the
      sidebar falls back to icons whatever the stored preference says. */
   const [narrow, setNarrow] = React.useState(() => window.matchMedia('(max-width: 1023px)').matches)
+  /* On a phone even a 62px rail is a tenth of the screen, and a tooltip is not
+     something a finger can ask for. There the sidebar leaves the layout
+     entirely and comes back as a drawer over it, with its labels. */
+  const [phone, setPhone] = React.useState(() => window.matchMedia('(max-width: 767px)').matches)
+  const [drawer, setDrawer] = React.useState(false)
   const [paletteOpen, setPaletteOpen] = React.useState(false)
   const location = useLocation()
   const navigate = useNavigate()
@@ -39,6 +44,13 @@ export function AppShell() {
     () => NAV.map((group) => ({ ...group, items: group.items.filter((i) => can(i.permission)) })).filter((g) => g.items.length > 0),
     [can],
   )
+
+  /* `/mr/my` sits under `/mr`, so without this both light up at once. A link
+     matches exactly whenever another link lives beneath it. */
+  const exactPaths = React.useMemo(() => {
+    const all = NAV.flatMap((g) => g.items.map((i) => i.to))
+    return new Set(all.filter((to) => all.some((other) => other !== to && other.startsWith(`${to}/`))))
+  }, [])
 
   const initials = (user?.fullName ?? 'Tata Gemilang')
     .split(' ')
@@ -58,7 +70,28 @@ export function AppShell() {
     return () => mq.removeEventListener('change', onChange)
   }, [])
 
-  const rail = collapsed || narrow
+  React.useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)')
+    const onChange = (e: MediaQueryListEvent) => {
+      setPhone(e.matches)
+      if (!e.matches) setDrawer(false)
+    }
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+
+  /* Following a link is the whole point of the drawer, so it closes itself. */
+  React.useEffect(() => setDrawer(false), [location.pathname])
+
+  React.useEffect(() => {
+    if (!drawer) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDrawer(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [drawer])
+
+  /* On a phone the drawer always shows labels; the icon rail is a desktop idea. */
+  const rail = !phone && (collapsed || narrow)
 
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -98,22 +131,42 @@ export function AppShell() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-bg">
+      {/* The drawer's backdrop. Only ever on a phone, and only while it is open. */}
+      {phone && drawer && (
+        <div
+          className="fixed inset-0 z-40 bg-fg/40 backdrop-blur-[1px] animate-fade-in"
+          onClick={() => setDrawer(false)}
+          aria-hidden
+        />
+      )}
+
       {/* ---------------- sidebar ---------------- */}
       <aside
         className={cn(
-          'relative z-20 flex shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-200 ease-out',
-          rail ? 'w-[62px]' : 'w-[238px]',
+          'z-20 flex shrink-0 flex-col border-r border-border bg-surface',
+          phone
+            ? cn(
+                'fixed inset-y-0 left-0 z-50 w-[272px] shadow-pop transition-transform duration-200 ease-out',
+                drawer ? 'translate-x-0' : '-translate-x-full',
+              )
+            : cn('relative transition-[width] duration-200 ease-out', rail ? 'w-[62px]' : 'w-[238px]'),
         )}
+        aria-hidden={phone && !drawer}
       >
         <div className={cn('flex h-14 items-center gap-2.5 border-b border-border px-3.5', rail && 'justify-center px-0')}>
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-fg shadow-[inset_0_1px_0_0_rgb(255_255_255/0.2)]">
             <ShieldHalf className="size-[17px]" />
           </span>
           {!rail && (
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="truncate text-[13.5px] font-semibold leading-tight tracking-[-0.01em] text-fg">Tata Gemilang</p>
               <p className="truncate text-[11px] leading-tight text-fg-subtle">Outsourcing Management</p>
             </div>
+          )}
+          {phone && (
+            <Button variant="ghost" size="icon" onClick={() => setDrawer(false)} aria-label="Close the menu">
+              <X />
+            </Button>
           )}
         </div>
 
@@ -131,10 +184,11 @@ export function AppShell() {
                     <NavLink
                       key={item.to}
                       to={item.to}
-                      end={item.to === '/'}
+                      end={item.to === '/' || exactPaths.has(item.to)}
                       className={({ isActive }) =>
                         cn(
                           'group relative flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] font-medium transition-colors',
+                          phone && 'py-2.5 text-[14px]',
                           rail && 'justify-center px-0 py-2',
                           isActive ? 'bg-primary-soft text-primary-soft-fg' : 'text-fg-muted hover:bg-bg-muted hover:text-fg',
                         )
@@ -176,7 +230,7 @@ export function AppShell() {
           ))}
         </nav>
 
-        <div className={cn('border-t border-border p-2', rail && 'flex justify-center')}>
+        <div className={cn('border-t border-border p-2', rail && 'flex justify-center', phone && 'hidden')}>
           <button
             onClick={() => setCollapsed((v) => !v)}
             className={cn(
@@ -197,15 +251,29 @@ export function AppShell() {
 
       {/* ---------------- main ---------------- */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
-          <button
-            onClick={() => setPaletteOpen(true)}
-            className="group flex h-9 w-full max-w-sm items-center gap-2.5 rounded-lg border border-border-strong/70 bg-bg-muted/60 px-3 text-left text-[13px] text-fg-subtle transition-colors hover:border-border-strong hover:bg-bg-muted"
-          >
-            <Search className="size-4" />
-            <span className="flex-1 truncate">Search clients, projects, items…</span>
-            <Kbd className="bg-surface">⌘K</Kbd>
-          </button>
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-surface px-3 sm:gap-3 sm:px-4">
+          {phone && (
+            <Button variant="ghost" size="icon" onClick={() => setDrawer(true)} aria-label="Open the menu">
+              <MenuIcon />
+            </Button>
+          )}
+
+          {/* A search field wide enough to read its own placeholder does not fit
+              next to the bell on a phone, so there it is the icon alone. */}
+          {phone ? (
+            <Button variant="ghost" size="icon" onClick={() => setPaletteOpen(true)} aria-label="Search">
+              <Search />
+            </Button>
+          ) : (
+            <button
+              onClick={() => setPaletteOpen(true)}
+              className="group flex h-9 w-full max-w-sm items-center gap-2.5 rounded-lg border border-border-strong/70 bg-bg-muted/60 px-3 text-left text-[13px] text-fg-subtle transition-colors hover:border-border-strong hover:bg-bg-muted"
+            >
+              <Search className="size-4" />
+              <span className="flex-1 truncate">Search clients, projects, items…</span>
+              <Kbd className="bg-surface">⌘K</Kbd>
+            </button>
+          )}
 
           <div className="flex-1" />
 
@@ -220,7 +288,7 @@ export function AppShell() {
                 )}
               </Button>
             </MenuTrigger>
-            <MenuContent className="w-[380px]">
+            <MenuContent className="w-[min(380px,calc(100vw-1.5rem))]">
               <MenuLabel>Needs attention</MenuLabel>
               {alerts.length === 0 && (
                 <p className="px-3 py-6 text-center text-[12.5px] text-fg-subtle">Every post is filled and every level is healthy.</p>
@@ -246,7 +314,7 @@ export function AppShell() {
             </MenuContent>
           </Menu>
 
-          <Separator vertical className="h-6" />
+          <Separator vertical className="hidden h-6 sm:block" />
 
           <Menu>
             <MenuTrigger asChild>
@@ -313,7 +381,7 @@ export function AppShell() {
         </header>
 
         <main key={location.pathname} className="scrollbar-thin min-h-0 flex-1 overflow-y-auto">
-          <div className="mx-auto flex min-h-full w-full max-w-[1720px] flex-col px-5 py-5 lg:px-7">
+          <div className="mx-auto flex min-h-full w-full max-w-[1720px] flex-col px-4 py-4 sm:px-5 sm:py-5 lg:px-7">
             <Outlet />
           </div>
         </main>

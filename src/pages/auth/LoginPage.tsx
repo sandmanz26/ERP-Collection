@@ -14,6 +14,7 @@ import { fmtDateTime } from '@/lib/format'
 const DEMO = [
   { email: 'hendra.wijayanto@tatagemilang.co.id', label: 'Super Administrator', note: 'every module' },
   { email: 'siti.rahmawati@tatagemilang.co.id', label: 'Operation Manager', note: 'no inventory edits' },
+  { email: 'nurhayati.dewi@tatagemilang.co.id', label: 'Division Head', note: 'files the division MR' },
   { email: 'lina.marlina@tatagemilang.co.id', label: 'Warehouse Admin', note: 'deletes revoked' },
   { email: 'ratna.wulandari@tatagemilang.co.id', label: 'Site Supervisor', note: 'custom role, no clients' },
   { email: 'budi.santoso@tatagemilang.co.id', label: 'Unverified', note: 'email never verified' },

@@ -6,6 +6,7 @@ import {
 import type { ItemCategory, MrRequest, MrRequestLine } from '@/data/types'
 import { itemCategoryLabel, monthLabel } from '@/data/reference'
 import { useErp } from '@/store/useErp'
+import { useIsPhone } from '@/hooks/useMediaQuery'
 import { useCurrentUser } from '@/store/useAuth'
 import { KpiCard, PageHeader } from '@/components/shared/PageHeader'
 import { StatusBadge } from '@/components/shared/status'
@@ -18,11 +19,21 @@ import { MultiSelect, Select } from '@/components/ui/select'
 import { EmptyState } from '@/components/ui/misc'
 import { Tooltip } from '@/components/ui/tooltip'
 import { useToast } from '@/components/ui/toast'
-import { uid } from '@/lib/utils'
+import { cn, uid } from '@/lib/utils'
 import { fmtCurrency, fmtDate, fmtNumber } from '@/lib/format'
 import { availableQty } from '@/lib/domain'
 import { daysUntil } from '@/lib/domain'
 import { mrRequestTotal, requestableItems } from '@/lib/procurement'
+
+/** A label above a value, for the phone card once the request is locked. */
+function MobileFact({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-fg-subtle">{label}</p>
+      <p className="mt-0.5 text-[13px] text-fg">{value || '—'}</p>
+    </div>
+  )
+}
 
 /**
  * The division head's page. It shows one thing: this division's request in the
@@ -35,6 +46,9 @@ export function MyRequestPage() {
   const { mrSessions, mrRequests, divisions, items, stock, upsertMrRequest, submitMrRequest } = useErp()
   const [draft, setDraft] = React.useState<MrRequest | null>(null)
   const [category, setCategory] = React.useState<string[]>([])
+  /* A division head files this from wherever they are, which is often a phone
+     standing in a store room. That is a different layout, not a narrower one. */
+  const isPhone = useIsPhone()
 
   /* The division this account speaks for: the one it belongs to, or the one it heads. */
   const myDivision = React.useMemo(
@@ -192,7 +206,7 @@ export function MyRequestPage() {
             <Badge tone="success" size="lg">
               <CheckCircle2 className="size-3.5" /> Submitted {draft.submittedAt ? fmtDate(draft.submittedAt) : ''}
             </Badge>
-          ) : (
+          ) : isPhone ? undefined : (
             <>
               <Button variant="secondary" onClick={() => save(false)}>Save draft</Button>
               <Button variant="primary" onClick={() => save(true)}>
@@ -222,18 +236,40 @@ export function MyRequestPage() {
         </div>
       )}
 
-      <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Lines" value={draft.lines.length} icon={<ClipboardList />} accent="primary" sub={`${fmtNumber(draft.lines.reduce((a, l) => a + l.qty, 0))} units in total`} />
-        <KpiCard label="Estimated value" value={fmtCurrency(total, 'IDR', { compact: true })} icon={<Send />} accent="accent" sub="your estimate, or standard cost" />
-        <KpiCard label="Items you can request" value={catalogue.length} icon={<Package />} accent="purple" sub="active master items the warehouse holds" />
-        <KpiCard
-          label="Session closes"
-          value={`${daysLeft}d`}
-          icon={<CalendarRange />}
-          accent={daysLeft <= 2 ? 'danger' : 'primary'}
-          sub={fmtDate(session.closesAt)}
-        />
-      </div>
+      {/* Four cards stacked one per screen is most of a phone's scroll spent
+          before the form starts, so there the same numbers are one strip. */}
+      {isPhone ? (
+        <div className="mb-4 grid grid-cols-3 divide-x divide-border rounded-xl border border-border bg-surface shadow-card">
+          <div className="px-3 py-2.5">
+            <p className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-fg-subtle">Lines</p>
+            <p className="tnum mt-1 text-[16px] font-semibold leading-none text-fg">{draft.lines.length}</p>
+            <p className="tnum mt-1 text-[11px] text-fg-muted">{fmtNumber(draft.lines.reduce((a, l) => a + l.qty, 0))} units</p>
+          </div>
+          <div className="px-3 py-2.5">
+            <p className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-fg-subtle">Value</p>
+            <p className="tnum mt-1 text-[13px] font-semibold leading-none text-fg">{fmtCurrency(total, 'IDR')}</p>
+            <p className="mt-1 text-[11px] text-fg-muted">estimated</p>
+          </div>
+          <div className="px-3 py-2.5">
+            <p className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-fg-subtle">Closes</p>
+            <p className={cn('tnum mt-1 text-[16px] font-semibold leading-none', daysLeft <= 2 ? 'text-danger' : 'text-fg')}>{daysLeft}d</p>
+            <p className="mt-1 text-[11px] text-fg-muted">{fmtDate(session.closesAt, 'short')}</p>
+          </div>
+        </div>
+      ) : (
+        <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <KpiCard label="Lines" value={draft.lines.length} icon={<ClipboardList />} accent="primary" sub={`${fmtNumber(draft.lines.reduce((a, l) => a + l.qty, 0))} units in total`} />
+          <KpiCard label="Estimated value" value={fmtCurrency(total, 'IDR', { compact: true })} icon={<Send />} accent="accent" sub="your estimate, or standard cost" />
+          <KpiCard label="Items you can request" value={catalogue.length} icon={<Package />} accent="purple" sub="active master items the warehouse holds" />
+          <KpiCard
+            label="Session closes"
+            value={`${daysLeft}d`}
+            icon={<CalendarRange />}
+            accent={daysLeft <= 2 ? 'danger' : 'primary'}
+            sub={fmtDate(session.closesAt)}
+          />
+        </div>
+      )}
 
       <Card>
         <CardHeader
@@ -242,12 +278,12 @@ export function MyRequestPage() {
           description="One line per item. Purchasing merges your line with the other divisions asking for the same thing."
           actions={
             !locked ? (
-              <div className="flex items-center gap-2">
+              <div className={cn('flex items-center gap-2', isPhone && 'w-full')}>
                 <MultiSelect
                   values={category}
                   onChange={setCategory}
                   size="sm"
-                  className="w-[232px]"
+                  className={isPhone ? 'min-w-0 flex-1' : 'w-[232px]'}
                   placeholder="All categories"
                   options={categories.map((c) => ({
                     value: c,
@@ -255,8 +291,8 @@ export function MyRequestPage() {
                     meta: <span className="tnum text-[11px] text-fg-subtle">{catalogue.filter((i) => i.category === c).length}</span>,
                   }))}
                 />
-                <Button variant="secondary" size="sm" onClick={addLine}>
-                  <Plus /> Add a line
+                <Button variant="secondary" size="sm" className="shrink-0" onClick={addLine}>
+                  <Plus /> Add
                 </Button>
               </div>
             ) : undefined
@@ -270,6 +306,124 @@ export function MyRequestPage() {
             description="Add the items your division needs this month. Only what the warehouse already stocks can be asked for."
             action={!locked ? <Button variant="primary" size="sm" onClick={addLine}><Plus /> Add a line</Button> : undefined}
           />
+        ) : isPhone ? (
+          /* One card per line. A seven-column grid of inputs on a 390px screen
+             is a sideways scroll for every field, which is how a request ends
+             up with a quantity typed into the wrong row. */
+          <div className="divide-y divide-border">
+            {draft.lines.map((line, i) => {
+              const item = items.find((it) => it.id === line.itemId)
+              const unit = line.estimatedUnitPrice ?? item?.standardCost ?? 0
+              const onHand = availableOf(line.itemId)
+              return (
+                <div key={line.id} className="p-4">
+                  <div className="mb-2.5 flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-fg-subtle">
+                      Line {i + 1}
+                    </span>
+                    {!locked && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="-my-1 h-8 text-danger hover:bg-danger-soft"
+                        onClick={() => setDraft((d) => (d ? { ...d, lines: d.lines.filter((l) => l.id !== line.id) } : d))}
+                      >
+                        <Trash2 /> Remove
+                      </Button>
+                    )}
+                  </div>
+
+                  {locked ? (
+                    <div className="min-w-0">
+                      <p className="font-medium text-fg">{item?.name}</p>
+                      <p className="font-mono text-[11px] text-fg-subtle">{item?.sku}</p>
+                    </div>
+                  ) : (
+                    <Field label="Item">
+                      <Select
+                        searchable
+                        className="w-full"
+                        value={line.itemId}
+                        onChange={(v) => patchLine(line.id, { itemId: v })}
+                        options={catalogue
+                          .filter((it) => it.id === line.itemId || inCategory(it.id))
+                          .map((it) => ({
+                            value: it.id,
+                            label: it.name,
+                            description: `${it.sku} · ${it.uom} · ${fmtNumber(availableOf(it.id))} available`,
+                            group: itemCategoryLabel(it.category),
+                            disabled: it.id !== line.itemId && draft.lines.some((l) => l.itemId === it.id),
+                          }))}
+                      />
+                    </Field>
+                  )}
+
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    {locked ? (
+                      <>
+                        <MobileFact label="Quantity" value={`${fmtNumber(line.qty)} ${item?.uom ?? ''}`} />
+                        <MobileFact
+                          label="Estimate / unit"
+                          value={line.estimatedUnitPrice ? fmtCurrency(line.estimatedUnitPrice, 'IDR') : '—'}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <Field label="Quantity" hint={item?.uom}>
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            min={1}
+                            value={line.qty}
+                            onChange={(e) => patchLine(line.id, { qty: Number(e.target.value) })}
+                            className="tnum"
+                          />
+                        </Field>
+                        <Field label="Estimate / unit" hint="optional">
+                          <Input
+                            type="number"
+                            inputMode="numeric"
+                            step={1_000}
+                            placeholder="standard cost"
+                            value={line.estimatedUnitPrice ?? ''}
+                            onChange={(e) => patchLine(line.id, { estimatedUnitPrice: e.target.value === '' ? undefined : Number(e.target.value) })}
+                            className="tnum"
+                          />
+                        </Field>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="mt-3">
+                    {locked ? (
+                      <MobileFact label="Purpose" value={line.purpose} />
+                    ) : (
+                      <Field label="Purpose" hint="purchasing decides on this">
+                        <Input
+                          value={line.purpose}
+                          onChange={(e) => patchLine(line.id, { purpose: e.target.value })}
+                          placeholder="Why it is needed"
+                        />
+                      </Field>
+                    )}
+                  </div>
+
+                  {/* Label above value rather than beside it: a full rupiah
+                      figure and a unit of measure do not share one line. */}
+                  <div className="mt-3 grid grid-cols-2 gap-3 rounded-lg bg-surface-sunken px-3 py-2 text-[12px]">
+                    <div className="min-w-0">
+                      <p className="text-fg-muted">In warehouse</p>
+                      <p className="tnum mt-0.5 font-medium text-fg">{fmtNumber(onHand)} {item?.uom}</p>
+                    </div>
+                    <div className="min-w-0 text-right">
+                      <p className="text-fg-muted">Line value</p>
+                      <p className="tnum mt-0.5 font-semibold text-fg">{fmtCurrency(line.qty * unit, 'IDR')}</p>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         ) : (
           <div className="scrollbar-thin overflow-x-auto">
             <table className="w-full border-separate border-spacing-0 text-[13px]">
@@ -383,7 +537,9 @@ export function MyRequestPage() {
         )}
 
         <CardFooter className="flex-col items-stretch gap-3">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12.5px]">
+          {/* The bar at the thumb already carries these while the form is
+              editable; repeating them here is just more to scroll past. */}
+          <div className={cn('flex flex-wrap items-center gap-x-6 gap-y-2 text-[12.5px]', isPhone && !locked && 'hidden')}>
             <span className="text-fg-muted">
               Lines <span className="tnum ml-1 font-semibold text-fg">{draft.lines.length}</span>
             </span>
@@ -407,6 +563,25 @@ export function MyRequestPage() {
           {locked && draft.note && <p className="text-[12.5px] text-fg-muted">Note: {draft.note}</p>}
         </CardFooter>
       </Card>
+
+      {/* On a phone the header scrolls away long before the last line is filled
+          in, so the two things this page exists for stay at the thumb. */}
+      {isPhone && !locked && (
+        <div className="sticky bottom-0 z-30 -mx-4 mt-4 border-t border-border bg-surface/95 px-4 py-3 shadow-sticky-t backdrop-blur">
+          <div className="mb-2 flex items-center justify-between text-[12px]">
+            <span className="text-fg-muted">
+              {draft.lines.length} line{draft.lines.length === 1 ? '' : 's'}
+            </span>
+            <span className="tnum font-semibold text-fg">{fmtCurrency(total, 'IDR')}</span>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" className="flex-1" onClick={() => save(false)}>Save draft</Button>
+            <Button variant="primary" className="flex-1" onClick={() => save(true)}>
+              <Send /> Submit
+            </Button>
+          </div>
+        </div>
+      )}
 
       <p className="mt-4 text-[12px] leading-relaxed text-fg-subtle">
         Only items already held in a warehouse can be requested — {catalogue.length} of {items.length} master items qualify. Anything
