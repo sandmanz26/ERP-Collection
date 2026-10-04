@@ -5,20 +5,20 @@ import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
-  'relative inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 select-none disabled:pointer-events-none disabled:opacity-45 active:translate-y-px [&_svg]:shrink-0',
+  'ui-btn relative inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 select-none disabled:pointer-events-none disabled:opacity-45 active:translate-y-px [&_svg]:shrink-0',
   {
     variants: {
       variant: {
         primary:
-          'bg-primary text-primary-fg shadow-[0_1px_0_0_hsl(var(--shadow-color)/0.12),inset_0_1px_0_0_rgb(255_255_255/0.16)] hover:bg-primary-hover',
+          'ui-btn-primary bg-primary text-primary-fg shadow-[0_1px_0_0_hsl(var(--shadow-color)/0.12),inset_0_1px_0_0_rgb(255_255_255/0.16)] hover:bg-primary-hover',
         secondary:
-          'bg-surface text-fg border border-border-strong/70 shadow-card hover:bg-bg-muted hover:border-border-strong',
-        ghost: 'text-fg-muted hover:bg-bg-muted hover:text-fg',
-        subtle: 'bg-bg-muted text-fg hover:bg-neutral-soft',
-        danger: 'bg-danger text-white shadow-card hover:brightness-110',
-        dangerGhost: 'text-danger hover:bg-danger-soft',
-        outlineDanger: 'border border-danger/40 text-danger hover:bg-danger-soft',
-        link: 'text-primary underline-offset-4 hover:underline p-0 h-auto',
+          'ui-btn-secondary bg-surface text-fg border border-border-strong/70 shadow-card hover:bg-bg-muted hover:border-border-strong',
+        ghost: 'ui-btn-ghost text-fg-muted hover:bg-bg-muted hover:text-fg',
+        subtle: 'ui-btn-subtle bg-bg-muted text-fg hover:bg-neutral-soft',
+        danger: 'ui-btn-danger bg-danger text-white shadow-card hover:brightness-110',
+        dangerGhost: 'ui-btn-dangerGhost text-danger hover:bg-danger-soft',
+        outlineDanger: 'ui-btn-outlineDanger border border-danger/40 text-danger hover:bg-danger-soft',
+        link: 'ui-btn-link text-primary underline-offset-4 hover:underline p-0 h-auto',
       },
       size: {
         xs: 'h-7 rounded-md px-2 text-[12px] [&_svg]:size-3.5',

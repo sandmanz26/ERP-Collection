@@ -143,7 +143,7 @@ export function Select<T extends string>({
           aria-haspopup="listbox"
           aria-expanded={open}
           className={cn(
-            'group flex w-full items-center gap-2 rounded-lg border bg-surface px-3 text-left transition-[border-color,box-shadow]',
+            'ui-input group flex w-full items-center gap-2 rounded-lg border bg-surface px-3 text-left transition-[border-color,box-shadow]',
             'focus:outline-none focus-visible:border-primary focus-visible:ring-[3px] focus-visible:ring-primary/16',
             'disabled:cursor-not-allowed disabled:bg-bg-muted disabled:text-fg-subtle',
             open && 'border-primary ring-[3px] ring-primary/16',

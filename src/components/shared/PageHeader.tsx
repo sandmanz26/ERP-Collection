@@ -17,11 +17,11 @@ export function PageHeader({
   className?: string
 }) {
   return (
-    <div className={cn('flex flex-wrap items-start justify-between gap-5 pb-7', className)}>
+    <div className={cn('ui-ph flex flex-wrap items-start justify-between gap-5 pb-7', className)}>
       <div className="min-w-0">
-        {eyebrow && <div className="mb-2.5 flex items-center gap-2">{eyebrow}</div>}
-        <h1 className="text-[23px] font-semibold leading-tight tracking-[-0.022em] text-fg">{title}</h1>
-        {description && <p className="mt-2.5 max-w-3xl text-[13.5px] leading-[1.65] text-fg-muted">{description}</p>}
+        {eyebrow && <div className="ui-ph-eyebrow mb-2.5 flex items-center gap-2">{eyebrow}</div>}
+        <h1 className="ui-ph-title text-[23px] font-semibold leading-tight tracking-[-0.022em] text-fg">{title}</h1>
+        {description && <p className="ui-ph-desc mt-2.5 max-w-3xl text-[13.5px] leading-[1.65] text-fg-muted">{description}</p>}
         {meta && <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2.5">{meta}</div>}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
@@ -60,17 +60,18 @@ export function KpiCard({
   return (
     <Comp
       onClick={onClick}
+      data-accent={accent ?? 'primary'}
       className={cn(
-        'flex items-start gap-3.5 rounded-xl border border-border bg-surface px-5 py-[18px] text-left shadow-card transition-shadow',
+        'ui-kpi flex items-start gap-3.5 rounded-xl border border-border bg-surface px-5 py-[18px] text-left shadow-card transition-shadow',
         onClick && 'hover:border-border-strong hover:shadow-pop',
       )}
     >
       {icon && (
-        <span className={cn('grid size-9 shrink-0 place-items-center rounded-lg [&_svg]:size-[18px]', accents[accent ?? 'primary'])}>
+        <span className={cn('ui-kpi-icon grid size-9 shrink-0 place-items-center rounded-lg [&_svg]:size-[18px]', accents[accent ?? 'primary'])}>
           {icon}
         </span>
       )}
-      <div className="min-w-0 flex-1">
+      <div className="ui-kpi-body min-w-0 flex-1">
         <p className="text-[11px] font-medium uppercase leading-tight tracking-[0.055em] text-fg-subtle">{label}</p>
         <p className="tnum mt-2 truncate text-[21px] font-semibold leading-none tracking-[-0.025em] text-fg">{value}</p>
         <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">

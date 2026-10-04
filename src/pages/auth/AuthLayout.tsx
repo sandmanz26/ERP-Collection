@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { Segmented } from '@/components/ui/checkbox'
 import { useTheme } from '@/hooks/useTheme'
 import { company } from '@/data/seed-master'
+import { useUiStyle } from '@/store/useUiStyle'
 
 /** The three numbers on the marketing panel — real figures from the seeded book. */
 const PROOF = [
@@ -26,6 +27,36 @@ export function AuthLayout({
 }) {
   const { mode, setMode } = useTheme()
   const { pathname } = useLocation()
+  const uiStyle = useUiStyle((s) => s.style)
+
+  /* the classic sign-in: one centred box on a pale ground, no brand panel */
+  if (uiStyle === 'classic') {
+    return (
+      <div className="cl-login">
+        <div className="fixed right-4 top-3">
+          <Segmented
+            value={mode}
+            onChange={(v) => setMode(v)}
+            options={[
+              { value: 'light', label: 'Light', icon: <Sun /> },
+              { value: 'dark', label: 'Dark', icon: <Moon /> },
+              { value: 'system', label: 'Auto', icon: <Monitor /> },
+            ]}
+          />
+        </div>
+        <div className="cl-login-logo">
+          <b>Kriyanusa</b> ERP
+        </div>
+        <div className="cl-login-box" key={pathname}>
+          <h2>{title}</h2>
+          <p>{subtitle}</p>
+          {children}
+          {footer && <div className="mt-6 border-t border-border pt-4 text-[12.5px] text-fg-muted">{footer}</div>}
+        </div>
+        <p className="mt-6 text-[12px] text-fg-subtle">{company.legalName} · {company.registrationNo}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen w-full bg-bg">

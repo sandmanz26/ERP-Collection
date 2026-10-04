@@ -356,9 +356,9 @@ export function DataTable<T>({
       )}
 
       {/* ------------ table ------------ */}
-      <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-surface">
+      <div className="ui-table-wrap min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-surface">
         <div className="scrollbar-thin h-full overflow-auto">
-          <table className="w-full border-separate border-spacing-0 text-[13px]">
+          <table className="ui-table w-full border-separate border-spacing-0 text-[13px]">
             <thead>
               <tr>
                 <th
@@ -438,6 +438,8 @@ export function DataTable<T>({
                   <tr
                     key={id}
                     onClick={() => onRowClick?.(row)}
+                    data-selected={isSelected || undefined}
+                    data-tone={rowTone?.(row) ? '1' : undefined}
                     className={cn(
                       'group transition-colors',
                       onRowClick && 'cursor-pointer',

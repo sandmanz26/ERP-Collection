@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/hooks/useTheme'
 import { ToastProvider } from '@/components/ui/toast'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { RequireAuth, RedirectIfSignedIn } from '@/components/layout/RequireAuth'
+import { useApplyUiStyle } from '@/store/useUiStyle'
 
 import { DashboardPage } from '@/pages/DashboardPage'
 import { ProjectsPage } from '@/pages/projects/ProjectsPage'
@@ -39,6 +40,7 @@ import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 
 export default function App() {
+  useApplyUiStyle()
   return (
     <ThemeProvider>
       <TooltipProvider>

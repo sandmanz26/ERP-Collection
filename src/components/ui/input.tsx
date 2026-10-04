@@ -13,7 +13,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       <input
         ref={ref}
         className={cn(
-          'h-9 w-full rounded-lg border bg-surface px-3 text-[13.5px] text-fg shadow-[inset_0_1px_1px_hsl(var(--shadow-color)/0.04)] transition-[border-color,box-shadow] placeholder:text-fg-subtle',
+          'ui-input h-9 w-full rounded-lg border bg-surface px-3 text-[13.5px] text-fg shadow-[inset_0_1px_1px_hsl(var(--shadow-color)/0.04)] transition-[border-color,box-shadow] placeholder:text-fg-subtle',
           'focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/16',
           'disabled:cursor-not-allowed disabled:bg-bg-muted disabled:text-fg-subtle',
           invalid ? 'border-danger focus:border-danger focus:ring-danger/18' : 'border-border-strong/80',
@@ -47,7 +47,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.TextareaHTML
     <textarea
       ref={ref}
       className={cn(
-        'w-full rounded-lg border bg-surface px-3 py-2 text-[13.5px] text-fg transition-[border-color,box-shadow] placeholder:text-fg-subtle',
+        'ui-input w-full rounded-lg border bg-surface px-3 py-2 text-[13.5px] text-fg transition-[border-color,box-shadow] placeholder:text-fg-subtle',
         'focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/16 resize-y min-h-[76px]',
         invalid ? 'border-danger' : 'border-border-strong/80',
         className,

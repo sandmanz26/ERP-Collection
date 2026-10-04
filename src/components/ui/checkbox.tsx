@@ -110,7 +110,7 @@ export function Segmented<T extends string>({
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-0.5 rounded-lg border border-border bg-surface-sunken p-0.5',
+        'ui-seg inline-flex items-center gap-0.5 rounded-lg border border-border bg-surface-sunken p-0.5',
         className,
       )}
     >
@@ -119,8 +119,9 @@ export function Segmented<T extends string>({
           key={o.value}
           type="button"
           onClick={() => onChange(o.value)}
+          data-active={value === o.value || undefined}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-md font-medium transition-all duration-150 [&_svg]:size-3.5',
+            'ui-seg-btn inline-flex items-center gap-1.5 rounded-md font-medium transition-all duration-150 [&_svg]:size-3.5',
             size === 'sm' ? 'h-6 px-2 text-[12px]' : 'h-7 px-2.5 text-[12.5px]',
             value === o.value
               ? 'bg-surface text-fg shadow-card'

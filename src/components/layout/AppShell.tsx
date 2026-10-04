@@ -16,10 +16,12 @@ import { Segmented } from '@/components/ui/checkbox'
 import { useTheme } from '@/hooks/useTheme'
 import { useErp } from '@/store/useErp'
 import { useAuth, useCurrentUser } from '@/store/useAuth'
-import { useExceptions } from '@/hooks/useExceptions'
+import { useNavBadges } from '@/hooks/useNavBadges'
 import { roleLabel } from '@/data/reference'
 import { useToast } from '@/components/ui/toast'
 import { fmtDateTime } from '@/lib/format'
+import { useUiStyle } from '@/store/useUiStyle'
+import { ClassicShell } from './ClassicShell'
 
 export function AppShell() {
   const [collapsed, setCollapsed] = React.useState(() => localStorage.getItem('kn-sidebar') === '1')
@@ -32,6 +34,7 @@ export function AppShell() {
   const signOut = useAuth((s) => s.signOut)
   const resetTours = useTourState((s) => s.reset)
   const user = useCurrentUser()
+  const uiStyle = useUiStyle((st) => st.style)
 
   const initials = (user?.fullName ?? 'Kriyanusa User')
     .split(' ')
@@ -59,25 +62,23 @@ export function AppShell() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const { exceptions, positions } = useExceptions()
-  const critical = exceptions.filter((e) => e.severity === 'CRITICAL').length
+  const { badges, exceptions, critical, topExceptions } = useNavBadges()
 
-  const badges: Record<string, number> = {
-    exceptions: critical,
-    projects: store.projects.filter((p) => p.status === 'WON' && p.stage !== 'CLOSED').length,
-    inquiries: store.projects.filter((p) => p.status === 'OPEN').length,
-    budgets: store.budgets.filter((b) => b.status === 'SUBMITTED').length,
-    requests: store.requests.filter((r) => r.status === 'SUBMITTED').length,
-    orders: store.orders.filter((o) => o.status === 'AWAITING_APPROVAL' || o.status === 'PARTIALLY_RECEIVED').length,
-    receipts: store.receipts.filter((g) => g.qcResult === 'FAILED' || g.qcResult === 'PARTIAL').length,
-    reorder: positions.filter((p) => p.belowReorder && p.onOrder <= 0).length,
-    production: store.workOrders.filter((w) => w.status === 'ON_HOLD' || (w.status !== 'COMPLETED' && new Date(w.dueAt) < new Date())).length,
-    shipments: store.shipments.filter((s) => !['SAILED', 'ARRIVED', 'CLOSED'].includes(s.status)).length,
-    payables: store.bills.filter((b) => b.status === 'OVERDUE' || b.status === 'DISPUTED').length,
-    receivables: store.invoices.filter((i) => i.status === 'OVERDUE').length,
+  if (uiStyle === 'classic') {
+    return (
+      <ClassicShell
+        collapsed={collapsed}
+        setCollapsed={setCollapsed}
+        openPalette={() => setPaletteOpen(true)}
+        badges={badges}
+        exceptions={exceptions}
+        critical={critical}
+        topExceptions={topExceptions}
+        paletteOpen={paletteOpen}
+        setPaletteOpen={setPaletteOpen}
+      />
+    )
   }
-
-  const topExceptions = exceptions.slice(0, 6)
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-bg">

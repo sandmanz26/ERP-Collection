@@ -175,6 +175,27 @@ first paint, so choosing it does not cost you a white flash on every reload. Bot
 from the same token names, so every screen follows automatically — the worst badge contrast in
 either theme is 6.5:1.
 
+### Two interfaces
+
+**Settings → Interface** switches the whole application between two looks, instantly and per browser:
+
+| | Modern | Classic |
+| --- | --- | --- |
+| Shell | Light sidebar, search bar on top | Coloured top bar, dark sidebar with a user panel, pale content well, plain footer |
+| Panels | Rounded cards, soft shadows | Flat square boxes with a 3px top rule |
+| Numbers | KPI cards | Info-boxes with a solid coloured icon block |
+| Status | Tinted badges | Solid-colour labels |
+| Tables | Open rows | Striped, bordered, hover-highlighted |
+| Type | Inter | Helvetica Neue / Arial at 14px |
+
+Both draw the same screens from the same data, and either one can be light or dark. Classic is a **skin over
+the same components**, not a second set of pages: shared primitives carry `ui-*` class names that
+`src/classic.css` restyles when `<html data-ui="classic">`, and the shell is a separate component
+(`ClassicShell`) because its structure genuinely differs. It reproduces the Bootstrap-3-era admin look
+in plain CSS rather than loading Bootstrap itself — the pages are built from Tailwind utilities, so
+Bootstrap's own class names would not have matched anything. Bootstrap's signature blue is deliberately
+not used; Classic stays inside the timber palette.
+
 The table on every list screen is one component: search, multi-select filters, column visibility and
 ordering, sticky columns, dense mode, pagination, CSV and JSON export, CSV import with column
 mapping, bulk delete with cascade warnings, and a footer summary. Column layouts persist per screen.

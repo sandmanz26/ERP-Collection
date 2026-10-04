@@ -2,7 +2,7 @@ import * as React from 'react'
 import { cn } from '@/lib/utils'
 
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('rounded-xl border border-border bg-surface shadow-card', className)} {...props} />
+  return <div className={cn('ui-card rounded-xl border border-border bg-surface shadow-card', className)} {...props} />
 }
 
 export function CardHeader({
@@ -21,10 +21,10 @@ export function CardHeader({
   icon?: React.ReactNode
 }) {
   return (
-    <div className={cn('flex items-start justify-between gap-4 border-b border-border px-5 py-4', className)} {...props}>
+    <div className={cn('ui-card-head flex items-start justify-between gap-4 border-b border-border px-5 py-4', className)} {...props}>
       <div className="flex min-w-0 items-start gap-3">
         {icon && (
-          <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-md bg-primary-soft text-primary-soft-fg [&_svg]:size-4">
+          <span className="ui-card-icon mt-0.5 grid size-7 shrink-0 place-items-center rounded-md bg-primary-soft text-primary-soft-fg [&_svg]:size-4">
             {icon}
           </span>
         )}

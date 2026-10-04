@@ -15,12 +15,13 @@ import { fmtDate, fmtDateTime, fmtNumber, relativeDays, titleCase } from '@/lib/
 import { useErp } from '@/store/useErp'
 import { useAuth } from '@/store/useAuth'
 import { ACCOUNT_STATUSES, roleLabel } from '@/data/reference'
+import { InterfacePicker } from './InterfacePicker'
 
 export function SettingsPage() {
   const store = useErp()
   const auth = useAuth()
   const toast = useToast()
-  const [view, setView] = React.useState<'company' | 'thresholds' | 'people' | 'audit'>('company')
+  const [view, setView] = React.useState<'interface' | 'company' | 'thresholds' | 'people' | 'audit'>('interface')
   const [draft, setDraft] = React.useState(store.settings)
 
   React.useEffect(() => setDraft(store.settings), [store.settings])
@@ -39,6 +40,7 @@ export function SettingsPage() {
             value={view}
             onChange={setView}
             items={[
+              { value: 'interface', label: 'Interface' },
               { value: 'company', label: 'Company' },
               { value: 'thresholds', label: 'Thresholds' },
               { value: 'people', label: 'People', count: auth.users.length },
@@ -47,6 +49,8 @@ export function SettingsPage() {
           />
         }
       />
+
+      {view === 'interface' && <InterfacePicker />}
 
       {view === 'company' && (
         <div className="space-y-5">
