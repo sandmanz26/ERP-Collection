@@ -20,7 +20,7 @@ export function PageHeader({
     <div className={cn('flex flex-wrap items-start justify-between gap-4 pb-5', className)}>
       <div className="min-w-0">
         {eyebrow && <div className="mb-1.5 flex items-center gap-2">{eyebrow}</div>}
-        <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.022em] text-fg">{title}</h1>
+        <h1 data-slot="page-title" className="text-[22px] font-semibold leading-tight tracking-[-0.022em] text-fg">{title}</h1>
         {description && <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-fg-muted">{description}</p>}
         {meta && <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">{meta}</div>}
       </div>
@@ -65,9 +65,11 @@ export function KpiCard({
    * must never do, the type steps down as the number gets longer.
    */
   const len = typeof value === 'string' ? value.length : 0
-  const valueSize = len > 16 ? 'text-[16px]' : len > 13 ? 'text-[18px]' : 'text-[21px]'
+  const valueLength = len > 16 ? 'long' : len > 13 ? 'medium' : 'short'
+  const valueSize = { long: 'text-[16px]', medium: 'text-[18px]', short: 'text-[21px]' }[valueLength]
   return (
     <Comp
+      data-slot="kpi"
       onClick={onClick}
       className={cn(
         'flex items-start gap-3 rounded-xl border border-border bg-surface p-4 text-left shadow-card transition-shadow',
@@ -75,13 +77,17 @@ export function KpiCard({
       )}
     >
       {icon && (
-        <span className={cn('grid size-9 shrink-0 place-items-center rounded-lg [&_svg]:size-[18px]', accents[accent ?? 'primary'])}>
+        <span
+          data-slot="kpi-icon"
+          data-accent={accent ?? 'primary'}
+          className={cn('grid size-9 shrink-0 place-items-center rounded-lg [&_svg]:size-[18px]', accents[accent ?? 'primary'])}
+        >
           {icon}
         </span>
       )}
       <div className="min-w-0 flex-1">
         <p className="truncate text-[11.5px] font-medium uppercase tracking-[0.06em] text-fg-subtle">{label}</p>
-        <p className={cn('tnum mt-1.5 truncate font-semibold leading-none tracking-[-0.025em] text-fg', valueSize)}>{value}</p>
+        <p data-length={valueLength} className={cn('tnum mt-1.5 truncate font-semibold leading-none tracking-[-0.025em] text-fg', valueSize)}>{value}</p>
         <div className="mt-1.5 flex items-start gap-2">
           {delta && (
             <span

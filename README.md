@@ -370,6 +370,26 @@ them:
 - Column show/hide with a stored preference, compact/comfortable density, page size, bulk selection,
   bulk delete with a cascade warning that names what else it will affect.
 
+### Two interfaces, one suite
+
+The whole suite can be worn in one of two faces, chosen in **Settings → Interface** (or from the
+account menu in the header, for the roles that cannot open Settings):
+
+- **Modern** — the interface the suite was designed around: soft corners, light surfaces, a quiet
+  sidebar.
+- **Classic** — the same screens dressed as a Bootstrap 3 admin of 2017: a dark `#222d32` sidebar, a
+  blue header bar, flat square buttons with a darker border, solid-colour labels, bordered and
+  striped tables, "boxes" with a grey top rule, and summary figures as coloured info-boxes. The palette
+  is Bootstrap 3's own (`#337ab7`, `#5cb85c`, `#d9534f`); the layout is AdminLTE's.
+
+Classic is a **second skin, not a second set of pages**, so a record, a permission or a total can never
+differ between the two. It is switched by `data-ui` on `<html>` (`src/store/useInterface.ts`) and
+implemented in `src/styles/classic.css` by redefining the colour tokens — including inside the sidebar
+and header, which are dark and blue on a light page — and overriding shape and shadow directly. It does
+not load Bootstrap's own stylesheet: that would fight Tailwind's reset and restyle elements this suite
+does not control. The choice is remembered in this browser and applied before the first render, so a
+reload never flashes the other face.
+
 ### Two presentations, one table
 
 The same register serves two people. Somebody reconciling a month wants every column at once and will

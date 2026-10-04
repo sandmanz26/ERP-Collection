@@ -2,7 +2,7 @@ import * as React from 'react'
 import { cn } from '@/lib/utils'
 
 export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('rounded-xl border border-border bg-surface shadow-card', className)} {...props} />
+  return <div data-slot="card" className={cn('rounded-xl border border-border bg-surface shadow-card', className)} {...props} />
 }
 
 export function CardHeader({
@@ -24,6 +24,7 @@ export function CardHeader({
     /* Below `sm` the actions drop under the title instead of squeezing it: a
        filter and a button do not share a 320px row with a heading. */
     <div
+      data-slot="card-header"
       className={cn(
         'flex flex-col gap-3 border-b border-border px-4 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4',
         className,
@@ -32,7 +33,7 @@ export function CardHeader({
     >
       <div className="flex min-w-0 items-start gap-2.5">
         {icon && (
-          <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-md bg-primary-soft text-primary-soft-fg [&_svg]:size-4">
+          <span data-slot="card-icon" className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-md bg-primary-soft text-primary-soft-fg [&_svg]:size-4">
             {icon}
           </span>
         )}

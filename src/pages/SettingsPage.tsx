@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ArrowRight, Building2, RotateCcw, ScrollText, ShieldCheck, UsersRound } from 'lucide-react'
+import { ArrowRight, Building2, Palette, RotateCcw, ScrollText, ShieldCheck, UsersRound } from 'lucide-react'
 import { useErp } from '@/store/useErp'
 import { useAuth, useCurrentUser } from '@/store/useAuth'
 import { effectivePermissions, rolesOf, useCan } from '@/lib/access'
@@ -14,6 +14,7 @@ import { Field } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Tabs } from '@/components/ui/tabs'
 import { EmptyState } from '@/components/ui/misc'
+import { InterfaceChooser } from '@/components/settings/InterfaceChooser'
 import { useToast } from '@/components/ui/toast'
 import { AUTH_POLICY } from '@/data/reference'
 import { fmtDateTime } from '@/lib/format'
@@ -27,7 +28,7 @@ export function SettingsPage() {
   const { roles } = useErp()
   const myRoles = rolesOf(me, roles)
   const myPermissions = effectivePermissions(me, roles)
-  const [tab, setTab] = React.useState<'company' | 'activity'>('company')
+  const [tab, setTab] = React.useState<'company' | 'interface' | 'activity'>('company')
   const [draft, setDraft] = React.useState(company)
 
   React.useEffect(() => setDraft(company), [company])
@@ -60,6 +61,7 @@ export function SettingsPage() {
         className="mb-5"
         items={[
           { value: 'company', label: 'Company profile', icon: <Building2 /> },
+          { value: 'interface', label: 'Interface', icon: <Palette /> },
           ...(can('audit.view') ? [{ value: 'activity' as const, label: 'Activity', icon: <ScrollText />, count: activity.length }] : []),
         ]}
       />
@@ -183,6 +185,24 @@ export function SettingsPage() {
             </CardFooter>
           </Card>
         </div>
+      )}
+
+      {tab === 'interface' && (
+        <Card>
+          <CardHeader
+            title="Interface"
+            icon={<Palette />}
+            description="Choose how the whole suite looks. Both show the same records, totals and permissions — only the presentation differs."
+          />
+          <CardBody>
+            <InterfaceChooser />
+          </CardBody>
+          <CardFooter>
+            <span className="text-[12px] text-fg-muted">
+              Saved in this browser for whoever is signed in on it; it does not change what anyone else sees.
+            </span>
+          </CardFooter>
+        </Card>
       )}
 
       {tab === 'activity' && (

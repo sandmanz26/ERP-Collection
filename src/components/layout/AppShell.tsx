@@ -11,11 +11,12 @@ import { TableStyleSwitcher } from '@/components/data-table/TableStyleSwitcher'
 import { Button } from '@/components/ui/button'
 import { Kbd, Separator } from '@/components/ui/misc'
 import { Tooltip } from '@/components/ui/tooltip'
-import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from '@/components/ui/menu'
+import { Menu, MenuCheckItem, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from '@/components/ui/menu'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/toast'
 import { useErp } from '@/store/useErp'
 import { useAuth, useCurrentUser } from '@/store/useAuth'
+import { INTERFACES, useInterface } from '@/store/useInterface'
 import { primaryRoleName, rolesOf, useCan } from '@/lib/access'
 import { buildAlerts, daysUntil, fulfilment, isLiveProject, stockStatus } from '@/lib/domain'
 import { invoiceState } from '@/lib/finance'
@@ -37,6 +38,7 @@ export function AppShell() {
   const store = useErp()
   const signOut = useAuth((s) => s.signOut)
   const user = useCurrentUser()
+  const { style: uiStyle, setStyle: setUiStyle } = useInterface()
   const can = useCan()
   /* The menu shows what the account may open. The route guard enforces it; this
      only saves people from clicking into a page that would refuse them. */
@@ -142,6 +144,7 @@ export function AppShell() {
 
       {/* ---------------- sidebar ---------------- */}
       <aside
+        data-slot="sidebar"
         className={cn(
           'z-20 flex shrink-0 flex-col border-r border-border bg-surface',
           phone
@@ -153,7 +156,7 @@ export function AppShell() {
         )}
         aria-hidden={phone && !drawer}
       >
-        <div className={cn('flex h-14 items-center gap-2.5 border-b border-border px-3.5', rail && 'justify-center px-0')}>
+        <div data-slot="brand" className={cn('flex h-14 items-center gap-2.5 border-b border-border px-3.5', rail && 'justify-center px-0')}>
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-primary-fg shadow-[inset_0_1px_0_0_rgb(255_255_255/0.2)]">
             <ShieldHalf className="size-[17px]" />
           </span>
@@ -251,7 +254,7 @@ export function AppShell() {
 
       {/* ---------------- main ---------------- */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-surface px-3 sm:gap-3 sm:px-4">
+        <header data-slot="topbar" className="flex h-14 shrink-0 items-center gap-2 border-b border-border bg-surface px-3 sm:gap-3 sm:px-4">
           {phone && (
             <Button variant="ghost" size="icon" onClick={() => setDrawer(true)} aria-label="Open the menu">
               <MenuIcon />
@@ -356,6 +359,15 @@ export function AppShell() {
                   Company & account settings
                 </MenuItem>
               )}
+              {/* Only two roles can open Settings, and this is a preference of
+                  whoever is at the keyboard, so it is reachable from here too. */}
+              <MenuLabel>Interface</MenuLabel>
+              {INTERFACES.map((o) => (
+                <MenuCheckItem key={o.value} checked={uiStyle === o.value} onSelect={() => setUiStyle(o.value)}>
+                  {o.label}
+                </MenuCheckItem>
+              ))}
+              <MenuSeparator />
               <MenuItem
                 icon={<RotateCcw />}
                 onSelect={() => {

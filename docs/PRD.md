@@ -395,6 +395,12 @@ filters, CSV import with mapping and validation, CSV/JSON export (including a re
 visible total row count, column show/hide, density control, bulk selection and delete with a cascade
 warning.
 
+The suite has two interfaces over the same screens — **Modern**, and **Classic**, a Bootstrap-3-era
+admin look (dark sidebar, blue header bar, flat square buttons, bordered striped tables). Either can be
+chosen from Settings → Interface, or from the account menu for the roles that cannot open Settings. It
+is a preference of the person at the keyboard, kept in their browser, and changes presentation only:
+no record, permission or figure differs between the two.
+
 Money is always written out in full with thousand separators — `IDR 111,949,605` — and never on an
 abbreviated scale such as `111.9M` or `385K`, anywhere in the interface. Where a figure is then too
 long for the space, the type size gives way; the figure never does.

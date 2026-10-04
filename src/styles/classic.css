@@ -1,0 +1,350 @@
+/* ------------------------------------------------------------------
+   Classic interface — a Bootstrap 3 admin, the way one looked in 2017.
+
+   It is a second skin over the same components, switched on by
+   `<html data-ui="classic">`, never a second set of pages. Three tools do the
+   work, in order of preference:
+
+     1. Tokens.     Redefining the colour variables recolours everything that
+                    uses them, which is almost everything.
+     2. Scoped tokens. The sidebar and the header bar are dark and blue on a
+                    light page, so they redefine the same variables again
+                    inside their own element and everything within follows.
+     3. Overrides.  Shape, shadow and typography are utilities, not tokens, so
+                    they are overridden directly. This file is unlayered on
+                    purpose: unlayered rules beat Tailwind's layered utilities
+                    whatever their specificity, so no `!important` is needed.
+
+   Colours are Bootstrap 3's own — #337ab7, #5cb85c, #d9534f — and the layout
+   is AdminLTE's: a dark #222d32 sidebar, a blue top bar, white boxes with a
+   grey top rule. Where Bootstrap's white-on-pastel labels fail contrast, the
+   darker "hover" shade of the same colour is used instead.
+   ------------------------------------------------------------------ */
+
+:root[data-ui='classic'] {
+  --font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-mono: Menlo, Monaco, Consolas, 'Courier New', monospace;
+
+  /* surfaces — AdminLTE's #ecf0f5 page, white boxes */
+  --bg: 213 31% 95%;
+  --bg-muted: 0 0% 93%;
+  --surface: 0 0% 100%;
+  --surface-raised: 0 0% 100%;
+  --surface-sunken: 0 0% 96%;
+  --overlay: 0 0% 0%;
+
+  /* ink — Bootstrap's #333 / #666 / #777 */
+  --fg: 0 0% 20%;
+  --fg-muted: 0 0% 40%;
+  --fg-subtle: 0 0% 52%;
+  --fg-inverse: 0 0% 100%;
+
+  /* lines — #ddd and #ccc */
+  --border: 0 0% 87%;
+  --border-strong: 0 0% 80%;
+  --ring: 206 77% 65%;
+
+  /* brand — #337ab7 */
+  --primary: 208 56% 46%;
+  --primary-hover: 208 56% 36%;
+  --primary-fg: 0 0% 100%;
+  --primary-soft: 208 50% 92%;
+  --primary-soft-fg: 208 56% 30%;
+
+  --accent: 194 66% 45%;
+  --accent-soft: 200 65% 91%;
+  --accent-soft-fg: 200 49% 38%;
+
+  /* contextual colours — Bootstrap's alert palette */
+  --success: 120 39% 54%;
+  --success-soft: 102 44% 89%;
+  --success-soft-fg: 121 33% 35%;
+  --warning: 35 84% 62%;
+  --warning-soft: 50 81% 94%;
+  --warning-soft-fg: 38 40% 39%;
+  --danger: 2 64% 58%;
+  --danger-soft: 0 43% 91%;
+  --danger-soft-fg: 1 44% 46%;
+  --info: 194 66% 61%;
+  --info-soft: 200 65% 91%;
+  --info-soft-fg: 200 49% 38%;
+  --neutral-soft: 0 0% 93%;
+  --neutral-soft-fg: 0 0% 33%;
+  --purple: 243 30% 51%;
+  --purple-soft: 243 30% 92%;
+  --purple-soft-fg: 243 30% 38%;
+
+  --auth-panel: 208 56% 38%;
+  --auth-panel-fg: 0 0% 100%;
+
+  --shadow-color: 0 0% 0%;
+  --radius: 0.25rem;
+}
+
+[data-ui='classic'] body {
+  font-feature-settings: normal;
+  -webkit-font-smoothing: auto;
+  text-rendering: auto;
+}
+
+/* ---------- shape: nothing is rounder than Bootstrap's 4px ---------- */
+[data-ui='classic'] .rounded-2xl { border-radius: 6px; }
+[data-ui='classic'] .rounded-xl,
+[data-ui='classic'] .rounded-lg { border-radius: 4px; }
+[data-ui='classic'] .rounded-md,
+[data-ui='classic'] .rounded { border-radius: 3px; }
+[data-ui='classic'] .rounded-sm { border-radius: 2px; }
+
+/* ---------- depth: a hairline under a box, a real shadow on a dropdown ---------- */
+[data-ui='classic'] .shadow-card { box-shadow: 0 1px 1px hsl(0 0% 0% / 0.1); }
+[data-ui='classic'] .shadow-pop { box-shadow: 0 6px 12px hsl(0 0% 0% / 0.175); }
+
+/* ---------- type ---------- */
+[data-ui='classic'] h1,
+[data-ui='classic'] h2,
+[data-ui='classic'] h3 { letter-spacing: 0; }
+[data-ui='classic'] [data-slot='page-title'] { font-size: 24px; font-weight: 400; }
+
+/* ------------------------------------------------------------------
+   The sidebar. Dark, with the group captions a step dimmer than the links
+   and a blue rule beside the page you are on.
+   ------------------------------------------------------------------ */
+[data-ui='classic'] [data-slot='sidebar'] {
+  --surface: 199 19% 16%;
+  --bg-muted: 197 19% 14%;
+  --fg: 0 0% 100%;
+  --fg-muted: 199 18% 76%;
+  --fg-subtle: 198 19% 52%;
+  --border: 200 19% 13%;
+  --border-strong: 200 19% 13%;
+  --primary: 202 52% 49%;
+  --primary-soft: 197 19% 14%;
+  --primary-soft-fg: 0 0% 100%;
+  --neutral-soft: 199 12% 30%;
+  --neutral-soft-fg: 199 18% 85%;
+  --warning-soft: 35 84% 52%;
+  --warning-soft-fg: 0 0% 100%;
+  border-right-color: hsl(200 19% 13%);
+}
+
+/* the logo block sits a shade darker than the bar beside it, white mark on blue */
+[data-ui='classic'] [data-slot='brand'] {
+  --surface: 208 56% 40%;
+  --fg: 0 0% 100%;
+  --fg-subtle: 208 60% 86%;
+  --primary: 0 0% 100%;
+  --primary-fg: 208 56% 40%;
+  background-color: hsl(208 56% 40%);
+  border-bottom-color: hsl(208 56% 34%);
+}
+[data-ui='classic'] [data-slot='brand'] p:first-child {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------------------
+   The header bar.
+   ------------------------------------------------------------------ */
+[data-ui='classic'] [data-slot='topbar'] {
+  --surface: 208 56% 46%;
+  --bg-muted: 208 56% 38%;
+  --fg: 0 0% 100%;
+  --fg-muted: 0 0% 93%;
+  --fg-subtle: 208 60% 88%;
+  --border: 208 56% 40%;
+  --border-strong: 208 56% 56%;
+  --primary-soft: 208 56% 34%;
+  --primary-soft-fg: 0 0% 100%;
+  border-bottom-color: hsl(208 56% 40%);
+}
+
+/* ------------------------------------------------------------------
+   Buttons. Flat, square-ish, a darker border of the same colour, and the
+   inset press Bootstrap 3 gave an active button.
+   ------------------------------------------------------------------ */
+[data-ui='classic'] [data-slot='button'] {
+  box-shadow: none;
+  font-weight: 400;
+  transition-duration: 0s;
+}
+[data-ui='classic'] [data-slot='button']:disabled { opacity: 0.65; }
+[data-ui='classic'] [data-slot='button']:active:not(:disabled) {
+  transform: none;
+  box-shadow: inset 0 3px 5px hsl(0 0% 0% / 0.125);
+}
+
+[data-ui='classic'] [data-slot='button'][data-variant='primary'] {
+  background-color: #337ab7;
+  border: 1px solid #2e6da4;
+  color: #fff;
+}
+[data-ui='classic'] [data-slot='button'][data-variant='primary']:hover:not(:disabled) {
+  background-color: #286090;
+  border-color: #204d74;
+}
+
+[data-ui='classic'] [data-slot='button'][data-variant='secondary'] {
+  background-color: #fff;
+  border: 1px solid #ccc;
+  color: #333;
+}
+[data-ui='classic'] [data-slot='button'][data-variant='secondary']:hover:not(:disabled) {
+  background-color: #e6e6e6;
+  border-color: #adadad;
+}
+
+[data-ui='classic'] [data-slot='button'][data-variant='danger'] {
+  background-color: #d9534f;
+  border: 1px solid #d43f3a;
+  color: #fff;
+}
+[data-ui='classic'] [data-slot='button'][data-variant='danger']:hover:not(:disabled) {
+  background-color: #c9302c;
+  border-color: #ac2925;
+  filter: none;
+}
+
+[data-ui='classic'] [data-slot='button'][data-variant='subtle'] {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+}
+
+/* ------------------------------------------------------------------
+   Labels. Bootstrap 3 labels are solid colour with bold white type — not the
+   pale pills of the modern interface.
+   ------------------------------------------------------------------ */
+[data-ui='classic'] [data-slot='badge'] {
+  color: #fff;
+  font-weight: 700;
+  border-radius: 3px;
+}
+[data-ui='classic'] [data-slot='badge'][data-tone='neutral'] { background-color: #777; }
+[data-ui='classic'] [data-slot='badge'][data-tone='primary'] { background-color: #337ab7; }
+[data-ui='classic'] [data-slot='badge'][data-tone='accent'],
+[data-ui='classic'] [data-slot='badge'][data-tone='info'] { background-color: #269abc; }
+[data-ui='classic'] [data-slot='badge'][data-tone='success'] { background-color: #449d44; }
+[data-ui='classic'] [data-slot='badge'][data-tone='warning'] { background-color: #d58512; }
+[data-ui='classic'] [data-slot='badge'][data-tone='danger'] { background-color: #d9534f; }
+[data-ui='classic'] [data-slot='badge'][data-tone='purple'] { background-color: #605ca8; }
+[data-ui='classic'] [data-slot='badge'][data-tone='outline'] {
+  background-color: transparent;
+  color: #777;
+  border: 1px solid #ccc;
+  font-weight: 400;
+}
+
+/* ------------------------------------------------------------------
+   Boxes (AdminLTE's name for a card): a grey rule across the top, a plain
+   header with a normal-weight title, and no icon chip beside it.
+   ------------------------------------------------------------------ */
+[data-ui='classic'] [data-slot='card'] {
+  border-radius: 3px;
+  border-top: 3px solid #d2d6de;
+}
+[data-ui='classic'] [data-slot='card-header'] {
+  padding: 10px 12px;
+  border-bottom-color: #f4f4f4;
+}
+[data-ui='classic'] [data-slot='card-header'] h3 {
+  font-size: 16px;
+  font-weight: 400;
+}
+[data-ui='classic'] [data-slot='card-icon'] { display: none; }
+
+/* ------------------------------------------------------------------
+   Info boxes: the summary cards become a solid coloured block with the icon
+   in it, which is how every dashboard of the period looked.
+   ------------------------------------------------------------------ */
+[data-ui='classic'] [data-slot='kpi'] {
+  padding: 0;
+  gap: 0;
+  align-items: stretch;
+  min-height: 84px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 2px;
+}
+[data-ui='classic'] [data-slot='kpi'] > div { padding: 10px 12px; }
+/* the figure steps down with its length, since the icon block costs width */
+[data-ui='classic'] [data-slot='kpi'] [data-length='short'] { font-size: 19px; }
+[data-ui='classic'] [data-slot='kpi'] [data-length='medium'] { font-size: 16px; }
+[data-ui='classic'] [data-slot='kpi'] [data-length='long'] { font-size: 14px; }
+/* the icon block takes 64px, so a long caption wraps rather than being cut */
+[data-ui='classic'] [data-slot='kpi'] > div > p:first-child {
+  white-space: normal;
+  line-height: 1.35;
+}
+[data-ui='classic'] [data-slot='kpi-icon'] {
+  width: 64px;
+  height: auto;
+  align-self: stretch;
+  border-radius: 0;
+  color: #fff;
+}
+[data-ui='classic'] [data-slot='kpi-icon'] svg { width: 30px; height: 30px; }
+[data-ui='classic'] [data-slot='kpi-icon'][data-accent='primary'] { background-color: #337ab7; }
+[data-ui='classic'] [data-slot='kpi-icon'][data-accent='accent'] { background-color: #269abc; }
+[data-ui='classic'] [data-slot='kpi-icon'][data-accent='success'] { background-color: #449d44; }
+[data-ui='classic'] [data-slot='kpi-icon'][data-accent='warning'] { background-color: #d58512; }
+[data-ui='classic'] [data-slot='kpi-icon'][data-accent='danger'] { background-color: #d9534f; }
+[data-ui='classic'] [data-slot='kpi-icon'][data-accent='purple'] { background-color: #605ca8; }
+[data-ui='classic'] [data-slot='kpi-icon'][data-accent='neutral'] { background-color: #777; }
+
+/* ------------------------------------------------------------------
+   Tabs: Bootstrap's nav-tabs — the active one is a bordered tab that joins the
+   panel beneath it, the others are plain links in the brand blue.
+   ------------------------------------------------------------------ */
+[data-ui='classic'] [data-slot='tabs'] { gap: 2px; border-bottom: 1px solid #ddd; }
+[data-ui='classic'] [data-slot='tab'] {
+  padding: 8px 14px;
+  font-weight: 400;
+  color: #337ab7;
+  border: 1px solid transparent;
+  border-radius: 4px 4px 0 0;
+}
+[data-ui='classic'] [data-slot='tab']:hover { background-color: #eee; border-color: #eee #eee #ddd; }
+[data-ui='classic'] [data-slot='tab'][data-active='true'] {
+  color: #555;
+  background-color: #fff;
+  border-color: #ddd #ddd #fff;
+}
+
+/* ------------------------------------------------------------------
+   Tables: Bootstrap's `table-bordered table-striped` — a rule between every
+   column, a heavier rule under the header, and every other row a shade darker.
+   The stripe is a translucent overlay rather than a colour, so it sits
+   correctly on a pinned cell, a selected row and a tinted warning row alike.
+   ------------------------------------------------------------------ */
+[data-ui='classic'] table th,
+[data-ui='classic'] table td { border-right: 1px solid hsl(var(--border)); }
+[data-ui='classic'] table th:last-child,
+[data-ui='classic'] table td:last-child { border-right: 0; }
+[data-ui='classic'] table thead th { border-bottom-width: 2px; }
+[data-ui='classic'] table th,
+[data-ui='classic'] table th span:not(.sr-only),
+[data-ui='classic'] table th button {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #333;
+}
+[data-ui='classic'] table tbody tr:nth-child(odd) > td {
+  background-image: linear-gradient(hsl(0 0% 0% / 0.025), hsl(0 0% 0% / 0.025));
+}
+
+/* ------------------------------------------------------------------
+   Form controls: Bootstrap's inset shadow and its blue focus glow.
+   ------------------------------------------------------------------ */
+[data-ui='classic'] input,
+[data-ui='classic'] textarea,
+[data-ui='classic'] select {
+  box-shadow: inset 0 1px 1px hsl(0 0% 0% / 0.075);
+}
+[data-ui='classic'] input:focus,
+[data-ui='classic'] textarea:focus,
+[data-ui='classic'] select:focus {
+  border-color: #66afe9;
+  box-shadow: inset 0 1px 1px hsl(0 0% 0% / 0.075), 0 0 8px hsl(206 77% 65% / 0.6);
+}

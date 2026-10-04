@@ -51,6 +51,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
            action button placed in a form never fires the form by accident —
            submit buttons say so explicitly. */
         {...(asChild ? {} : { type: type ?? 'button' })}
+        data-slot="button"
+        data-variant={variant ?? 'secondary'}
         className={cn(buttonVariants({ variant, size }), className)}
         disabled={disabled || loading}
         {...props}

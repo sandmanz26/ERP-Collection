@@ -37,10 +37,12 @@ export function Tabs<T extends string>({
     )
   }
   return (
-    <div className={cn('flex items-center gap-0.5 border-b border-border', className)}>
+    <div data-slot="tabs" className={cn('flex items-center gap-0.5 border-b border-border', className)}>
       {items.map((it) => (
         <button
           key={it.value}
+          data-slot="tab"
+          data-active={value === it.value}
           onClick={() => onChange(it.value)}
           className={cn(
             'relative -mb-px inline-flex items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-[13px] font-medium transition-colors [&_svg]:size-4',
