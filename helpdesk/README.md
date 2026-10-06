@@ -51,7 +51,7 @@ Karyawan                         Teknisi / Admin
 
 ## Data contoh
 
-`src/data/seed.ts` membuat ±200 tiket 90 hari terakhir, 41 aset pabrik (boiler, kompresor, genset, forklift, APAR…), 17 jadwal berkala, ±100 tugas, ±400 reservasi (termasuk pengajuan menunggu, ditolak, penyewa eksternal), dan notifikasi. Waktu dibuat relatif terhadap *sekarang* agar ETA dan jadwal selalu terasa hidup. **Reset data demo** ada di menu akun.
+`src/data/seed.ts` membuat ±218 tiket 90 hari terakhir, 42 aset pabrik (boiler, kompresor, genset, forklift, APAR…), 18 jadwal berkala, ±120 tugas, ±294 reservasi (termasuk pengajuan menunggu, ditolak, penyewa eksternal), dan notifikasi. Waktu dibuat relatif terhadap *sekarang* agar ETA dan jadwal selalu terasa hidup. **Reset data demo** ada di menu akun.
 
 ## Peta kode
 
