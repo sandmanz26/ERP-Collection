@@ -1,6 +1,7 @@
 # Draft Plan — Help Desk & Building Management System
 
-> Status: **DRAFT v0.1** · Branch: `claude/help-desk-system` · Bahasa: Indonesia
+> Status: **DRAFT v0.2** — a clickable front-end prototype now exists in [`/helpdesk`](../helpdesk/README.md)
+> Status (original): **DRAFT v0.1** · Branch: `claude/help-desk-system` · Bahasa: Indonesia
 > Dokumen ini adalah rencana awal untuk didiskusikan, bukan spesifikasi final. Hal yang belum pasti ditandai **[TBD]**.
 
 ---
