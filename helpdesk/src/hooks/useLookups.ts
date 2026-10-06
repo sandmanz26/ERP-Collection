@@ -37,8 +37,7 @@ export function useSpaceLabel() {
       const s = id ? space.get(id) : undefined
       if (!s) return '—'
       const b = building.get(s.buildingId)
-      const fl = s.floor < 0 ? `B${Math.abs(s.floor)}` : `L${s.floor}`
-      return `${s.name} · ${b?.code} ${fl}`
+      return `${s.name} · ${b?.code}`
     },
     [space, building],
   )

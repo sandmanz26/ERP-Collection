@@ -9,54 +9,69 @@ export interface User {
   dept: string
   phone: string
   teamId?: string
-  /** floor the person normally sits on — used to pre-fill location */
+  /** area the person normally works in — pre-fills "lokasi" when reporting */
   homeSpaceId?: string
   vip?: boolean
+  /** hidden from sign-in lists (e.g. anonymous QR reporter) */
+  system?: boolean
 }
 
 export interface Team {
   id: string
   name: string
   description: string
-  /** the queue that new tickets in these categories land in */
-  domain: 'facilities' | 'it' | 'security' | 'workplace'
 }
 
-/* ---------- locations ---------- */
+/* ---------- locations & facilities ---------- */
 
 export interface Building {
   id: string
   name: string
   code: string
-  address: string
-  floors: number
+  description: string
 }
 
-export type SpaceKind = 'meeting' | 'office' | 'common' | 'pantry' | 'technical' | 'lobby' | 'parking' | 'restroom'
+export type SpaceKind =
+  | 'production' | 'warehouse' | 'utility' | 'office' | 'meeting' | 'hall' | 'canteen' | 'field' | 'parking' | 'restroom' | 'common' | 'lab'
+
+export interface Addon {
+  id: string
+  name: string
+  price: number
+  per: 'event' | 'hour' | 'person'
+}
+
+/** Present only on spaces that can be rented / reserved. */
+export interface Rental {
+  /** Rp per hour for external renters; internal departments are free unless set */
+  rateExternal: number
+  rateInternal: number
+  /** internal bookings also wait for approval */
+  needsApproval: boolean
+  openHour: number
+  closeHour: number
+  amenities: string[]
+  addonIds: string[]
+  description?: string
+}
 
 export interface Space {
   id: string
   buildingId: string
-  floor: number
   name: string
   kind: SpaceKind
   capacity: number
-  bookable: boolean
-  amenities: string[]
+  rental?: Rental
 }
 
 /* ---------- catalogue ---------- */
 
 export type Priority = 'p1' | 'p2' | 'p3' | 'p4'
-export type TicketKind = 'incident' | 'request'
 
 export interface Category {
   id: string
   name: string
-  domain: Team['domain']
   teamId: string
-  parentId?: string
-  kind: TicketKind
   defaultPriority: Priority
   icon: string
   description: string
@@ -72,23 +87,24 @@ export interface SlaPolicy {
 
 export interface BusinessHours {
   days: number[] // 0 Sun … 6 Sat
-  startMin: number // minutes from midnight
+  startMin: number
   endMin: number
-  holidays: string[] // yyyy-MM-dd
+  holidays: string[]
 }
 
 /* ---------- tickets ---------- */
 
-export type TicketStatus = 'new' | 'assigned' | 'in_progress' | 'pending' | 'resolved' | 'closed' | 'cancelled'
-export type PendingReason = 'requester' | 'vendor' | 'parts' | 'approval'
-export type Channel = 'portal' | 'email' | 'phone' | 'walk_in' | 'qr' | 'inspection'
+export type TicketStatus = 'new' | 'assigned' | 'in_progress' | 'pending' | 'done' | 'cancelled'
+export type PendingReason = 'parts' | 'vendor' | 'approval' | 'production' | 'requester'
+export type Channel = 'portal' | 'qr' | 'phone' | 'whatsapp' | 'walk_in' | 'inspection'
+export type Impact = 'stop' | 'partial' | 'none'
 
-export type ActivityType = 'created' | 'comment' | 'note' | 'status' | 'assign' | 'priority' | 'workorder' | 'system' | 'csat'
+export type ActivityType = 'created' | 'comment' | 'note' | 'status' | 'assign' | 'priority' | 'eta' | 'task' | 'system' | 'rating'
 
 export interface Activity {
   id: string
   at: string
-  actorId: string | null // null = system
+  actorId: string | null
   type: ActivityType
   body?: string
   from?: string
@@ -100,38 +116,42 @@ export interface Ticket {
   number: string
   title: string
   description: string
-  kind: TicketKind
   categoryId: string
   priority: Priority
   status: TicketStatus
   pendingReason?: PendingReason
   requesterId: string
+  /** for anonymous reports from a QR code */
+  reporterName?: string
+  reporterPhone?: string
   assigneeId?: string
   teamId: string
   spaceId?: string
   assetId?: string
   channel: Channel
+  impact?: Impact
+  hazard?: boolean
   createdAt: string
   updatedAt: string
+  /** technician's promised finish time — the number the requester actually cares about */
+  etaAt?: string
   firstResponseAt?: string
   resolvedAt?: string
-  closedAt?: string
-  /** SLA clock stops while pending */
+  confirmedAt?: string
   pausedAt?: string
   pausedMs: number
   dueResponseAt: string
   dueResolveAt: string
   tags: string[]
-  workOrderIds: string[]
+  taskIds: string[]
   attachments?: string[]
-  csat?: { score: number; comment?: string; at: string }
+  rating?: { score: number; comment?: string; at: string }
   resolutionNote?: string
   activity: Activity[]
-  /** unread by the requester */
   unreadForRequester?: boolean
 }
 
-/* ---------- assets, work, PM ---------- */
+/* ---------- assets & maintenance ---------- */
 
 export type AssetStatus = 'operational' | 'degraded' | 'down' | 'retired'
 export type Criticality = 'low' | 'medium' | 'high' | 'critical'
@@ -161,8 +181,8 @@ export interface Asset {
   notes?: string
 }
 
-export type WorkOrderType = 'corrective' | 'preventive' | 'inspection'
-export type WorkOrderStatus = 'open' | 'scheduled' | 'in_progress' | 'on_hold' | 'completed' | 'cancelled'
+export type TaskType = 'corrective' | 'preventive' | 'inspection'
+export type TaskStatus = 'open' | 'scheduled' | 'in_progress' | 'on_hold' | 'completed' | 'cancelled'
 
 export interface ChecklistItem {
   id: string
@@ -171,13 +191,14 @@ export interface ChecklistItem {
   note?: string
 }
 
-export interface WorkOrder {
+/** A maintenance task ("work order"): scheduled preventive job, inspection round, or planned repair. */
+export interface Task {
   id: string
   number: string
   title: string
   description?: string
-  type: WorkOrderType
-  status: WorkOrderStatus
+  type: TaskType
+  status: TaskStatus
   priority: Priority
   assetId?: string
   spaceId?: string
@@ -187,6 +208,7 @@ export interface WorkOrder {
   vendorId?: string
   createdAt: string
   scheduledFor?: string
+  /** target selesai / ETA */
   dueAt: string
   startedAt?: string
   completedAt?: string
@@ -197,23 +219,24 @@ export interface WorkOrder {
   completionNote?: string
 }
 
-export type PmFrequency = 'weekly' | 'monthly' | 'quarterly' | 'semiannual' | 'annual'
+export type PmFrequency = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'semiannual' | 'annual'
 
 export interface PmSchedule {
   id: string
   name: string
-  assetId: string
+  assetId?: string
+  spaceId?: string
   frequency: PmFrequency
   nextDueAt: string
   lastDoneAt?: string
   checklist: string[]
   teamId: string
+  assigneeId?: string
   vendorId?: string
   active: boolean
   estMinutes: number
+  notes?: string
 }
-
-/* ---------- vendors ---------- */
 
 export interface Vendor {
   id: string
@@ -222,65 +245,36 @@ export interface Vendor {
   contact: string
   phone: string
   email: string
-  rating: number
-  responseHours: number
 }
 
-export interface Contract {
-  id: string
-  vendorId: string
-  title: string
-  startsAt: string
-  endsAt: string
-  annualValue: number
-  scope: string
-  autoRenew: boolean
-}
+/* ---------- rental ---------- */
 
-/* ---------- workplace ---------- */
+export type BookingStatus = 'pending' | 'approved' | 'rejected' | 'cancelled'
 
 export interface Booking {
   id: string
+  number: string
   spaceId: string
+  /** 'block' = closed for maintenance / internal use, not a rental */
+  kind: 'booking' | 'block'
+  /** who entered it */
   userId: string
+  renterType: 'internal' | 'external'
+  renterName: string
+  company?: string
+  phone?: string
   title: string
   start: string
   end: string
   attendees: number
-  status: 'confirmed' | 'cancelled'
-  catering?: boolean
-}
-
-export type VisitorStatus = 'expected' | 'checked_in' | 'checked_out' | 'cancelled' | 'no_show'
-
-export interface Visitor {
-  id: string
-  name: string
-  company: string
-  email: string
-  hostId: string
-  purpose: string
-  expectedAt: string
-  status: VisitorStatus
-  checkedInAt?: string
-  checkedOutAt?: string
-  passCode: string
-  vehicle?: string
-  ndaSigned?: boolean
-}
-
-export interface KbArticle {
-  id: string
-  title: string
-  categoryId: string
-  summary: string
-  body: string[] // paragraphs; lines starting with "- " render as bullets, "## " as a heading
-  views: number
-  helpful: number
-  notHelpful: number
-  updatedAt: string
-  authorId: string
-  audience: 'everyone' | 'staff'
+  addonIds: string[]
+  fee: number
+  status: BookingStatus
+  note?: string
+  createdAt: string
+  decidedBy?: string
+  decidedAt?: string
+  rejectReason?: string
 }
 
 export interface Notification {
@@ -305,5 +299,4 @@ export interface Announcement {
   body: string
   tone: 'info' | 'warning'
   at: string
-  buildingId?: string
 }

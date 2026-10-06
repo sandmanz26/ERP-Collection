@@ -20,7 +20,7 @@ export function Notifications() {
   return (
     <P.Root>
       <P.Trigger asChild>
-        <Button variant="ghost" size="icon" aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'} className="relative">
+        <Button variant="ghost" size="icon" aria-label={unread ? `Notifikasi, ${unread} belum dibaca` : 'Notifikasi'} className="relative">
           <Bell />
           {unread > 0 && (
             <span className="absolute right-1.5 top-1.5 grid min-w-4 place-items-center rounded-full bg-danger px-1 text-[10px] font-bold leading-4 text-white ring-2 ring-surface">{unread}</span>
@@ -30,14 +30,14 @@ export function Notifications() {
       <P.Portal>
         <P.Content align="end" sideOffset={8} className="z-[70] w-[min(380px,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-border bg-surface-raised shadow-pop animate-pop-in">
           <div className="flex items-center justify-between border-b border-border px-3.5 py-2.5">
-            <p className="text-[13px] font-semibold">Notifications</p>
+            <p className="text-[13px] font-semibold">Notifikasi</p>
             <Button variant="ghost" size="xs" onClick={() => markAll(me.id)} disabled={!unread}>
-              <CheckCheck /> Mark all read
+              <CheckCheck /> Tandai dibaca
             </Button>
           </div>
           <div className="scrollbar-thin max-h-[420px] overflow-y-auto">
             {mine.length === 0 ? (
-              <EmptyState icon={<Bell />} title="You are all caught up" description="Updates on your requests will show up here." className="py-10" />
+              <EmptyState icon={<Bell />} title="Tidak ada notifikasi" description="Kabar terbaru laporan dan reservasi Anda muncul di sini." className="py-10" />
             ) : (
               mine.slice(0, 20).map((n) => (
                 <button

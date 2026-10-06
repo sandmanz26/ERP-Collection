@@ -1,6 +1,15 @@
-# Atrium — Help Desk & Building Management
+# Atrium — Fasilitas & Maintenance Pabrik
 
-A front-end-only prototype for a company help desk joined to building management. Everything is mock data held in the browser (Zustand + `localStorage`) — there is no backend. It is built to be clicked through like the real thing: tickets move through a lifecycle, SLA clocks run and pause, work orders roll up cost, rooms cannot be double-booked.
+Prototipe **front-end saja** (tanpa backend, semua data contoh disimpan di browser) untuk kebutuhan klien pabrik:
+
+| # | Kebutuhan klien | Di mana |
+|---|---|---|
+| 1 | Kelola **penyewaan** ruang meeting dan fasilitas lain | **Reservasi & sewa** — jadwal per hari/bulan, persetujuan, penyewa internal/eksternal, tarif, tambahan, bukti reservasi |
+| 2 | Masalah **fasilitas pabrik** | **Lapor masalah** (1 halaman), **Lapor cepat via QR tanpa login**, dampak ke produksi + penanda K3 |
+| 3 | **Tiket** sederhana | **Tiket** — daftar + **papan kanban** (tarik untuk ubah status) |
+| 4 | **Aset** sederhana + info maintenance | **Aset** — tambah/ubah, **impor Excel/CSV**, kartu "servis terakhir / berikutnya / garansi / biaya", label QR |
+| 5 | **Jadwal building maintenance** | **Jadwal maintenance** — buat jadwal (per aset atau per area), daftar terlambat→nanti, **kalender bulan**, **"Sudah dikerjakan"** satu langkah |
+| 6 | **Assign, ETA, status** | Panel **Teknisi · Estimasi selesai · Status** di setiap tiket dan tugas, bisa diubah dari daftar, papan, dan beranda |
 
 ```bash
 cd helpdesk
@@ -9,79 +18,55 @@ npm run dev      # http://localhost:5173
 npm run build
 ```
 
-Sign in as any of three personas (or any of the 21 seeded people). Switch persona from the avatar menu at any time. **Reset demo data** lives in the same menu.
+Masuk sebagai **Anisa** (Karyawan), **Budi** (Teknisi) atau **Rina** (Admin) — ganti kapan saja dari menu akun. Lihat `docs/ROAST-v1.md` untuk kritik terhadap versi pertama yang melatarbelakangi desain ini.
 
-| Persona | Sees | Try this |
-|---|---|---|
-| **Anisa Putri** — Employee | Portal: search-first home, My requests, Book a room, Visitors, Help articles | Raise “Plumbing — leak”, then confirm + rate a *Resolved* ticket (HD-1194) |
-| **Budi Santoso** — Agent | Queue, work orders, assets, preventive maintenance, spaces | Open the P1 chiller incident; run a work order checklist; log time and parts |
-| **Rina Kusuma** — Manager | All of the above + vendors & contracts, reports, settings | Operations overview, SLA by priority, contract expiry, maintenance spend |
+## Cara kerja inti
 
-## Product decisions worth knowing
+**Satu panel untuk tiga pertanyaan.** Semua orang bertanya *siapa yang pegang, kapan selesai, sekarang statusnya apa*. Di halaman tiket ketiganya berdampingan di atas percakapan. Karyawan melihatnya (read-only), teknisi/admin bisa mengubah masing-masing satu klik:
 
-**Two products in one shell, shaped by role.** Employees get a calm, search-first portal; staff get a dense work surface. Same data, same routes, different defaults — the sidebar, the home page and the ticket page all change with role. Staff-only routes bounce employees home rather than showing a dead end.
+- **Tugaskan** → pilih teknisi (disarankan: tim terkait, urutkan yang paling sedikit beban) + estimasi selesai sekaligus.
+- **ETA** → pilihan cepat (+1 jam, besok 10:00, …) atau pilih sendiri. Mengubah ETA yang sudah ada meminta alasan, dan pelapor diberi tahu. ETA yang lewat ditandai merah; tugas tanpa ETA ditandai kuning.
+- **Status** → Baru → Ditugaskan → Dikerjakan → Menunggu → Selesai. "Mulai kerja" menanyakan ETA, "Tunda" menanyakan apa yang ditunggu (sparepart/vendor/persetujuan/area dikosongkan), "Selesai" meminta catatan apa yang dikerjakan.
 
-**Tickets and work orders are separate on purpose** (ITSM + CMMS practice). A ticket is the *conversation and SLA* with a requester; a work order is the *job* — checklist, time, parts, vendor, cost — against an asset. One ticket can spawn many work orders; preventive jobs have no ticket at all. Completing a work order flags its ticket as ready to resolve; completing a preventive one schedules the next.
+**Tiket vs tugas maintenance.** Tiket = laporan dan janji ke pelapor. Tugas (work order) = pekerjaan berchecklist dengan waktu, material, dan biaya; berasal dari jadwal berkala atau dibuat dari tiket. Teknisi yang hanya ingin menandai "sudah dikerjakan" tidak perlu membuka tugas.
 
-**SLA is real, not decorative.**
-- Targets per priority with a 24×7 calendar for Critical and business hours (Mon–Fri 08:00–17:00 WIB) for the rest — `src/lib/sla.ts`.
-- The clock **pauses** while a ticket is *Pending* (waiting on requester / vendor / parts / approval) and resumes when they reply or the agent resumes.
-- States shown with words *and* icons, never colour alone: on track · at risk (<30 min or >75% used) · breached · paused · met · missed.
-- Default queue order is “what will breach first”.
-- Reported times (first response, time-to-resolve) count only working hours, so a Friday-evening ticket does not make Monday look slow.
+**Penyewaan.** Fasilitas bertanda "bisa disewa" (di Pengaturan) punya jam buka, tarif karyawan dan pihak luar, tambahan (proyektor, snack, kursi, lampu lapangan), dan aturan persetujuan. Karyawan memesan ruang kecil langsung; aula, rapat direksi dan semua penyewa eksternal masuk status *Menunggu* dan **menahan slot** sampai admin menyetujui atau menolak (dengan alasan). Bentrok dicegah secara langsung, biaya dihitung otomatis, admin bisa menutup fasilitas untuk maintenance.
 
-**Reduce tickets before they exist.** The request form suggests knowledge-base articles as you type a title, the home search shows answers before offering “raise a request”, and every article ends in “Did this solve it? → No → raise a request” pre-filled.
+**Lapor tanpa login.** `/lapor-cepat?aset=<id>` adalah yang dibuka stiker QR pada mesin: lokasi dan jenis masalah terisi dari aset, pelapor cukup isi nama dan judul. Form juga memperingatkan jika sudah ada laporan terbuka untuk aset/area yang sama.
 
-**Asks the employee a human question, not a field.** Priority is chosen by *impact* (“a team cannot work”, “safety risk”) rather than a P1–P4 dropdown; staff see the resulting priority and the SLA it implies. A Critical choice shows a call-Security-first banner.
-
-**Don't make people chase.** Status shows a four-step progress bar, “waiting on you” items float to the top of the home page, a reply from the requester on a pending ticket resumes the clock, and a reply on a resolved ticket reopens it. Resolved tickets ask “is this fixed?” with a one-click yes + optional 5-star rating.
-
-**Physical-world hooks.** Each asset has a printable QR label; scanning opens the request form with the asset and its floor filled in (use *Simulate a scan* in the asset's QR dialog). Rooms show a day grid with live free-time, conflicts are prevented (including gaps that are not long enough for the chosen length), and visitors get a QR pass, a pass code, host notification on check-in and a printable badge.
-
-**Safe operations.** Destructive or irreversible steps ask for a reason (cancel, reopen, resolve), bulk actions work from a sticky toolbar, filters are URL-addressable where it matters (`/tickets?view=unassigned`), and everything can be reached from the ⌘K palette.
-
-## Information architecture
+## Peta halaman
 
 ```
-Employee                         Staff (agent / manager)
-────────                         ───────────────────────
-/             Home               /               Dashboard (agent: my day · manager: operations overview)
-/new          New request        /tickets        Queue (views, filters, sort, bulk, export)
-/requests     My requests        /tickets/:id    Conversation · SLA · assign · priority · work orders
-/tickets/:id  Request detail     /work-orders    List / board · /work-orders/:id · /work-orders/new
-/rooms        Book a room        /assets         Register · /assets/:id history, cost, QR, status
-/visitors     Invite & passes    /maintenance    PM schedule + 4-week calendar, generate jobs
-/help         Articles           /spaces         Stacking view: floors → rooms → open tickets
-                                 /rooms          Booking grid (all bookings visible)
-                                 /visitors       Reception: check-in / check-out
-                                 /help           Knowledge base (+ staff-only articles, authoring)
-                                 /vendors        Contracts, expiry, vendor scorecards      (manager)
-                                 /reports        SLA, volume, CSAT, spend, repeat assets   (manager)
-                                 /settings       SLA, routing, teams, canned replies       (manager)
+Karyawan                         Teknisi / Admin
+/            Beranda             /               Beranda (teknisi: tugas hari ini · admin: ringkasan)
+/lapor       Lapor masalah       /tiket          Daftar + papan, tab: tugas saya / belum ditugaskan / perlu perhatian
+/laporan-saya                    /tiket/:id      Penanganan · percakapan · detail
+/tiket/:id   Detail + ETA        /jadwal         Daftar · kalender bulan · semua tugas
+/reservasi   Jadwal · pengajuan  /tugas/:id      Checklist, waktu, material, biaya
+             · fasilitas & tarif /aset  /aset/:id  Daftar, impor, kartu maintenance, jadwal, riwayat
+/lapor-cepat (tanpa login)       /reservasi      + persetujuan, tutup fasilitas, ekspor
+                                 /laporan        (admin) kinerja, biaya, pemakaian fasilitas
+                                 /pengaturan     (admin) lokasi & tarif, kategori, pengguna, vendor, target waktu
 ```
 
-## What is mock data
+## Data contoh
 
-`src/data/seed.ts` generates ~207 tickets over 90 days (with realistic status ageing, pauses, first-response lag and CSAT), 41 assets, ~86 work orders, 15 preventive schedules, ~540 room bookings, 14 visitors, 15 articles and notifications. A seeded RNG keeps the story identical on every load, while timestamps are relative to *now* so SLA timers are live. A handful of hand-written stories (a P1 chiller trip, a leak, a stuck lift awaiting a vendor, an expired housekeeping contract) make the demo legible.
+`src/data/seed.ts` membuat ±200 tiket 90 hari terakhir, 41 aset pabrik (boiler, kompresor, genset, forklift, APAR…), 17 jadwal berkala, ±100 tugas, ±400 reservasi (termasuk pengajuan menunggu, ditolak, penyewa eksternal), dan notifikasi. Waktu dibuat relatif terhadap *sekarang* agar ETA dan jadwal selalu terasa hidup. **Reset data demo** ada di menu akun.
 
-Simulated: email delivery, QR scanning, printing, file uploads (names only), SSO.
-
-## Code map
+## Peta kode
 
 ```
-src/data/        types, reference data, assets, KB, seed generator
-src/store/       one persisted Zustand store with all domain actions
-src/lib/         sla.ts (clock, calendars), metrics.ts, pm.ts, labels, format
-src/components/  ui/ (design-system primitives), layout/, shared/, charts/
-src/pages/       auth, dashboard, tickets, work, assets, workplace, help, manage
+src/data/        types, referensi (lokasi, fasilitas, kategori, vendor), aset, generator seed
+src/store/       satu Zustand store dengan semua aksi domain (createTicket, setEta, requestBooking, …)
+src/lib/         sla (jam kerja, jeda), rental (hitung biaya), metrics, labels (Indonesia), format
+src/components/  ui/ layout/ shared/ (ETA, badge, rating) tickets/ (TicketFlow) charts/
+src/pages/       auth, dashboard, tickets, assets (+ jadwal, tugas), rental, manage
 ```
 
-The store exposes domain actions (`createTicket`, `setStatus`, `comment`, `createBooking`, …) and no component mutates state directly, so swapping the store for an API client later is a mechanical change.
+## Langkah menuju produksi
 
-## Next steps toward production
-
-1. API + Postgres behind the same action names; server-side SLA timers and business-hours calendars with holidays.
-2. SSO (OIDC), real role/permission checks and an audit log.
-3. Email-to-ticket and Teams/WhatsApp notifications; attachments in object storage.
-4. IoT/BMS alarms creating tickets automatically; meter readings for energy.
-5. Locale (ID/EN), time zones per building, accessibility audit with assistive-tech testing.
+1. API + database dengan nama aksi yang sama; pengatur waktu SLA di server dan kalender hari libur.
+2. SSO dan hak akses per peran; log audit.
+3. Notifikasi WhatsApp/email (ETA berubah, persetujuan reservasi, jadwal jatuh tempo).
+4. Foto/lampiran sungguhan; QR sungguhan (kode di label mengarah ke `/lapor-cepat?aset=`).
+5. Invoice penyewaan dan integrasi keuangan; reservasi berulang.

@@ -11,3 +11,27 @@ export function downloadCsv(name: string, rows: (string | number | undefined | n
   a.click()
   URL.revokeObjectURL(url)
 }
+
+/** Parse CSV / TSV / semicolon text (Excel paste works) into rows. Handles quoted cells. */
+export function parseTable(text: string): string[][] {
+  const clean = text.replace(/^﻿/, '').replace(/\r/g, '')
+  const firstLine = clean.split('\n')[0] ?? ''
+  const delim = [',', ';', '\t'].map((d) => ({ d, n: firstLine.split(d).length })).sort((a, b) => b.n - a.n)[0].d
+  const rows: string[][] = []
+  let row: string[] = []
+  let cell = ''
+  let q = false
+  for (let i = 0; i < clean.length; i++) {
+    const c = clean[i]
+    if (q) {
+      if (c === '"' && clean[i + 1] === '"') { cell += '"'; i++ }
+      else if (c === '"') q = false
+      else cell += c
+    } else if (c === '"') q = true
+    else if (c === delim) { row.push(cell.trim()); cell = '' }
+    else if (c === '\n') { row.push(cell.trim()); rows.push(row); row = []; cell = '' }
+    else cell += c
+  }
+  if (cell.length || row.length) { row.push(cell.trim()); rows.push(row) }
+  return rows.filter((r) => r.some((c) => c !== ''))
+}

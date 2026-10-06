@@ -1,69 +1,86 @@
-import type { AssetStatus, Channel, Criticality, PendingReason, Priority, TicketStatus, VisitorStatus, WorkOrderStatus, WorkOrderType } from '@/data/types'
+import type { AssetStatus, Channel, Criticality, Impact, PendingReason, PmFrequency, Priority, SpaceKind, TaskStatus, TaskType, TicketStatus, BookingStatus } from '@/data/types'
 import type { BadgeTone } from '@/components/ui/badge'
 
 export const PRIORITY: Record<Priority, { label: string; short: string; tone: BadgeTone; rank: number; hint: string }> = {
-  p1: { label: 'Critical', short: 'P1', tone: 'danger', rank: 1, hint: 'Safety risk or a whole floor/service down' },
-  p2: { label: 'High', short: 'P2', tone: 'warning', rank: 2, hint: 'A team cannot work, or a key facility is unavailable' },
-  p3: { label: 'Medium', short: 'P3', tone: 'info', rank: 3, hint: 'Individual impact, workaround exists' },
-  p4: { label: 'Low', short: 'P4', tone: 'neutral', rank: 4, hint: 'Question, request or cosmetic issue' },
+  p1: { label: 'Darurat', short: 'P1', tone: 'danger', rank: 1, hint: 'Membahayakan orang atau menghentikan produksi' },
+  p2: { label: 'Tinggi', short: 'P2', tone: 'warning', rank: 2, hint: 'Produksi terganggu sebagian atau fasilitas penting mati' },
+  p3: { label: 'Sedang', short: 'P3', tone: 'info', rank: 3, hint: 'Mengganggu tapi masih ada jalan lain' },
+  p4: { label: 'Rendah', short: 'P4', tone: 'neutral', rank: 4, hint: 'Permintaan biasa atau perbaikan kosmetik' },
 }
 
-export const STATUS: Record<TicketStatus, { label: string; tone: BadgeTone; open: boolean }> = {
-  new: { label: 'New', tone: 'primary', open: true },
-  assigned: { label: 'Assigned', tone: 'info', open: true },
-  in_progress: { label: 'In progress', tone: 'accent', open: true },
-  pending: { label: 'Pending', tone: 'warning', open: true },
-  resolved: { label: 'Resolved', tone: 'success', open: false },
-  closed: { label: 'Closed', tone: 'neutral', open: false },
-  cancelled: { label: 'Cancelled', tone: 'outline', open: false },
+export const STATUS: Record<TicketStatus, { label: string; tone: BadgeTone; open: boolean; hint: string }> = {
+  new: { label: 'Baru', tone: 'primary', open: true, hint: 'Belum ada yang menangani' },
+  assigned: { label: 'Ditugaskan', tone: 'info', open: true, hint: 'Sudah ada teknisi, belum mulai' },
+  in_progress: { label: 'Dikerjakan', tone: 'accent', open: true, hint: 'Sedang ditangani' },
+  pending: { label: 'Menunggu', tone: 'warning', open: true, hint: 'Menunggu sparepart, vendor, atau akses' },
+  done: { label: 'Selesai', tone: 'success', open: false, hint: 'Pekerjaan selesai' },
+  cancelled: { label: 'Dibatalkan', tone: 'outline', open: false, hint: 'Dibatalkan' },
 }
 
-export const STATUS_ORDER: TicketStatus[] = ['new', 'assigned', 'in_progress', 'pending', 'resolved', 'closed', 'cancelled']
+export const STATUS_ORDER: TicketStatus[] = ['new', 'assigned', 'in_progress', 'pending', 'done', 'cancelled']
+export const BOARD_COLUMNS: TicketStatus[] = ['new', 'assigned', 'in_progress', 'pending', 'done']
 
 export const PENDING_LABEL: Record<PendingReason, string> = {
-  requester: 'Waiting on requester',
-  vendor: 'Waiting on vendor',
-  parts: 'Waiting on parts',
-  approval: 'Waiting on approval',
+  parts: 'Menunggu sparepart',
+  vendor: 'Menunggu vendor',
+  approval: 'Menunggu persetujuan',
+  production: 'Menunggu area dikosongkan',
+  requester: 'Menunggu pelapor',
 }
 
 export const CHANNEL_LABEL: Record<Channel, string> = {
-  portal: 'Portal', email: 'Email', phone: 'Phone', walk_in: 'Walk-in', qr: 'QR scan', inspection: 'Inspection',
+  portal: 'Aplikasi', qr: 'Scan QR', phone: 'Telepon', whatsapp: 'WhatsApp', walk_in: 'Datang langsung', inspection: 'Inspeksi',
 }
 
-export const WO_STATUS: Record<WorkOrderStatus, { label: string; tone: BadgeTone }> = {
-  open: { label: 'Open', tone: 'primary' },
-  scheduled: { label: 'Scheduled', tone: 'info' },
-  in_progress: { label: 'In progress', tone: 'accent' },
-  on_hold: { label: 'On hold', tone: 'warning' },
-  completed: { label: 'Completed', tone: 'success' },
-  cancelled: { label: 'Cancelled', tone: 'outline' },
+export const IMPACT: Record<Impact, { label: string; hint: string; priority: Priority }> = {
+  stop: { label: 'Produksi / operasional berhenti', hint: 'Mesin, line, atau fasilitas penting mati total', priority: 'p1' },
+  partial: { label: 'Terganggu sebagian', hint: 'Masih jalan tapi lambat, atau sebagian area terdampak', priority: 'p2' },
+  none: { label: 'Tidak mengganggu operasional', hint: 'Bisa menunggu beberapa hari', priority: 'p3' },
 }
 
-export const WO_TYPE: Record<WorkOrderType, { label: string; tone: BadgeTone }> = {
-  corrective: { label: 'Corrective', tone: 'danger' },
-  preventive: { label: 'Preventive', tone: 'success' },
-  inspection: { label: 'Inspection', tone: 'purple' },
+export const TASK_STATUS: Record<TaskStatus, { label: string; tone: BadgeTone }> = {
+  open: { label: 'Baru', tone: 'primary' },
+  scheduled: { label: 'Terjadwal', tone: 'info' },
+  in_progress: { label: 'Dikerjakan', tone: 'accent' },
+  on_hold: { label: 'Ditunda', tone: 'warning' },
+  completed: { label: 'Selesai', tone: 'success' },
+  cancelled: { label: 'Dibatalkan', tone: 'outline' },
+}
+
+export const TASK_TYPE: Record<TaskType, { label: string; tone: BadgeTone }> = {
+  corrective: { label: 'Perbaikan', tone: 'danger' },
+  preventive: { label: 'Berkala', tone: 'success' },
+  inspection: { label: 'Inspeksi', tone: 'purple' },
 }
 
 export const ASSET_STATUS: Record<AssetStatus, { label: string; tone: BadgeTone }> = {
-  operational: { label: 'Operational', tone: 'success' },
-  degraded: { label: 'Degraded', tone: 'warning' },
-  down: { label: 'Down', tone: 'danger' },
-  retired: { label: 'Retired', tone: 'neutral' },
+  operational: { label: 'Normal', tone: 'success' },
+  degraded: { label: 'Terganggu', tone: 'warning' },
+  down: { label: 'Rusak', tone: 'danger' },
+  retired: { label: 'Nonaktif', tone: 'neutral' },
 }
 
 export const CRITICALITY: Record<Criticality, { label: string; tone: BadgeTone }> = {
-  low: { label: 'Low', tone: 'neutral' },
-  medium: { label: 'Medium', tone: 'info' },
-  high: { label: 'High', tone: 'warning' },
-  critical: { label: 'Critical', tone: 'danger' },
+  low: { label: 'Rendah', tone: 'neutral' },
+  medium: { label: 'Sedang', tone: 'info' },
+  high: { label: 'Tinggi', tone: 'warning' },
+  critical: { label: 'Kritis', tone: 'danger' },
 }
 
-export const VISITOR_STATUS: Record<VisitorStatus, { label: string; tone: BadgeTone }> = {
-  expected: { label: 'Expected', tone: 'info' },
-  checked_in: { label: 'On site', tone: 'success' },
-  checked_out: { label: 'Left', tone: 'neutral' },
-  cancelled: { label: 'Cancelled', tone: 'outline' },
-  no_show: { label: 'No show', tone: 'warning' },
+export const FREQ_LABEL: Record<PmFrequency, string> = {
+  daily: 'Harian', weekly: 'Mingguan', monthly: 'Bulanan', quarterly: '3 bulanan', semiannual: '6 bulanan', annual: 'Tahunan',
 }
+
+export const BOOKING_STATUS: Record<BookingStatus, { label: string; tone: BadgeTone }> = {
+  pending: { label: 'Menunggu persetujuan', tone: 'warning' },
+  approved: { label: 'Disetujui', tone: 'success' },
+  rejected: { label: 'Ditolak', tone: 'danger' },
+  cancelled: { label: 'Dibatalkan', tone: 'outline' },
+}
+
+export const SPACE_KIND: Record<SpaceKind, string> = {
+  production: 'Area produksi', warehouse: 'Gudang', utility: 'Utilitas', office: 'Kantor', meeting: 'Ruang meeting', hall: 'Aula', canteen: 'Kantin', field: 'Lapangan',
+  parking: 'Parkir', restroom: 'Toilet', common: 'Umum', lab: 'Laboratorium',
+}
+
+export const ROLE_LABEL = { requester: 'Karyawan', agent: 'Teknisi', manager: 'Admin' } as const

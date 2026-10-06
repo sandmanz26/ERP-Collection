@@ -1,66 +1,51 @@
 import * as React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import {
-  AlertTriangle, ArrowRight, BookOpen, CalendarClock, CalendarDays, CheckCircle2, Clock, Contact, Flame, Inbox, MessageSquareReply, PlusCircle, Search, Wrench, ShieldAlert, Boxes,
-} from 'lucide-react'
-import { Card, CardBody, CardHeader } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { AlertTriangle, ArrowRight, CalendarCheck, CalendarClock, Check, CheckCheck, CheckCircle2, Clock, Flame, Inbox, MessageSquareReply, PlusCircle, QrCode, UserCheck, Wrench, Boxes } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardBody, CardHeader } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/misc'
 import { KpiCard } from '@/components/shared/PageHeader'
-import { PriorityBadge, SlaChip, StatusBadge, WoStatusBadge } from '@/components/shared/badges'
-import { BarChart, HBars, Spark } from '@/components/charts/charts'
-import { useMe, useStore } from '@/store/useStore'
+import { PriorityBadge, StatusBadge, UserChip } from '@/components/shared/badges'
+import { EtaChip, EtaDialog } from '@/components/shared/Eta'
+import { BarChart } from '@/components/charts/charts'
+import { useTicketFlow } from '@/components/tickets/TicketFlow'
+import { QuickActions, needsAttention } from '@/pages/tickets/TicketsPage'
+import { useCompleteSchedule } from '@/pages/assets/forms'
 import { useLookups, useSpaceLabel } from '@/hooks/useLookups'
 import { useNow } from '@/hooks/useNow'
-import { avgFirstResponseMs, csat, dailyFlow, DAY, slaCompliance } from '@/lib/metrics'
-import { fmtAgo, fmtDuration, fmtSmart, pct } from '@/lib/format'
-import { isOpenStatus, worstSla } from '@/lib/sla'
-import type { Ticket } from '@/data/types'
+import { useMe, useStore } from '@/store/useStore'
+import { dailyFlow } from '@/lib/metrics'
+import { fmtAgo, fmtDate, fmtSmart, format } from '@/lib/format'
+import { BOOKING_STATUS } from '@/lib/labels'
+import { isOpenStatus } from '@/lib/sla'
 import { cn } from '@/lib/utils'
+import { useToast } from '@/components/ui/toast'
+import type { Ticket } from '@/data/types'
 
-const greeting = () => {
-  const h = new Date().getHours()
-  return h < 11 ? 'Good morning' : h < 15 ? 'Good afternoon' : h < 19 ? 'Good evening' : 'Hello'
-}
+const greeting = () => { const h = new Date().getHours(); return h < 11 ? 'Selamat pagi' : h < 15 ? 'Selamat siang' : h < 18 ? 'Selamat sore' : 'Selamat malam' }
 
 export function DashboardPage() {
   const me = useMe()!
-  return me.role === 'requester' ? <EmployeeHome /> : <StaffDashboard />
+  return me.role === 'requester' ? <EmployeeHome /> : me.role === 'agent' ? <TechnicianHome /> : <AdminHome />
 }
 
-/* ------------------------------------------------------------------ employee */
+/* ------------------------------------------------------------------ karyawan */
 
 function EmployeeHome() {
   const me = useMe()!
   const nav = useNavigate()
   const tickets = useStore((s) => s.tickets)
-  const kb = useStore((s) => s.kb)
   const bookings = useStore((s) => s.bookings)
-  const visitors = useStore((s) => s.visitors)
   const announcements = useStore((s) => s.announcements)
   const { space } = useLookups()
-  const [q, setQ] = React.useState('')
-
+  const spaceLabel = useSpaceLabel()
   const mine = React.useMemo(() => tickets.filter((t) => t.requesterId === me.id).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)), [tickets, me.id])
-  const open = mine.filter((t) => isOpenStatus(t.status) || t.status === 'resolved')
-  const attention = mine.filter((t) => t.status === 'resolved' || (t.status === 'pending' && t.pendingReason === 'requester'))
-  const today = new Date().toDateString()
-  const myBookings = bookings.filter((b) => b.userId === me.id && b.status === 'confirmed' && new Date(b.end) > new Date()).sort((a, b) => a.start.localeCompare(b.start)).slice(0, 3)
-  const myVisitors = visitors.filter((v) => v.hostId === me.id && (v.status === 'expected' || v.status === 'checked_in') && new Date(v.expectedAt).toDateString() >= today).slice(0, 3)
-  const suggestions = React.useMemo(() => {
-    const s = q.trim().toLowerCase()
-    if (s.length < 2) return []
-    return kb.filter((a) => a.audience === 'everyone' && (a.title.toLowerCase().includes(s) || a.summary.toLowerCase().includes(s))).slice(0, 4)
-  }, [q, kb])
-  const popular = [...kb].filter((a) => a.audience === 'everyone').sort((a, b) => b.views - a.views).slice(0, 5)
-
-  const actions = [
-    { to: '/new?type=incident', icon: <ShieldAlert />, title: 'Report a problem', sub: 'Something is broken or unsafe', tone: 'bg-danger-soft text-danger-soft-fg' },
-    { to: '/new?type=request', icon: <PlusCircle />, title: 'Request a service', sub: 'Equipment, access, catering…', tone: 'bg-primary-soft text-primary-soft-fg' },
-    { to: '/rooms', icon: <CalendarDays />, title: 'Book a room', sub: 'Find a free meeting space', tone: 'bg-info-soft text-info-soft-fg' },
-    { to: '/visitors?invite=1', icon: <Contact />, title: 'Invite a visitor', sub: 'Pre-register a guest', tone: 'bg-accent-soft text-accent-soft-fg' },
-  ]
+  const active = mine.filter((t) => isOpenStatus(t.status))
+  const confirm = mine.filter((t) => t.status === 'done' && !t.confirmedAt)
+  const waitingMe = mine.filter((t) => t.status === 'pending' && t.pendingReason === 'requester')
+  const myBookings = bookings.filter((b) => b.userId === me.id && b.kind === 'booking' && (b.status === 'approved' || b.status === 'pending') && new Date(b.end) > new Date()).sort((a, b) => a.start.localeCompare(b.start)).slice(0, 4)
+  const incidents = tickets.filter((t) => isOpenStatus(t.status) && (t.priority === 'p1' || t.priority === 'p2') && t.requesterId !== me.id).sort((a, b) => a.priority.localeCompare(b.priority)).slice(0, 3)
 
   return (
     <div className="space-y-6">
@@ -68,320 +53,203 @@ function EmployeeHome() {
         <div className="surface-grid pointer-events-none absolute inset-0 opacity-30 [mask-image:linear-gradient(to_left,black,transparent_70%)]" />
         <div className="relative max-w-2xl">
           <p className="text-[13px] font-medium text-primary-soft-fg">{greeting()}, {me.name.split(' ')[0]}</p>
-          <h1 className="mt-1 text-[26px] font-semibold leading-tight tracking-[-0.03em] sm:text-[30px]">How can we help today?</h1>
-          <form className="relative mt-5" onSubmit={(e) => { e.preventDefault(); nav(`/help?q=${encodeURIComponent(q)}`) }}>
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-fg-subtle" />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Describe your issue — e.g. “wifi keeps dropping” or “book boardroom”"
-              aria-label="Search help articles"
-              className="h-12 w-full rounded-xl border border-border-strong/80 bg-surface pl-11 pr-4 text-[14.5px] shadow-card outline-none transition-[border-color,box-shadow] placeholder:text-fg-subtle focus:border-primary focus:ring-[3px] focus:ring-primary/16"
-            />
-            {suggestions.length > 0 && (
-              <div className="absolute inset-x-0 top-[calc(100%+6px)] z-10 overflow-hidden rounded-xl border border-border bg-surface-raised shadow-pop animate-pop-in">
-                <p className="px-3.5 pb-1 pt-2.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-fg-subtle">Maybe this helps</p>
-                {suggestions.map((a) => (
-                  <Link key={a.id} to={`/help/${a.id}`} className="flex items-start gap-3 px-3.5 py-2.5 hover:bg-bg-muted">
-                    <BookOpen className="mt-0.5 size-4 shrink-0 text-primary" />
-                    <span><span className="block text-[13.5px] font-medium">{a.title}</span><span className="block text-[12px] text-fg-muted">{a.summary}</span></span>
-                  </Link>
-                ))}
-                <Link to={`/new?title=${encodeURIComponent(q)}`} className="flex items-center justify-between border-t border-border bg-surface-sunken px-3.5 py-2.5 text-[13px] font-medium text-primary hover:underline">
-                  Not what you need? Raise a request <ArrowRight className="size-4" />
-                </Link>
-              </div>
-            )}
-          </form>
+          <h1 className="mt-1 text-[26px] font-semibold leading-tight tracking-[-0.03em] sm:text-[30px]">Ada masalah di fasilitas?</h1>
+          <p className="mt-1.5 text-[14px] text-fg-muted">Laporkan dalam satu halaman. Anda bisa memantau siapa yang menangani dan kapan estimasi selesainya.</p>
+          <div className="mt-5 flex flex-col gap-2.5 sm:flex-row">
+            <Button variant="primary" size="lg" onClick={() => nav('/lapor')}><PlusCircle /> Lapor masalah</Button>
+            <Button variant="secondary" size="lg" onClick={() => nav('/reservasi')}><CalendarCheck /> Pesan ruang / fasilitas</Button>
+          </div>
         </div>
       </section>
 
-      {announcements.map((a) => (
-        <div key={a.id} role="status" className={cn('flex items-start gap-3 rounded-xl border px-4 py-3 text-[13px]', a.tone === 'warning' ? 'border-warning/30 bg-warning-soft text-warning-soft-fg' : 'border-info/25 bg-info-soft text-info-soft-fg')}>
-          {a.tone === 'warning' ? <AlertTriangle className="mt-0.5 size-4 shrink-0" /> : <CalendarClock className="mt-0.5 size-4 shrink-0" />}
-          <p><span className="font-semibold">{a.title}.</span> <span className="opacity-90">{a.body}</span></p>
-        </div>
-      ))}
+      {announcements.map((a) => <div key={a.id} role="status" className={cn('flex items-start gap-3 rounded-xl border px-4 py-3 text-[13px]', a.tone === 'warning' ? 'border-warning/30 bg-warning-soft text-warning-soft-fg' : 'border-info/25 bg-info-soft text-info-soft-fg')}>{a.tone === 'warning' ? <AlertTriangle className="mt-0.5 size-4 shrink-0" /> : <CalendarClock className="mt-0.5 size-4 shrink-0" />}<p><span className="font-semibold">{a.title}.</span> <span className="opacity-90">{a.body}</span></p></div>)}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {actions.map((a) => (
-          <Link key={a.to} to={a.to} className="group flex items-center gap-3.5 rounded-xl border border-border bg-surface p-4 shadow-card transition-all hover:-translate-y-px hover:border-primary/40 hover:shadow-pop">
-            <span className={cn('grid size-11 shrink-0 place-items-center rounded-xl [&_svg]:size-5', a.tone)}>{a.icon}</span>
-            <span className="min-w-0"><span className="block text-[14.5px] font-semibold">{a.title}</span><span className="block text-[12.5px] text-fg-muted">{a.sub}</span></span>
-          </Link>
-        ))}
-      </div>
-
-      {attention.length > 0 && (
-        <Card className="border-warning/40">
-          <CardHeader icon={<MessageSquareReply />} title="Needs your attention" description="These are waiting for you — a quick reply keeps things moving." />
-          <div className="divide-y divide-border">
-            {attention.map((t) => (
-              <Link key={t.id} to={`/tickets/${t.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-bg-muted">
-                <span className="tnum text-[12.5px] text-fg-subtle">{t.number}</span>
-                <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium">{t.title}</span>
-                {t.status === 'resolved' ? <Badge tone="success" dot>Confirm it is fixed</Badge> : <Badge tone="warning" dot>Reply needed</Badge>}
-                <ArrowRight className="size-4 text-fg-subtle" />
-              </Link>
-            ))}
-          </div>
+      {(confirm.length > 0 || waitingMe.length > 0) && (
+        <Card className="border-warning/40"><CardHeader icon={<MessageSquareReply />} title="Menunggu tanggapan Anda" description="Satu ketukan saja supaya laporan bisa ditutup atau dilanjutkan." />
+          <ul className="divide-y divide-border">{[...confirm, ...waitingMe].map((t) => <li key={t.id}><Link to={`/tiket/${t.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 hover:bg-bg-muted"><span className="tnum text-[12.5px] text-fg-subtle">{t.number}</span><span className="min-w-0 flex-1 truncate text-[13.5px] font-medium">{t.title}</span>{t.status === 'done' ? <Badge tone="success" dot>Konfirmasi sudah beres?</Badge> : <Badge tone="warning" dot>Mohon balas</Badge>}<ArrowRight className="size-4 text-fg-subtle" /></Link></li>)}</ul>
         </Card>
       )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <Card>
-          <CardHeader title="My open requests" description={open.length ? `${open.length} in progress` : undefined} actions={<Button variant="ghost" size="sm" asChild><Link to="/requests">View all <ArrowRight /></Link></Button>} />
-          {open.length === 0 ? (
-            <EmptyState icon={<CheckCircle2 />} title="Nothing open" description="When you raise something, you can follow it here from first reply to fix." action={<Button variant="primary" onClick={() => nav('/new')}>New request</Button>} />
-          ) : (
-            <ul className="divide-y divide-border">
-              {open.slice(0, 5).map((t) => <MyRow key={t.id} t={t} />)}
-            </ul>
+          <CardHeader title="Laporan saya yang berjalan" description={active.length ? `${active.length} laporan` : undefined} actions={<Button variant="ghost" size="sm" asChild><Link to="/laporan-saya">Semua <ArrowRight /></Link></Button>} />
+          {active.length === 0 ? <EmptyState icon={<CheckCircle2 />} title="Tidak ada laporan berjalan" description="Semua laporan Anda sudah selesai. Terima kasih sudah membantu menjaga fasilitas." action={<Button variant="primary" onClick={() => nav('/lapor')}>Lapor masalah</Button>} /> : (
+            <ul className="divide-y divide-border">{active.slice(0, 5).map((t) => (
+              <li key={t.id}><Link to={`/tiket/${t.id}`} className="block space-y-2 px-4 py-3.5 hover:bg-bg-muted">
+                <div className="flex items-center gap-2"><span className="tnum text-[12px] text-fg-subtle">{t.number}</span>{t.unreadForRequester && <span className="size-1.5 rounded-full bg-primary" aria-label="Ada pembaruan" />}<span className="ml-auto text-[12px] text-fg-subtle">{fmtAgo(t.updatedAt)}</span></div>
+                <p className="text-[14px] font-medium">{t.title}</p>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12.5px] text-fg-muted"><StatusBadge status={t.status} pending={t.pendingReason} /><span className="inline-flex items-center gap-1.5">{t.assigneeId ? <UserChip id={t.assigneeId} size="sm" /> : 'Menunggu teknisi'}</span><EtaChip ticket={t} perspective="requester" /></div>
+              </Link></li>
+            ))}</ul>
           )}
         </Card>
 
         <div className="space-y-6">
-          <Card>
-            <CardHeader title="Coming up" icon={<CalendarClock />} />
-            <CardBody className="space-y-3">
-              {myBookings.length === 0 && myVisitors.length === 0 && <p className="text-[13px] text-fg-muted">No bookings or visitors scheduled.</p>}
-              {myBookings.map((b) => (
-                <Link key={b.id} to="/rooms" className="flex items-start gap-3 rounded-lg p-1.5 hover:bg-bg-muted">
-                  <span className="mt-0.5 grid size-8 place-items-center rounded-lg bg-info-soft text-info-soft-fg"><CalendarDays className="size-4" /></span>
-                  <span className="min-w-0"><span className="block truncate text-[13.5px] font-medium">{b.title}</span><span className="block text-[12px] text-fg-muted">{space.get(b.spaceId)?.name} · {fmtSmart(b.start)}</span></span>
-                </Link>
-              ))}
-              {myVisitors.map((v) => (
-                <Link key={v.id} to="/visitors" className="flex items-start gap-3 rounded-lg p-1.5 hover:bg-bg-muted">
-                  <span className="mt-0.5 grid size-8 place-items-center rounded-lg bg-accent-soft text-accent-soft-fg"><Contact className="size-4" /></span>
-                  <span className="min-w-0"><span className="block truncate text-[13.5px] font-medium">{v.name} <span className="font-normal text-fg-muted">· {v.company}</span></span><span className="block text-[12px] text-fg-muted">{v.status === 'checked_in' ? 'On site now' : `Arriving ${fmtSmart(v.expectedAt)}`}</span></span>
-                </Link>
-              ))}
-            </CardBody>
+          <Card><CardHeader title="Reservasi saya" icon={<CalendarCheck />} actions={<Button variant="ghost" size="sm" asChild><Link to="/reservasi?tab=daftar">Semua</Link></Button>} />
+            {myBookings.length === 0 ? <p className="px-4 py-5 text-[13px] text-fg-muted">Belum ada reservasi mendatang.</p> : <ul className="divide-y divide-border">{myBookings.map((b) => <li key={b.id}><Link to="/reservasi?tab=daftar" className="flex items-start justify-between gap-3 px-4 py-3 hover:bg-bg-muted"><span className="min-w-0"><span className="block truncate text-[13.5px] font-medium">{b.title}</span><span className="block text-[12px] text-fg-muted">{space.get(b.spaceId)?.name} · {fmtSmart(b.start)}</span></span><Badge tone={BOOKING_STATUS[b.status].tone} size="sm">{BOOKING_STATUS[b.status].label}</Badge></Link></li>)}</ul>}
           </Card>
-          <Card>
-            <CardHeader title="Popular help" icon={<BookOpen />} actions={<Button variant="ghost" size="sm" asChild><Link to="/help">Browse</Link></Button>} />
-            <ul className="divide-y divide-border">
-              {popular.map((a) => (
-                <li key={a.id}><Link to={`/help/${a.id}`} className="flex items-center justify-between gap-3 px-4 py-2.5 text-[13.5px] hover:bg-bg-muted"><span className="truncate">{a.title}</span><ArrowRight className="size-4 shrink-0 text-fg-subtle" /></Link></li>
-              ))}
-            </ul>
-          </Card>
+          {incidents.length > 0 && <Card><CardHeader title="Gangguan yang sedang ditangani" description="Sudah diketahui — tidak perlu lapor ulang." icon={<Flame />} />
+            <ul className="divide-y divide-border">{incidents.map((t) => <li key={t.id} className="space-y-1 px-4 py-3"><div className="flex items-center gap-2"><PriorityBadge priority={t.priority} compact /><span className="truncate text-[13.5px] font-medium">{t.title}</span></div><div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-fg-muted"><span>{spaceLabel(t.spaceId)}</span><EtaChip ticket={t} perspective="requester" /></div></li>)}</ul></Card>}
+          <Card className="p-4"><div className="flex items-start gap-3"><span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary-soft-fg"><QrCode className="size-[18px]" /></span><div className="text-[13px]"><p className="font-semibold">Lihat stiker QR di mesin?</p><p className="mt-0.5 text-fg-muted">Pindai dengan kamera HP untuk lapor tanpa login dan tanpa mengetik lokasi. <Link to="/lapor-cepat" className="font-medium text-primary hover:underline">Coba sekarang</Link></p></div></div></Card>
         </div>
       </div>
     </div>
   )
 }
 
-function MyRow({ t }: { t: Ticket }) {
-  const { user, category } = useLookups()
-  const cat = category.get(t.categoryId)
-  return (
-    <li>
-      <Link to={`/tickets/${t.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-3 hover:bg-bg-muted">
-        <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-2"><span className="tnum text-[12px] text-fg-subtle">{t.number}</span>{t.unreadForRequester && <span className="size-1.5 rounded-full bg-primary" aria-label="New update" />}</span>
-          <span className="block truncate text-[14px] font-medium">{t.title}</span>
-          <span className="block text-[12px] text-fg-muted">{cat?.name} · {t.assigneeId ? `with ${user.get(t.assigneeId)?.name}` : 'waiting to be picked up'} · updated {fmtAgo(t.updatedAt)}</span>
-        </span>
-        <StatusBadge status={t.status} />
-      </Link>
-    </li>
-  )
-}
+/* ------------------------------------------------------------------ teknisi */
 
-/* ------------------------------------------------------------------ staff */
-
-function StaffDashboard() {
+function TechnicianHome() {
   const me = useMe()!
   const nav = useNavigate()
-  const isManager = me.role === 'manager'
   const tickets = useStore((s) => s.tickets)
-  const wos = useStore((s) => s.workOrders)
-  const assets = useStore((s) => s.assets)
-  const contracts = useStore((s) => s.contracts)
   const pms = useStore((s) => s.pmSchedules)
-  const { user, vendor } = useLookups()
+  const assets = useStore((s) => s.assets)
+  const { assign } = useStore.getState()
+  const { asset } = useLookups()
   const spaceLabel = useSpaceLabel()
-  const now = useNow()
+  const now = useNow(60_000)
+  const flow = useTicketFlow()
+  const done = useCompleteSchedule()
+  const toast = useToast()
+  const [etaFor, setEtaFor] = React.useState<Ticket | null>(null)
+  const setEta = useStore((s) => s.setEta)
 
-  const open = React.useMemo(() => tickets.filter((t) => isOpenStatus(t.status)), [tickets])
-  const mine = open.filter((t) => t.assigneeId === me.id)
-  const unassigned = open.filter((t) => !t.assigneeId)
-  const rank = (t: Ticket) => {
-    const r = worstSla(t, now)
-    const order = { breached: 0, at_risk: 1, ok: 2, paused: 3, met: 4, missed: 4, 'n/a': 5 }
-    return order[r.state] * 1e12 + (r.dueAt.getTime())
-  }
-  const atRisk = open.filter((t) => ['breached', 'at_risk'].includes(worstSla(t, now).state))
-  const p1 = open.filter((t) => t.priority === 'p1')
-  const from30 = now - 30 * DAY
-  const sla = slaCompliance(tickets, from30, now)
-  const prevSla = slaCompliance(tickets, from30 - 30 * DAY, from30)
-  const frt = avgFirstResponseMs(tickets, from30, now)
-  const cs = csat(tickets, from30, now)
-  const flow = dailyFlow(tickets, 14)
-  const downAssets = assets.filter((a) => a.status === 'down' || a.status === 'degraded')
-  const myWos = wos.filter((w) => w.assigneeId === me.id && w.status !== 'completed' && w.status !== 'cancelled').sort((a, b) => a.dueAt.localeCompare(b.dueAt))
-  const overduePm = pms.filter((p) => p.active && new Date(p.nextDueAt).getTime() < now)
-  const expiring = contracts.filter((c) => new Date(c.endsAt).getTime() - now < 60 * DAY).sort((a, b) => a.endsAt.localeCompare(b.endsAt))
-
-  const list = (isManager ? atRisk : mine).slice().sort((a, b) => rank(a) - rank(b)).slice(0, 7)
-
-  const workload = React.useMemo(() => {
-    const m = new Map<string, number>()
-    open.forEach((t) => t.assigneeId && m.set(t.assigneeId, (m.get(t.assigneeId) ?? 0) + 1))
-    return [...m.entries()].sort((a, b) => b[1] - a[1]).map(([id, n]) => ({ label: user.get(id)?.name ?? id, value: n, sub: user.get(id)?.title }))
-  }, [open, user])
-
-  const kpis = isManager
-    ? [
-        { label: 'Open tickets', value: open.length, sub: `${unassigned.length} unassigned`, icon: <Inbox />, accent: 'primary' as const, to: '/tickets' },
-        { label: 'SLA met · 30 days', value: pct(sla.rate), delta: `${sla.rate >= prevSla.rate ? '▲' : '▼'} ${Math.abs((sla.rate - prevSla.rate) * 100).toFixed(1)} pts`, deltaTone: sla.rate >= prevSla.rate ? 'up' as const : 'down' as const, sub: `${sla.total} resolved`, icon: <CheckCircle2 />, accent: 'success' as const, to: '/reports' },
-        { label: 'Avg first response', value: fmtDuration(frt), sub: 'last 30 days', icon: <Clock />, accent: 'accent' as const, to: '/reports' },
-        { label: 'CSAT · 30 days', value: cs.n ? `${cs.avg.toFixed(2)} / 5` : '—', sub: `${cs.n} ratings`, icon: <MessageSquareReply />, accent: 'purple' as const, to: '/reports' },
-      ]
-    : [
-        { label: 'Assigned to me', value: mine.length, sub: `${mine.filter((t) => ['breached', 'at_risk'].includes(worstSla(t, now).state)).length} at risk`, icon: <Inbox />, accent: 'primary' as const, to: '/tickets?view=mine' },
-        { label: 'Unassigned', value: unassigned.length, sub: 'in the shared queue', icon: <AlertTriangle />, accent: 'warning' as const, to: '/tickets?view=unassigned' },
-        { label: 'My work orders', value: myWos.length, sub: `${myWos.filter((w) => new Date(w.dueAt).getTime() < now).length} overdue`, icon: <Wrench />, accent: 'accent' as const, to: '/work-orders?view=mine' },
-        { label: 'Assets needing care', value: downAssets.length, sub: `${downAssets.filter((a) => a.status === 'down').length} down`, icon: <Boxes />, accent: 'danger' as const, to: '/assets' },
-      ]
+  const open = tickets.filter((t) => isOpenStatus(t.status))
+  const mine = open.filter((t) => t.assigneeId === me.id).sort((a, b) => (a.etaAt ? new Date(a.etaAt).getTime() : 9e15) - (b.etaAt ? new Date(b.etaAt).getTime() : 9e15) || a.priority.localeCompare(b.priority))
+  const noEta = mine.filter((t) => !t.etaAt && t.status !== 'new')
+  const late = mine.filter((t) => t.etaAt && new Date(t.etaAt).getTime() < now)
+  const queue = open.filter((t) => !t.assigneeId && (t.teamId === me.teamId || t.priority === 'p1')).sort((a, b) => a.priority.localeCompare(b.priority)).slice(0, 5)
+  const myPms = pms.filter((p) => p.active && p.assigneeId === me.id && new Date(p.nextDueAt).getTime() < now + 86_400_000).sort((a, b) => a.nextDueAt.localeCompare(b.nextDueAt))
+  const bad = assets.filter((a) => a.status === 'down')
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[13px] font-medium text-primary">{greeting()}, {me.name.split(' ')[0]}</p>
-          <h1 className="mt-0.5 text-[24px] font-semibold tracking-[-0.025em]">{isManager ? 'Operations overview' : 'Your day'}</h1>
-        </div>
-        <p className="text-[12.5px] text-fg-muted">Live demo data · {new Date(now).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-      </div>
+      <div><p className="text-[13px] font-medium text-primary">{greeting()}, {me.name.split(' ')[0]}</p><h1 className="mt-0.5 text-[24px] font-semibold tracking-[-0.025em]">Tugas Anda hari ini</h1></div>
 
-      {p1.map((t) => (
-        <Link key={t.id} to={`/tickets/${t.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-danger/40 bg-danger-soft px-4 py-3 text-danger-soft-fg shadow-card transition-shadow hover:shadow-pop">
-          <Flame className="size-5 shrink-0" />
-          <span className="min-w-0 flex-1 basis-[220px]"><span className="block text-[11px] font-bold uppercase tracking-[0.08em]">Major incident · {t.number}</span><span className="block truncate text-[14px] font-semibold">{t.title}</span></span>
-          <span className="text-[12.5px]">{t.assigneeId ? `Owner: ${user.get(t.assigneeId)?.name}` : 'No owner yet'} · opened {fmtAgo(t.createdAt)}</span>
-          <SlaChip ticket={t} />
-        </Link>
-      ))}
+      {(noEta.length > 0 || late.length > 0) && (
+        <div role="status" className="flex flex-wrap items-center gap-3 rounded-xl border border-warning/40 bg-warning-soft px-4 py-3 text-[13.5px] text-warning-soft-fg"><Clock className="size-5 shrink-0" /><p className="min-w-0 flex-1">{late.length > 0 && <><strong>{late.length} tugas lewat ETA</strong> — perbarui estimasi agar pelapor tahu. </>}{noEta.length > 0 && <><strong>{noEta.length} tugas belum ada ETA.</strong></>}</p><Button size="sm" variant="secondary" onClick={() => setEtaFor(late[0] ?? noEta[0])}>Perbarui sekarang</Button></div>
+      )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {kpis.map(({ to, ...k }) => <KpiCard key={k.label} {...k} onClick={() => nav(to)} />)}
+        <KpiCard label="Tugas saya" value={mine.length} sub={`${mine.filter((t) => t.status === 'in_progress').length} sedang dikerjakan`} icon={<Inbox />} accent="primary" onClick={() => nav('/tiket?view=mine')} />
+        <KpiCard label="Lewat ETA" value={late.length} sub="perlu estimasi baru" icon={<Clock />} accent={late.length ? 'danger' : 'success'} onClick={() => nav('/tiket?view=mine')} />
+        <KpiCard label="Belum ditugaskan" value={queue.length} sub="di antrean tim Anda" icon={<UserCheck />} accent="warning" onClick={() => nav('/tiket?view=unassigned')} />
+        <KpiCard label="Jadwal hari ini" value={myPms.length} sub={`${myPms.filter((p) => new Date(p.nextDueAt).getTime() < now).length} terlambat`} icon={<CalendarClock />} accent="accent" onClick={() => nav('/jadwal')} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <Card>
-          <CardHeader
-            title={isManager ? 'Needs attention — SLA at risk or breached' : 'My queue, most urgent first'}
-            description={isManager ? `${atRisk.length} tickets across all teams` : 'Sorted by what will breach first'}
-            actions={<Button variant="ghost" size="sm" asChild><Link to="/tickets">Open queue <ArrowRight /></Link></Button>}
-          />
-          {list.length === 0 ? (
-            <EmptyState icon={<CheckCircle2 />} title={isManager ? 'Everything is inside SLA' : 'Your queue is clear'} description="Nice. Pick something from the shared queue or check on today's work orders." action={<Button variant="secondary" asChild><Link to="/tickets?view=unassigned">See unassigned</Link></Button>} />
-          ) : (
-            <ul className="divide-y divide-border">
-              {list.map((t) => (
-                <li key={t.id}>
-                  <Link to={`/tickets/${t.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3 hover:bg-bg-muted">
-                    <PriorityBadge priority={t.priority} compact />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13.5px] font-medium"><span className="tnum mr-2 text-[12px] font-normal text-fg-subtle">{t.number}</span>{t.title}</span>
-                      <span className="block truncate text-[12px] text-fg-muted">{spaceLabel(t.spaceId)}{isManager && t.assigneeId ? ` · ${user.get(t.assigneeId)?.name}` : ''}</span>
-                    </span>
-                    <StatusBadge status={t.status} />
-                    <SlaChip ticket={t} />
-                  </Link>
-                </li>
-              ))}
-            </ul>
+          <CardHeader title="Tugas saya" description="Paling mendesak di atas · ketuk ETA untuk mengubah" actions={<Button variant="ghost" size="sm" asChild><Link to="/tiket?view=mine">Buka antrean <ArrowRight /></Link></Button>} />
+          {mine.length === 0 ? <EmptyState icon={<CheckCircle2 />} title="Tidak ada tugas" description="Ambil dari antrean belum ditugaskan di kanan." /> : (
+            <ul className="divide-y divide-border">{mine.slice(0, 7).map((t) => (
+              <li key={t.id} className="space-y-2.5 px-4 py-3.5">
+                <Link to={`/tiket/${t.id}`} className="block"><div className="flex flex-wrap items-center gap-2"><PriorityBadge priority={t.priority} compact />{t.hazard && <Badge tone="danger" size="sm">K3</Badge>}<span className="tnum text-[12px] text-fg-subtle">{t.number}</span><StatusBadge status={t.status} pending={t.pendingReason} /></div><p className="mt-1.5 text-[14px] font-medium leading-snug">{t.title}</p><p className="text-[12px] text-fg-muted">{spaceLabel(t.spaceId)}{t.assetId ? ` · ${asset.get(t.assetId)?.name}` : ''}</p></Link>
+                <div className="flex flex-wrap items-center justify-between gap-2"><button onClick={() => setEtaFor(t)} aria-label={`Ubah estimasi ${t.number}`} className="rounded-md hover:bg-bg-muted"><EtaChip ticket={t} /></button><QuickActions t={t} flow={flow} me={me.id} /></div>
+              </li>
+            ))}</ul>
           )}
         </Card>
 
-        {isManager ? (
-          <Card>
-            <CardHeader title="Tickets in and out" description="Last 14 days" />
-            <CardBody>
-              <BarChart data={flow.map((f) => ({ label: f.label, values: { created: f.created, resolved: f.resolved } }))} series={[{ key: 'created', label: 'Created', color: 'var(--series-1)' }, { key: 'resolved', label: 'Resolved', color: 'var(--series-3)' }]} />
-            </CardBody>
+        <div className="space-y-6">
+          <Card><CardHeader title="Antrean tim Anda" description="Belum ada yang menangani" />
+            {queue.length === 0 ? <p className="px-4 py-5 text-[13px] text-fg-muted">Antrean kosong.</p> : <ul className="divide-y divide-border">{queue.map((t) => <li key={t.id} className="flex items-center gap-3 px-4 py-3"><Link to={`/tiket/${t.id}`} className="min-w-0 flex-1"><span className="flex items-center gap-2"><PriorityBadge priority={t.priority} compact /><span className="truncate text-[13.5px] font-medium">{t.title}</span></span><span className="block truncate text-[12px] text-fg-muted">{spaceLabel(t.spaceId)} · {fmtAgo(t.createdAt)}</span></Link><Button size="sm" variant="secondary" onClick={() => { assign(t.id, me.id); toast.push({ tone: 'success', title: `${t.number} diambil`, description: 'Jangan lupa isi estimasi selesai.', action: { label: 'Isi ETA', onClick: () => setEtaFor(t) } }) }}>Ambil</Button></li>)}</ul>}
           </Card>
-        ) : (
-          <Card>
-            <CardHeader title="Today's work orders" icon={<Wrench />} actions={<Button variant="ghost" size="sm" asChild><Link to="/work-orders">All</Link></Button>} />
-            {myWos.length === 0 ? <EmptyState title="No work orders assigned" description="New jobs from tickets and PM schedules will appear here." /> : (
-              <ul className="divide-y divide-border">
-                {myWos.slice(0, 6).map((w) => (
-                  <li key={w.id}>
-                    <Link to={`/work-orders/${w.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-bg-muted">
-                      <span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-medium">{w.title}</span><span className={cn('block text-[12px]', new Date(w.dueAt).getTime() < now ? 'font-medium text-danger' : 'text-fg-muted')}>Due {fmtSmart(w.dueAt)}</span></span>
-                      <WoStatusBadge status={w.status} />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
+          <Card><CardHeader title="Jadwal maintenance saya" icon={<CalendarClock />} actions={<Button variant="ghost" size="sm" asChild><Link to="/jadwal">Semua</Link></Button>} />
+            {myPms.length === 0 ? <p className="px-4 py-5 text-[13px] text-fg-muted">Tidak ada jadwal jatuh tempo hari ini.</p> : <ul className="divide-y divide-border">{myPms.slice(0, 5).map((p) => { const l = new Date(p.nextDueAt).getTime() < now; return <li key={p.id} className="flex items-center gap-3 px-4 py-3"><span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-medium">{p.name}</span><span className={cn('block text-[12px]', l ? 'font-medium text-danger' : 'text-fg-muted')}>{l ? 'Terlambat · ' : ''}{fmtDate(p.nextDueAt)}</span></span><Button size="sm" variant={l ? 'primary' : 'secondary'} onClick={() => done.open(p)}><CheckCheck /> Selesai</Button></li> })}</ul>}
           </Card>
-        )}
+          {bad.length > 0 && <Card><CardHeader title="Aset rusak" icon={<Boxes />} /><ul className="divide-y divide-border">{bad.slice(0, 4).map((a) => <li key={a.id}><Link to={`/aset/${a.id}`} className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-bg-muted"><span className="min-w-0"><span className="block truncate text-[13.5px] font-medium">{a.name}</span><span className="block truncate text-[12px] text-fg-muted">{spaceLabel(a.spaceId)}</span></span><Badge tone="danger">Rusak</Badge></Link></li>)}</ul></Card>}
+        </div>
       </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-        {isManager ? (
-          <Card>
-            <CardHeader title="Open tickets per person" description="Who is carrying the load" />
-            <CardBody>{workload.length ? <HBars rows={workload} /> : <p className="text-[13px] text-fg-muted">No assigned tickets.</p>}</CardBody>
-          </Card>
-        ) : (
-          <Card>
-            <CardHeader title="Shared queue" description="Unassigned in your teams" actions={<Badge tone="primary">{unassigned.length}</Badge>} />
-            <ul className="divide-y divide-border">
-              {unassigned.sort((a, b) => rank(a) - rank(b)).slice(0, 5).map((t) => (
-                <li key={t.id}><Link to={`/tickets/${t.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-bg-muted"><PriorityBadge priority={t.priority} compact /><span className="min-w-0 flex-1 truncate text-[13.5px]">{t.title}</span><span className="text-[12px] text-fg-subtle">{fmtAgo(t.createdAt)}</span></Link></li>
-              ))}
-              {unassigned.length === 0 && <li className="px-4 py-6 text-center text-[13px] text-fg-muted">Nothing waiting.</li>}
-            </ul>
-          </Card>
-        )}
-
-        <Card>
-          <CardHeader title="Building health" icon={<Boxes />} actions={<Button variant="ghost" size="sm" asChild><Link to="/assets">Assets</Link></Button>} />
-          <ul className="divide-y divide-border">
-            {downAssets.sort((a, b) => (a.status === 'down' ? -1 : 1) - (b.status === 'down' ? -1 : 1)).slice(0, 6).map((a) => (
-              <li key={a.id}>
-                <Link to={`/assets/${a.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-bg-muted">
-                  <span className={cn('size-2 rounded-full', a.status === 'down' ? 'bg-danger' : 'bg-warning')} />
-                  <span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-medium">{a.name}</span><span className="block truncate text-[12px] text-fg-muted">{spaceLabel(a.spaceId)}</span></span>
-                  <Badge tone={a.status === 'down' ? 'danger' : 'warning'}>{a.status === 'down' ? 'Down' : 'Degraded'}</Badge>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Card>
-
-        <Card>
-          <CardHeader title={isManager ? 'Contracts & compliance' : 'Preventive maintenance'} icon={<CalendarClock />} actions={<Button variant="ghost" size="sm" asChild><Link to={isManager ? '/vendors' : '/maintenance'}>Open</Link></Button>} />
-          <CardBody className="space-y-4">
-            <div className="flex items-center justify-between rounded-lg bg-surface-sunken px-3 py-2.5">
-              <div><p className="text-[12px] text-fg-muted">PM overdue</p><p className={cn('tnum text-[20px] font-semibold', overduePm.length ? 'text-danger' : 'text-success')}>{overduePm.length}</p></div>
-              <Spark values={[2, 3, 1, 2, 4, 3, 2, 3, overduePm.length + 1, overduePm.length]} color={overduePm.length ? 'var(--series-2)' : 'var(--series-3)'} />
-            </div>
-            {isManager && (
-              <ul className="space-y-2.5">
-                {expiring.slice(0, 3).map((c) => {
-                  const days = Math.round((new Date(c.endsAt).getTime() - now) / DAY)
-                  return (
-                    <li key={c.id} className="flex items-center justify-between gap-3 text-[13px]">
-                      <span className="min-w-0"><span className="block truncate font-medium">{vendor.get(c.vendorId)?.name}</span><span className="block truncate text-[12px] text-fg-muted">{c.title}</span></span>
-                      <Badge tone={days < 0 ? 'danger' : days < 30 ? 'warning' : 'neutral'}>{days < 0 ? `Expired ${-days}d ago` : `${days}d left`}</Badge>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </CardBody>
-        </Card>
-      </div>
+      {flow.node}
+      {done.node}
+      <EtaDialog open={!!etaFor} onOpenChange={(v) => !v && setEtaFor(null)} value={etaFor?.etaAt} priority={etaFor?.priority} requireReason allowClear description={etaFor ? `${etaFor.number} · ${etaFor.title}` : undefined} onSave={(e, r) => { if (etaFor) { setEta(etaFor.id, e, r); toast.push({ tone: 'success', title: e ? `Estimasi ${fmtSmart(e)}` : 'Estimasi dihapus' }) } }} />
     </div>
   )
 }
 
+/* ------------------------------------------------------------------ admin */
+
+function AdminHome() {
+  const me = useMe()!
+  const nav = useNavigate()
+  const tickets = useStore((s) => s.tickets)
+  const users = useStore((s) => s.users)
+  const bookings = useStore((s) => s.bookings)
+  const pms = useStore((s) => s.pmSchedules)
+  const assets = useStore((s) => s.assets)
+  const { decideBooking } = useStore.getState()
+  const { space, user } = useLookups()
+  const spaceLabel = useSpaceLabel()
+  const now = useNow(60_000)
+  const flow = useTicketFlow()
+  const toast = useToast()
+
+  const open = React.useMemo(() => tickets.filter((t) => isOpenStatus(t.status)), [tickets])
+  const unassigned = open.filter((t) => !t.assigneeId)
+  const lateEta = open.filter((t) => t.etaAt && new Date(t.etaAt).getTime() < now)
+  const attention = open.filter((t) => needsAttention(t, now)).sort((a, b) => a.priority.localeCompare(b.priority)).slice(0, 6)
+  const serious = open.filter((t) => t.priority === 'p1' || t.hazard)
+  const doneToday = tickets.filter((t) => t.resolvedAt && new Date(t.resolvedAt).toDateString() === new Date(now).toDateString()).length
+  const techs = users.filter((u) => u.role !== 'requester')
+  const board = techs.map((u) => ({ u, list: open.filter((t) => t.assigneeId === u.id).sort((a, b) => (a.etaAt ?? 'z').localeCompare(b.etaAt ?? 'z')) })).filter((x) => x.list.length > 0).sort((a, b) => b.list.length - a.list.length)
+  const pendingBk = bookings.filter((b) => b.status === 'pending').sort((a, b) => a.start.localeCompare(b.start))
+  const latePm = pms.filter((p) => p.active && new Date(p.nextDueAt).getTime() < now)
+  const bad = assets.filter((a) => a.status === 'down' || a.status === 'degraded')
+  const flowData = dailyFlow(tickets, 14)
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-[13px] font-medium text-primary">{greeting()}, {me.name.split(' ')[0]}</p><h1 className="mt-0.5 text-[24px] font-semibold tracking-[-0.025em]">Ringkasan hari ini</h1></div><p className="text-[12.5px] text-fg-muted">{format(new Date(now), 'EEEE, d MMMM yyyy')}</p></div>
+
+      {serious.map((t) => (
+        <Link key={t.id} to={`/tiket/${t.id}`} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-danger/40 bg-danger-soft px-4 py-3 text-danger-soft-fg shadow-card hover:shadow-pop">
+          <Flame className="size-5 shrink-0" /><span className="min-w-0 flex-1 basis-[220px]"><span className="block text-[11px] font-bold uppercase tracking-[0.08em]">{t.hazard ? 'Berbahaya (K3)' : 'Darurat'} · {t.number}</span><span className="block truncate text-[14px] font-semibold">{t.title}</span></span>
+          <span className="text-[12.5px]">{t.assigneeId ? `Ditangani ${user.get(t.assigneeId)?.name}` : 'BELUM ADA PENANGGUNG JAWAB'}</span><EtaChip ticket={t} className="!bg-white/50 !text-danger-soft-fg" />
+        </Link>
+      ))}
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard label="Belum ditugaskan" value={unassigned.length} sub="tugaskan teknisi sekarang" icon={<UserCheck />} accent={unassigned.length ? 'warning' : 'success'} onClick={() => nav('/tiket?view=unassigned')} />
+        <KpiCard label="Lewat ETA" value={lateEta.length} sub="janji waktu terlewat" icon={<Clock />} accent={lateEta.length ? 'danger' : 'success'} onClick={() => nav('/tiket?view=attention')} />
+        <KpiCard label="Sedang dikerjakan" value={open.filter((t) => t.status === 'in_progress').length} sub={`${open.filter((t) => t.status === 'pending').length} menunggu`} icon={<Wrench />} accent="accent" onClick={() => nav('/tiket?tampilan=papan&view=open')} />
+        <KpiCard label="Selesai hari ini" value={doneToday} sub={`${open.length} masih terbuka`} icon={<CheckCircle2 />} accent="success" onClick={() => nav('/tiket?view=done')} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+        <Card>
+          <CardHeader title="Siapa mengerjakan apa" description="Tugas aktif per orang beserta estimasi selesainya" actions={<Button variant="ghost" size="sm" asChild><Link to="/tiket?tampilan=papan&view=open">Papan <ArrowRight /></Link></Button>} />
+          {board.length === 0 ? <EmptyState title="Belum ada tugas aktif" /> : (
+            <ul className="divide-y divide-border">{board.map(({ u, list }) => (
+              <li key={u.id} className="space-y-2 px-4 py-3">
+                <div className="flex items-center justify-between gap-3"><UserChip id={u.id} showTitle /><Badge tone={list.length > 3 ? 'warning' : 'neutral'}>{list.length} aktif</Badge></div>
+                <ul className="space-y-1 pl-8">{list.slice(0, 3).map((t) => <li key={t.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]"><Link to={`/tiket/${t.id}`} className="min-w-0 flex-1 basis-[200px] truncate hover:text-primary hover:underline"><span className="tnum mr-1.5 text-fg-subtle">{t.number}</span>{t.title}</Link><StatusBadge status={t.status} /><EtaChip ticket={t} /></li>)}{list.length > 3 && <li className="text-[12px] text-fg-subtle">+{list.length - 3} lagi</li>}</ul>
+              </li>
+            ))}</ul>
+          )}
+        </Card>
+
+        <div className="space-y-6">
+          <Card className={cn(pendingBk.length && 'border-warning/40')}><CardHeader title="Reservasi menunggu persetujuan" icon={<CalendarCheck />} actions={<Button variant="ghost" size="sm" asChild><Link to="/reservasi?tab=daftar">Semua</Link></Button>} />
+            {pendingBk.length === 0 ? <p className="px-4 py-5 text-[13px] text-fg-muted">Tidak ada pengajuan menunggu.</p> : <ul className="divide-y divide-border">{pendingBk.slice(0, 4).map((b) => <li key={b.id} className="space-y-2 px-4 py-3"><div><p className="text-[13.5px] font-medium">{b.title}</p><p className="text-[12px] text-fg-muted">{space.get(b.spaceId)?.name} · {fmtSmart(b.start)} · {b.renterName}{b.company ? ` (${b.company})` : ''}</p></div><div className="flex gap-1.5"><Button size="sm" variant="primary" onClick={() => { decideBooking(b.id, true); toast.push({ tone: 'success', title: `${b.number} disetujui` }) }}><Check /> Setujui</Button><Button size="sm" variant="ghost" asChild><Link to="/reservasi?tab=daftar">Tolak / detail</Link></Button></div></li>)}</ul>}
+          </Card>
+          <Card><CardHeader title="Tiket masuk vs selesai" description="14 hari terakhir" /><CardBody><BarChart height={150} data={flowData.map((f) => ({ label: f.label, values: { created: f.created, resolved: f.resolved } }))} series={[{ key: 'created', label: 'Masuk', color: 'var(--series-1)' }, { key: 'resolved', label: 'Selesai', color: 'var(--series-3)' }]} /></CardBody></Card>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-1"><CardHeader title="Perlu perhatian" description="ETA terlewat, target waktu, atau belum ada penanggung jawab" />
+          {attention.length === 0 ? <p className="px-4 py-5 text-[13px] text-fg-muted">Semua terkendali.</p> : <ul className="divide-y divide-border">{attention.map((t) => <li key={t.id} className="space-y-1.5 px-4 py-3"><Link to={`/tiket/${t.id}`} className="flex items-center gap-2"><PriorityBadge priority={t.priority} compact /><span className="truncate text-[13.5px] font-medium">{t.title}</span></Link><div className="flex flex-wrap items-center justify-between gap-2">{t.assigneeId ? <UserChip id={t.assigneeId} size="sm" /> : <Button size="sm" variant="secondary" onClick={() => flow.open('assign', t)}>Tugaskan</Button>}<EtaChip ticket={t} /></div></li>)}</ul>}
+        </Card>
+        <Card><CardHeader title="Jadwal maintenance" icon={<CalendarClock />} actions={<Button variant="ghost" size="sm" asChild><Link to="/jadwal">Buka</Link></Button>} />
+          <CardBody className="space-y-3"><div className="flex items-center justify-between rounded-lg bg-surface-sunken px-3 py-2.5"><div><p className="text-[12px] text-fg-muted">Terlambat</p><p className={cn('tnum text-[22px] font-semibold', latePm.length ? 'text-danger' : 'text-success')}>{latePm.length}</p></div><Button variant="secondary" size="sm" onClick={() => nav('/jadwal')}>Lihat</Button></div>
+            <ul className="space-y-2">{latePm.slice(0, 4).map((p) => <li key={p.id} className="flex items-center justify-between gap-3 text-[13px]"><span className="min-w-0 truncate">{p.name}</span><span className="shrink-0 text-[12px] font-medium text-danger">{fmtDate(p.nextDueAt)}</span></li>)}</ul></CardBody>
+        </Card>
+        <Card><CardHeader title="Aset bermasalah" icon={<Boxes />} actions={<Button variant="ghost" size="sm" asChild><Link to="/aset">Aset</Link></Button>} />
+          {bad.length === 0 ? <p className="px-4 py-5 text-[13px] text-fg-muted">Semua aset normal.</p> : <ul className="divide-y divide-border">{bad.sort((a, b) => (a.status === 'down' ? -1 : 1) - (b.status === 'down' ? -1 : 1)).slice(0, 6).map((a) => <li key={a.id}><Link to={`/aset/${a.id}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-bg-muted"><span className={cn('size-2 rounded-full', a.status === 'down' ? 'bg-danger' : 'bg-warning')} /><span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-medium">{a.name}</span><span className="block truncate text-[12px] text-fg-muted">{spaceLabel(a.spaceId)}</span></span><Badge tone={a.status === 'down' ? 'danger' : 'warning'}>{a.status === 'down' ? 'Rusak' : 'Terganggu'}</Badge></Link></li>)}</ul>}
+        </Card>
+      </div>
+      {flow.node}
+    </div>
+  )
+}

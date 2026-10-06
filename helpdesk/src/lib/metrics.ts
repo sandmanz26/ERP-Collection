@@ -1,5 +1,5 @@
 import { addDays, format, startOfDay } from 'date-fns'
-import type { Ticket, WorkOrder } from '@/data/types'
+import type { Task, Ticket } from '@/data/types'
 import { policyFor, readSla, workingMsBetween } from '@/lib/sla'
 
 const ms = (iso: string) => new Date(iso).getTime()
@@ -42,14 +42,14 @@ export function mttrMs(tickets: Ticket[], from: number, to: number) {
 }
 
 export function csat(tickets: Ticket[], from: number, to: number) {
-  const rows = tickets.filter((t) => t.csat && inRange(t.csat.at, from, to))
+  const rows = tickets.filter((t) => t.rating && inRange(t.rating.at, from, to))
   if (!rows.length) return { avg: 0, n: 0, dist: [0, 0, 0, 0, 0] }
   const dist = [0, 0, 0, 0, 0]
-  rows.forEach((t) => (dist[t.csat!.score - 1]++))
-  return { avg: rows.reduce((a, t) => a + t.csat!.score, 0) / rows.length, n: rows.length, dist }
+  rows.forEach((t) => (dist[t.rating!.score - 1]++))
+  return { avg: rows.reduce((a, t) => a + t.rating!.score, 0) / rows.length, n: rows.length, dist }
 }
 
-export function woCost(w: WorkOrder, rate = 85_000) {
+export function woCost(w: Task, rate = 85_000) {
   const labor = w.timeLogs.reduce((a, l) => a + (l.minutes / 60) * rate, 0)
   const mats = w.materials.reduce((a, m) => a + m.qty * m.unitCost, 0)
   return { labor, mats, vendor: w.vendorCost ?? 0, total: labor + mats + (w.vendorCost ?? 0) }

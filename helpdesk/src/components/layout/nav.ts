@@ -1,4 +1,4 @@
-import { Armchair, BarChart3, BookOpen, Building2, CalendarClock, CalendarDays, Contact, Cog, Home, Inbox, PlusCircle, Boxes, Truck, Wrench, type LucideIcon } from 'lucide-react'
+import { Boxes, CalendarCheck, CalendarClock, Cog, Home, Inbox, PlusCircle, BarChart3, type LucideIcon } from 'lucide-react'
 import type { Role } from '@/data/types'
 
 export interface NavItem {
@@ -6,70 +6,39 @@ export interface NavItem {
   label: string
   icon: LucideIcon
   end?: boolean
-  badgeKey?: 'unassigned' | 'myOpen' | 'overdueWo'
+  badgeKey?: 'unassigned' | 'myOpen' | 'overdueTask' | 'pendingBookings'
   keywords?: string
 }
-export interface NavGroup {
-  label?: string
-  items: NavItem[]
-}
+export interface NavGroup { label?: string; items: NavItem[] }
 
 const requester: NavGroup[] = [
   {
     items: [
-      { to: '/', label: 'Home', icon: Home, end: true },
-      { to: '/new', label: 'New request', icon: PlusCircle, keywords: 'report issue create ticket' },
-      { to: '/requests', label: 'My requests', icon: Inbox, badgeKey: 'myOpen', keywords: 'tickets status' },
+      { to: '/', label: 'Beranda', icon: Home, end: true },
+      { to: '/lapor', label: 'Lapor masalah', icon: PlusCircle, keywords: 'buat tiket rusak bocor mati' },
+      { to: '/laporan-saya', label: 'Laporan saya', icon: Inbox, badgeKey: 'myOpen', keywords: 'status tiket' },
     ],
   },
-  {
-    label: 'Workplace',
-    items: [
-      { to: '/rooms', label: 'Book a room', icon: CalendarDays, keywords: 'meeting reserve' },
-      { to: '/visitors', label: 'Visitors', icon: Contact, keywords: 'guest invite pass' },
-    ],
-  },
-  { label: 'Help', items: [{ to: '/help', label: 'Help articles', icon: BookOpen, keywords: 'knowledge base faq how to' }] },
+  { label: 'Fasilitas', items: [{ to: '/reservasi', label: 'Reservasi fasilitas', icon: CalendarCheck, badgeKey: 'pendingBookings', keywords: 'sewa meeting aula lapangan kantin' }] },
 ]
 
 const staff = (manager: boolean): NavGroup[] => [
   {
     items: [
-      { to: '/', label: 'Dashboard', icon: Home, end: true },
-      { to: '/tickets', label: 'Tickets', icon: Inbox, badgeKey: 'unassigned', keywords: 'queue incidents requests' },
+      { to: '/', label: 'Beranda', icon: Home, end: true },
+      { to: '/tiket', label: 'Tiket', icon: Inbox, badgeKey: 'unassigned', keywords: 'laporan masalah antrean' },
+      { to: '/jadwal', label: 'Jadwal maintenance', icon: CalendarClock, badgeKey: 'overdueTask', keywords: 'perawatan berkala tugas' },
+      { to: '/aset', label: 'Aset', icon: Boxes, keywords: 'peralatan mesin daftar' },
     ],
   },
   {
-    label: 'Building',
-    items: [
-      { to: '/work-orders', label: 'Work orders', icon: Wrench, badgeKey: 'overdueWo', keywords: 'maintenance jobs' },
-      { to: '/assets', label: 'Assets', icon: Boxes, keywords: 'equipment register' },
-      { to: '/maintenance', label: 'Preventive maintenance', icon: CalendarClock, keywords: 'pm schedule' },
-      { to: '/spaces', label: 'Spaces', icon: Building2, keywords: 'floors rooms locations' },
-    ],
+    label: 'Fasilitas',
+    items: [{ to: '/reservasi', label: 'Reservasi & sewa', icon: CalendarCheck, badgeKey: 'pendingBookings', keywords: 'meeting aula lapangan kantin penyewa' }],
   },
-  {
-    label: 'Workplace',
-    items: [
-      { to: '/rooms', label: 'Rooms & bookings', icon: Armchair },
-      { to: '/visitors', label: 'Visitors & reception', icon: Contact },
-    ],
-  },
-  {
-    label: manager ? 'Manage' : 'Resources',
-    items: [
-      { to: '/help', label: 'Knowledge base', icon: BookOpen },
-      ...(manager
-        ? [
-            { to: '/vendors', label: 'Vendors & contracts', icon: Truck },
-            { to: '/reports', label: 'Reports', icon: BarChart3, keywords: 'analytics sla csat' },
-            { to: '/settings', label: 'Settings', icon: Cog, keywords: 'sla categories teams' },
-          ]
-        : []),
-    ],
-  },
+  ...(manager ? [{ label: 'Kelola', items: [{ to: '/laporan', label: 'Laporan', icon: BarChart3 }, { to: '/pengaturan', label: 'Pengaturan', icon: Cog, keywords: 'lokasi kategori pengguna tarif' }] }] : []),
 ]
 
 export const navFor = (role: Role): NavGroup[] => (role === 'requester' ? requester : staff(role === 'manager'))
 
-export const BRAND = { name: "Atrium", tagline: "Help desk & building management" }
+export const BRAND = { name: 'Atrium', tagline: 'Fasilitas & maintenance pabrik' }
+

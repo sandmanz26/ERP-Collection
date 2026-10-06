@@ -10,27 +10,30 @@ import { cn } from '@/lib/utils'
 import { useTheme } from '@/hooks/useTheme'
 import { useMe, useStore } from '@/store/useStore'
 import { isOpenStatus } from '@/lib/sla'
+import { ROLE_LABEL } from '@/lib/labels'
 import { BRAND, navFor, type NavItem } from './nav'
+import { SITE } from '@/data/reference'
 import { CommandPalette } from './CommandPalette'
 import { Notifications } from './Notifications'
 import { useToast } from '@/components/ui/toast'
 
 const PERSONAS = ['u_anisa', 'u_budi', 'u_rina']
-const ROLE_LABEL = { requester: 'Employee', agent: 'Agent', manager: 'Manager' }
 
 function useBadges() {
   const me = useMe()!
   const tickets = useStore((s) => s.tickets)
-  const wos = useStore((s) => s.workOrders)
+  const tasks = useStore((s) => s.tasks)
+  const bookings = useStore((s) => s.bookings)
   return React.useMemo(() => {
     const open = tickets.filter((t) => isOpenStatus(t.status))
     const now = Date.now()
     return {
       unassigned: open.filter((t) => !t.assigneeId).length,
-      myOpen: tickets.filter((t) => t.requesterId === me.id && (isOpenStatus(t.status) || t.status === 'resolved')).length,
-      overdueWo: wos.filter((w) => w.status !== 'completed' && w.status !== 'cancelled' && new Date(w.dueAt).getTime() < now).length,
+      myOpen: tickets.filter((t) => t.requesterId === me.id && (isOpenStatus(t.status) || (t.status === 'done' && !t.confirmedAt))).length,
+      overdueTask: tasks.filter((w) => w.status !== 'completed' && w.status !== 'cancelled' && new Date(w.dueAt).getTime() < now).length,
+      pendingBookings: bookings.filter((b) => b.status === 'pending' && (me.role === 'requester' ? b.userId === me.id : true)).length,
     }
-  }, [tickets, wos, me.id])
+  }, [tickets, tasks, bookings, me.id, me.role])
 }
 
 function Brand({ compact }: { compact?: boolean }) {
@@ -42,7 +45,7 @@ function Brand({ compact }: { compact?: boolean }) {
       {!compact && (
         <div className="leading-tight">
           <p className="text-[15px] font-semibold tracking-[-0.02em] text-fg">{BRAND.name}</p>
-          <p className="text-[11px] text-fg-subtle">Nusantara Group</p>
+          <p className="text-[11px] text-fg-subtle">{SITE}</p>
         </div>
       )}
     </div>
@@ -54,7 +57,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const badges = useBadges()
   const groups = navFor(me.role)
   return (
-    <nav aria-label="Main" className="flex-1 space-y-5 overflow-y-auto px-3 py-4 scrollbar-thin">
+    <nav aria-label="Utama" className="flex-1 space-y-5 overflow-y-auto px-3 py-4 scrollbar-thin">
       {groups.map((g, gi) => (
         <div key={gi} className="space-y-0.5">
           {g.label && <p className="px-2.5 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">{g.label}</p>}
@@ -116,15 +119,15 @@ export function AppShell() {
 
   return (
     <div className="min-h-dvh bg-bg">
-      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:shadow-pop">Skip to content</a>
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:shadow-pop">Lompat ke konten</a>
 
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col border-r border-border bg-surface lg:flex">
         <div className="flex h-14 items-center border-b border-border px-4"><Brand /></div>
         <SidebarNav />
         <div className="border-t border-border p-3">
           <div className="rounded-lg bg-surface-sunken px-3 py-2.5 text-[12px] leading-relaxed text-fg-muted">
-            <p className="font-semibold text-fg">Demo workspace</p>
-            Mock data lives in your browser — changes are real but private to you.
+            <p className="font-semibold text-fg">Ruang demo</p>
+            Data contoh tersimpan di browser Anda. Perubahan nyata, tapi hanya terlihat oleh Anda.
           </div>
         </div>
       </aside>
@@ -133,10 +136,10 @@ export function AppShell() {
         <D.Portal>
           <D.Overlay className="fixed inset-0 z-[60] bg-overlay/55 backdrop-blur-[2px] animate-fade-in lg:hidden" />
           <D.Content aria-describedby={undefined} className="fixed inset-y-0 left-0 z-[61] flex w-[280px] max-w-[86vw] flex-col bg-surface shadow-pop lg:hidden">
-            <D.Title className="sr-only">Navigation</D.Title>
+            <D.Title className="sr-only">Navigasi</D.Title>
             <div className="flex h-14 items-center justify-between border-b border-border px-4">
               <Brand />
-              <D.Close asChild><Button variant="ghost" size="iconSm" aria-label="Close menu"><X /></Button></D.Close>
+              <D.Close asChild><Button variant="ghost" size="iconSm" aria-label="Tutup menu"><X /></Button></D.Close>
             </div>
             <SidebarNav onNavigate={() => setDrawer(false)} />
           </D.Content>
@@ -145,27 +148,27 @@ export function AppShell() {
 
       <div className="lg:pl-[248px]">
         <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border bg-surface/90 px-3 backdrop-blur sm:px-5">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setDrawer(true)} aria-label="Open menu"><MenuIcon /></Button>
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setDrawer(true)} aria-label="Buka menu"><MenuIcon /></Button>
           <button
             onClick={() => setPalette(true)}
             className="flex h-9 min-w-0 flex-1 items-center gap-2.5 rounded-lg border border-border bg-surface-sunken px-3 text-left text-[13px] text-fg-subtle transition-colors hover:border-border-strong sm:max-w-md sm:flex-none sm:basis-[420px]"
           >
             <Search className="size-4 shrink-0" />
-            <span className="flex-1 truncate">{isStaff ? 'Search tickets, assets, articles…' : 'Search requests and help…'}</span>
+            <span className="flex-1 truncate">{isStaff ? 'Cari tiket, aset…' : 'Cari laporan saya…'}</span>
             <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
           </button>
           <div className="flex-1" />
-          <Button variant="primary" size="md" onClick={() => nav('/new')} className="hidden sm:inline-flex">
-            <Plus /> {isStaff ? 'New ticket' : 'New request'}
+          <Button variant="primary" size="md" onClick={() => nav('/lapor')} className="hidden sm:inline-flex">
+            <Plus /> {isStaff ? 'Buat tiket' : 'Lapor masalah'}
           </Button>
-          <Button variant="primary" size="icon" onClick={() => nav('/new')} className="sm:hidden" aria-label="New request"><Plus /></Button>
+          <Button variant="primary" size="icon" onClick={() => nav('/lapor')} className="sm:hidden" aria-label="Lapor masalah"><Plus /></Button>
           <Notifications />
-          <Button variant="ghost" size="icon" onClick={() => setMode(resolved === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme" className="hidden sm:inline-flex">
+          <Button variant="ghost" size="icon" onClick={() => setMode(resolved === 'dark' ? 'light' : 'dark')} aria-label="Ganti tema" className="hidden sm:inline-flex">
             {resolved === 'dark' ? <Sun /> : <Moon />}
           </Button>
           <Menu>
             <MenuTrigger asChild>
-              <button className="ml-0.5 flex items-center gap-2 rounded-lg p-1 hover:bg-bg-muted" aria-label="Account menu">
+              <button className="ml-0.5 flex items-center gap-2 rounded-lg p-1 hover:bg-bg-muted" aria-label="Menu akun">
                 <Avatar name={me.name} className="size-8 text-[11px]" />
                 <span className="hidden text-left leading-tight md:block">
                   <span className="block text-[13px] font-medium text-fg">{me.name}</span>
@@ -179,7 +182,7 @@ export function AppShell() {
                 <p className="text-[12px] text-fg-muted">{me.title}</p>
               </div>
               <MenuSeparator />
-              <MenuLabel>Switch demo persona</MenuLabel>
+              <MenuLabel>Ganti peran (demo)</MenuLabel>
               {PERSONAS.map((id) => {
                 const u = users.find((x) => x.id === id)!
                 return (
@@ -192,8 +195,8 @@ export function AppShell() {
                 )
               })}
               <MenuSeparator />
-              <MenuItem icon={<RotateCcw />} onSelect={() => { reset(); toast.push({ tone: 'success', title: 'Demo data reset', description: 'Fresh tickets, assets and bookings loaded.' }) }}>Reset demo data</MenuItem>
-              <MenuItem icon={<LogOut />} onSelect={() => { signOut(); nav('/login') }}>Sign out</MenuItem>
+              <MenuItem icon={<RotateCcw />} onSelect={() => { reset(); toast.push({ tone: 'success', title: 'Data demo direset', description: 'Tiket, aset, dan reservasi dimuat ulang.' }) }}>Reset data demo</MenuItem>
+              <MenuItem icon={<LogOut />} onSelect={() => { signOut(); nav('/login') }}>Keluar</MenuItem>
             </MenuContent>
           </Menu>
         </header>

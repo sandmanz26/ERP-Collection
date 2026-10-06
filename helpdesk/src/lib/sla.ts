@@ -2,17 +2,17 @@ import { addMinutes, format, startOfDay } from 'date-fns'
 import type { BusinessHours, Priority, SlaPolicy, Ticket } from '@/data/types'
 
 export const BUSINESS_HOURS: BusinessHours = {
-  days: [1, 2, 3, 4, 5],
-  startMin: 8 * 60,
-  endMin: 17 * 60,
+  days: [1, 2, 3, 4, 5, 6],
+  startMin: 7 * 60,
+  endMin: 16 * 60,
   holidays: [],
 }
 
 export const SLA_POLICIES: SlaPolicy[] = [
-  { priority: 'p1', label: 'Critical', responseMin: 15, resolveMin: 4 * 60, calendar: '24x7' },
-  { priority: 'p2', label: 'High', responseMin: 60, resolveMin: 8 * 60, calendar: 'business' },
-  { priority: 'p3', label: 'Medium', responseMin: 4 * 60, resolveMin: 3 * 9 * 60, calendar: 'business' },
-  { priority: 'p4', label: 'Low', responseMin: 8 * 60, resolveMin: 5 * 9 * 60, calendar: 'business' },
+  { priority: 'p1', label: 'Darurat', responseMin: 15, resolveMin: 4 * 60, calendar: '24x7' },
+  { priority: 'p2', label: 'Tinggi', responseMin: 60, resolveMin: 8 * 60, calendar: 'business' },
+  { priority: 'p3', label: 'Sedang', responseMin: 4 * 60, resolveMin: 3 * 9 * 60, calendar: 'business' },
+  { priority: 'p4', label: 'Rendah', responseMin: 8 * 60, resolveMin: 5 * 9 * 60, calendar: 'business' },
 ]
 
 export const policyFor = (p: Priority) => SLA_POLICIES.find((s) => s.priority === p)!
@@ -85,7 +85,7 @@ export function readSla(t: Ticket, which: 'response' | 'resolve', now = Date.now
     const ok = toMs(done) <= due
     return { state: ok ? 'met' : 'missed', dueAt: new Date(due), remainingMs: due - toMs(done), used: (toMs(done) - created) / total }
   }
-  if (which === 'resolve' && (t.status === 'resolved' || t.status === 'closed')) {
+  if (which === 'resolve' && t.status === 'done') {
     return { state: 'met', dueAt: new Date(due), remainingMs: 0, used: 1 }
   }
   if (t.pausedAt) return { state: 'paused', dueAt: new Date(due), remainingMs: due - now, used: (now - created) / total }
@@ -101,7 +101,7 @@ export function worstSla(t: Ticket, now = Date.now()): SlaReading & { which: 're
   const r = readSla(t, 'response', now)
   const s = readSla(t, 'resolve', now)
   const rank: Record<SlaState, number> = { breached: 6, at_risk: 5, missed: 4, paused: 3, ok: 2, met: 1, 'n/a': 0 }
-  const open = t.status !== 'resolved' && t.status !== 'closed' && t.status !== 'cancelled'
+  const open = t.status !== 'done' && t.status !== 'cancelled'
   if (open) {
     if (!t.firstResponseAt && rank[r.state] >= rank[s.state]) return { ...r, which: 'response' }
     return { ...s, which: 'resolve' }
@@ -109,7 +109,7 @@ export function worstSla(t: Ticket, now = Date.now()): SlaReading & { which: 're
   return rank[s.state] >= rank[r.state] ? { ...s, which: 'resolve' } : { ...r, which: 'response' }
 }
 
-export const isOpenStatus = (s: Ticket['status']) => s !== 'resolved' && s !== 'closed' && s !== 'cancelled'
+export const isOpenStatus = (s: Ticket['status']) => s !== 'done' && s !== 'cancelled'
 
 /** Elapsed time between two instants, counting only the hours the team's SLA calendar is running. */
 export function workingMsBetween(from: Date, to: Date, calendar: SlaPolicy['calendar'], bh = BUSINESS_HOURS) {
