@@ -27,6 +27,12 @@ inventory without deletes, `rizal.maulana@` for procurement, `nurhayati.dewi@` o
 for a division head who can only file their own request, or `ratna.wulandari@` for a custom site-supervisor role with no
 commercial access at all.
 
+**The full product document** — features, business rules, user scenarios, why it is more efficient than
+the usual approach, the code structure and a 44-table database mapping — is
+[`docs/PRD-Tata-Gemilang.pdf`](docs/PRD-Tata-Gemilang.pdf) (Indonesian, 68 pages). It is generated from
+the source by `docs/prd/build.mjs`, and the build fails if the database mapping drifts from
+`src/data/types.ts`. The shorter text version, with every business rule, is [`docs/PRD.md`](docs/PRD.md).
+
 ---
 
 ## The one number this system exists for

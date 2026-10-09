@@ -5,3 +5,5 @@ dist-ssr
 .DS_Store
 *.log
 .vite
+docs/prd/img/
+docs/prd/.build/
